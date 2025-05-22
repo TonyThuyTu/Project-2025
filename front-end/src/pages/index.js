@@ -36,9 +36,10 @@ export default function Home() {
           />
           <ol>
             <li>
-              Get started by editing <code>src/pages/index.js</code>.
+              Hello <code>Tony Nguyen</code>.
             </li>
-            <li>Save and see your changes instantly.</li>
+            <li>Software Engineer</li>
+            <li>The best framework for project</li>
           </ol>
 
           <div className={styles.ctas}>
