@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 const db = require('./config/db');
 const routes = require('./routes/index.route');
 
@@ -16,6 +17,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes - tiền tố /api cho toàn bộ
 app.use('/api', routes);
+
+// cho phép upload
+app.use("/upload", express.static(path.join(__dirname, "upload")));
 
 // Test route
 app.get('/', (req, res) => {
