@@ -6,7 +6,7 @@ const Contact = {
     const [result] = await db
       .promise()
       .execute(
-        "INSERT INTO Contact (name, phone, email, note) VALUES (?, ?, ?, ?)",
+        "INSERT INTO contact (name, phone, email, note) VALUES (?, ?, ?, ?)",
         [name, phone, email, note]
       );
     return result.insertId;
@@ -14,7 +14,7 @@ const Contact = {
 
   // Lấy tất cả liên hệ
   getAll: async () => {
-    const [rows] = await db.promise().query("SELECT * FROM Contact ORDER BY id_contact DESC");
+    const [rows] = await db.promise().query("SELECT * FROM contact ORDER BY id_contact DESC");
     return rows;
   },
 
@@ -22,7 +22,7 @@ const Contact = {
   getById: async (id) => {
     const [[row]] = await db
       .promise()
-      .execute("SELECT * FROM Contact WHERE id_contact = ?", [id]);
+      .execute("SELECT * FROM contact WHERE id_contact = ?", [id]);
     return row;
   },
 };
