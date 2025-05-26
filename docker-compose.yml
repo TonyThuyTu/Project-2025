@@ -1,50 +1,40 @@
-version: '3'
+version: '3.8'
 
 services:
+  backend:
+    build: ./back-end
+    container_name: backend
+    restart: always
+    volumes:
+      - ./back-end:/app
+      - /app/node_modules
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: host.docker.internal
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: apple
+      DB_PORT: 3306
+      PORT: 5000
+      JWT_SECRET: TONY_NGUYEN
+      EMAIL_USER: nguyenlehoangtu120405@gmail.com
+      EMAIL_PASS: 0777527125
+      FRONTEND_URL: http://localhost:3000
+    command: nodemon --legacy-watch server.js
+
   frontend:
-    build:
-      context: ./front-end
+    build: ./front-end
+    container_name: frontend
+    restart: always
+    volumes:
+      - ./front-end:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - "3000:3000"
-    volumes:
-      - ./front-end:/app
-      - /app/node_modules
     environment:
-      - CHOKIDAR_USEPOLLING=true
+      NEXT_PUBLIC_API_URL: http://localhost:5000
     command: npm run dev
     depends_on:
       - backend
 
-  backend:
-    build:
-      context: ./back-end
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./back-end:/usr/src/app
-      - /usr/src/app/node_modules
-    environment:
-      - NODE_ENV=development
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASSWORD=
-      - DB_NAME=apple
-      - DB_PORT=3306
-    command: nodemon server.js
-    depends_on:
-      - mysql
-
-  mysql:
-    image: mysql:5.7
-    restart: always
-    ports:
-      - "3307:3306"  # tránh xung đột cổng với máy host
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      MYSQL_DATABASE: "apple"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:
- 

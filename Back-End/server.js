@@ -23,7 +23,7 @@ app.use("/upload", express.static(path.join(__dirname, "upload")));
 
 // Test route
 app.get('/', (req, res) => {
-  res.send('🚀 Welcome to Apple Store API');
+  res.send('🚀 Welcome to my Apple API');
 });
 
 // Start server
