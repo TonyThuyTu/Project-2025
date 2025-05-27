@@ -4,11 +4,15 @@ const cors = require('cors');
 const path = require('path');
 const db = require('./config/db');
 const routes = require('./routes/index.route');
+const redisClient = require('./config/redisClient');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+//kết nối redis
+redisClient.connect().catch(console.error);
 
 // Middlewares
 app.use(cors());

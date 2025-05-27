@@ -19,9 +19,12 @@ services:
       PORT: 5000
       JWT_SECRET: TONY_NGUYEN
       EMAIL_USER: nguyenlehoangtu120405@gmail.com
-      EMAIL_PASS: 0777527125
+      EMAIL_PASS: osqphwupqugfafdi
       FRONTEND_URL: http://localhost:3000
+      REDIS_URL: redis://redis:6379    # SỬA CHỖ NÀY
     command: nodemon --legacy-watch server.js
+    depends_on:
+      - redis                      # backend phụ thuộc redis
 
   frontend:
     build: ./front-end
@@ -38,3 +41,9 @@ services:
     depends_on:
       - backend
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
