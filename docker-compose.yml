@@ -21,15 +21,16 @@ services:
       EMAIL_USER: nguyenlehoangtu120405@gmail.com
       EMAIL_PASS: osqphwupqugfafdi
       FRONTEND_URL: http://localhost:3000
-      REDIS_URL: redis://redis:6379    # SỬA CHỖ NÀY
+      REDIS_URL: redis://redis:6379
     command: nodemon --legacy-watch server.js
     depends_on:
-      - redis                      # backend phụ thuộc redis
+      - redis
 
   frontend:
     build: ./front-end
     container_name: frontend
     restart: always
+    working_dir: /usr/src/app
     volumes:
       - ./front-end:/usr/src/app
       - /usr/src/app/node_modules
