@@ -7,6 +7,7 @@ const productRoute = require('./products.route');
 const contactRoute = require('./contact.route');
 const customerRoute = require('./customer.route');
 const bannerRoute = require('./banner.route');
+const EmployeeRoute = require('./employee.route');
 
 // Dùng route con
 router.use('/categories', categoryRoute); // => /api/categories
@@ -18,5 +19,7 @@ router.use('/contact', contactRoute); //=> api/contact
 router.use('/customers', customerRoute); //=> api/customers
 
 router.use('/banner', bannerRoute); //=> api/banner
+
+router.use('/employees', EmployeeRoute); //=> api/employees
 
 module.exports = router;

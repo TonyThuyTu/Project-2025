@@ -1,61 +1,55 @@
-const Banner = require('../models/banner');
+const db = require('../models/index.model');
+const Banner = db.Banner;
 const path = require('path');
-const fs = require('fs');
 
+// Lấy tất cả banner
 exports.getAllBanners = async (req, res) => {
   try {
-    const banners = await Banner.getAll();
+    const banners = await Banner.findAll({ order: [['id_banner', 'DESC']] });
     res.json(banners);
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách banner', error: err.message });
+    res.status(500).json({ error: 'Lỗi khi lấy danh sách banner', detail: err.message });
   }
 };
 
+// Thêm banner
 exports.createBanner = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'Vui lòng chọn ảnh banner' });
+    if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn ảnh' });
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    const newBanner = await Banner.create(imageUrl);
-
-    res.status(201).json(newBanner);
+    const banner = await Banner.create({ banner_img_url: req.file.filename });
+    res.status(201).json(banner);
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi thêm banner', error: err.message });
+    res.status(500).json({ error: 'Lỗi khi tạo banner', detail: err.message });
   }
 };
 
+// Cập nhật banner
 exports.updateBanner = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!req.file) return res.status(400).json({ message: 'Vui lòng chọn ảnh mới' });
+    const banner = await Banner.findByPk(id);
+    if (!banner) return res.status(404).json({ error: 'Không tìm thấy banner' });
 
-    const banner = await Banner.getById(id);
-    if (!banner) return res.status(404).json({ message: 'Không tìm thấy banner' });
+    const newImage = req.file ? req.file.filename : banner.banner_img_url;
+    await banner.update({ banner_img_url: newImage });
 
-    const oldPath = path.join(__dirname, '..', banner.banner_img_url);
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-
-    const newUrl = `/uploads/${req.file.filename}`;
-    const updatedBanner = await Banner.update(id, newUrl);
-
-    res.json(updatedBanner);
+    res.json(banner);
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi cập nhật banner', error: err.message });
+    res.status(500).json({ error: 'Lỗi khi cập nhật banner', detail: err.message });
   }
 };
 
+// Xóa banner
 exports.deleteBanner = async (req, res) => {
   try {
     const { id } = req.params;
-    const banner = await Banner.getById(id);
-    if (!banner) return res.status(404).json({ message: 'Không tìm thấy banner' });
+    const banner = await Banner.findByPk(id);
+    if (!banner) return res.status(404).json({ error: 'Không tìm thấy banner' });
 
-    const imgPath = path.join(__dirname, '..', banner.banner_img_url);
-    if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-
-    await Banner.delete(id);
-    res.json({ message: 'Xóa banner thành công' });
+    await banner.destroy();
+    res.json({ message: 'Đã xóa banner' });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi xóa banner', error: err.message });
+    res.status(500).json({ error: 'Lỗi khi xóa banner', detail: err.message });
   }
 };

@@ -1,86 +1,97 @@
-const Category = require('../models/categories');
+const { Category } = require('../models/index.model');
 
 // Lấy tất cả danh mục
-exports.getCategories = (req, res) => {
-  Category.getAll((err, results) => {
-    if (err) return res.status(500).json({ error: err });
-    res.json(results);
-  });
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await Category.findAll({
+      order: [['parent_id', 'ASC'], ['category_id', 'ASC']]
+    });
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // Lấy danh mục theo ID
-exports.getCategoryById = (req, res) => {
-  Category.getById(req.params.id, (err, result) => {
-    if (err) return res.status(500).json({ error: err });
-    if (result.length === 0) return res.status(404).json({ message: 'Not found' });
-    res.json(result[0]);
-  });
+exports.getCategoryById = async (req, res) => {
+  try {
+    const category = await Category.findByPk(req.params.id);
+    if (!category) return res.status(404).json({ message: 'Not found' });
+    res.json(category);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // Lấy danh mục con theo parent_id
-exports.getChildrenByParentId = (req, res) => {
-  Category.getChildren(req.params.parentId, (err, results) => {
-    if (err) return res.status(500).json({ error: err });
-    res.json(results);
-  });
+exports.getChildrenByParentId = async (req, res) => {
+  try {
+    const children = await Category.findAll({ where: { parent_id: req.params.parentId } });
+    res.json(children);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // Thêm danh mục
-exports.createCategory = (req, res) => {
+exports.createCategory = async (req, res) => {
   const { name, parent_id } = req.body;
+  try {
+    const existing = await Category.findOne({
+      where: {
+        name,
+        parent_id: parent_id || null,
+      }
+    });
 
-  Category.exists(name, parent_id || null, (err, results) => {
-    if (err) {
-      console.error('Lỗi khi kiểm tra tồn tại danh mục:', err);
-      return res.status(500).json({ error: err });
-    }
-    if (results.length > 0) {
-      console.log(`Danh mục đã tồn tại: name=${name}, parent_id=${parent_id}`);
+    if (existing) {
       return res.status(400).json({ message: 'Danh mục đã tồn tại' });
     }
 
-    Category.create({ name, parent_id: parent_id || null }, (err, result) => {
-      if (err) {
-        console.error('Lỗi khi tạo danh mục mới:', err);
-        return res.status(500).json({ error: err });
-      }
-      console.log(`Tạo danh mục mới thành công, id=${result.insertId}`);
-      res.status(201).json({ message: 'Created', id: result.insertId });
-    });
-  });
+    const category = await Category.create({ name, parent_id: parent_id || null });
+    res.status(201).json({ message: 'Created', id: category.category_id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-// Chỉnh sửa danh mục
-exports.updateCategory = (req, res) => {
+// Cập nhật danh mục
+exports.updateCategory = async (req, res) => {
   const { name, parent_id } = req.body;
   const id = req.params.id;
 
-  Category.exists(name, parent_id || null, (err, results) => {
-    if (err) {
-      console.error('Lỗi khi kiểm tra tồn tại danh mục (update):', err);
-      return res.status(500).json({ error: err });
-    }
-    if (results.length > 0 && results[0].category_id != id) {
-      console.log(`Danh mục đã tồn tại khi cập nhật: name=${name}, parent_id=${parent_id}`);
+  try {
+    const existing = await Category.findOne({
+      where: {
+        name,
+        parent_id: parent_id || null,
+      }
+    });
+
+    if (existing && existing.category_id != id) {
       return res.status(400).json({ message: 'Danh mục đã tồn tại' });
     }
 
-    Category.update(id, { name, parent_id: parent_id || null }, (err) => {
-      if (err) {
-        console.error('Lỗi khi cập nhật danh mục:', err);
-        return res.status(500).json({ error: err });
-      }
-      console.log(`Cập nhật danh mục thành công, id=${id}`);
-      res.json({ message: 'Updated' });
-    });
-  });
+    const [updated] = await Category.update(
+      { name, parent_id: parent_id || null },
+      { where: { category_id: id } }
+    );
+
+    if (updated === 0) return res.status(404).json({ message: 'Không tìm thấy danh mục' });
+
+    res.json({ message: 'Updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-
 // Xóa danh mục
-exports.deleteCategory = (req, res) => {
-  Category.delete(req.params.id, (err) => {
-    if (err) return res.status(500).json({ error: err });
+exports.deleteCategory = async (req, res) => {
+  try {
+    const deleted = await Category.destroy({ where: { category_id: req.params.id } });
+    if (!deleted) return res.status(404).json({ message: 'Không tìm thấy danh mục' });
     res.json({ message: 'Deleted' });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
