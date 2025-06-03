@@ -27,7 +27,10 @@ sequelize.authenticate()
 redisClient.connect().catch(console.error);
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true, // nếu FE có gửi cookie hoặc token qua header
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -39,7 +42,7 @@ app.use("/upload", express.static(path.join(__dirname, "upload")));
 
 // Test route
 app.get('/', (req, res) => {
-  res.send('🚀 Welcome to my Apple API');
+  res.send('🚀 Welcome to my AppleStore API');
 });
 
 // Start server
