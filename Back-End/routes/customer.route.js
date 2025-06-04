@@ -20,14 +20,22 @@ router.post('/register', customerController.register);
 // Đăng nhập
 router.post('/login', customerController.login);
 
+// Quên mật khẩu có otp
+const forgotRouter = express.Router();
+forgotRouter.post('/send-otp', customerController.sendOTP);
+forgotRouter.post('/verify-otp', customerController.verifyOTP);
+forgotRouter.post('/reset-password', customerController.resetPassword);
+router.use('/forgot', forgotRouter);
+
+
 // OTP - PASS
 //Gữi OTP dựa theo email hoặc phone có sẵn trong mail
-router.post('/forgot/send-otp', customerController.sendOTP);
+// router.post('/forgot/send-otp', customerController.sendOTP);
 
-//xác nhận otp
-router.post('/forgot/verify-otp', customerController.verifyOTP);
+// //xác nhận otp
+// router.post('/forgot/verify-otp', customerController.verifyOTP);
 
-//đổi pass
-router.post('/forgot/reset-password', customerController.resetPassword);
+// //đổi pass
+// router.post('/forgot/reset-password', customerController.resetPassword);
 
 module.exports = router;

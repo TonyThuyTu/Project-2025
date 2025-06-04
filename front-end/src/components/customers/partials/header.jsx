@@ -1,6 +1,33 @@
-import Link from 'next/link'
+'use client';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 const HeaderClient = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkLogin = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    };
+
+    checkLogin();
+
+    // Lắng nghe event storage để cập nhật trạng thái đăng nhập khi localStorage thay đổi (tab khác)
+    window.addEventListener('storage', checkLogin);
+
+    return () => {
+      window.removeEventListener('storage', checkLogin);
+    };
+  }, []);
+
+  //đăng xuất
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    window.location.href = '/'; // Chuyển về trang chủ sau khi đăng xuất
+  };
+
   return (
     <>
       {/* Navbar trên cùng */}
@@ -78,14 +105,44 @@ const HeaderClient = () => {
               </a>
 
               <div className="dropdown">
-                <a className="nav-icon position-relative text-decoration-none" href="#" id="accountDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <a
+                  className="nav-icon position-relative text-decoration-none"
+                  href="#"
+                  id="accountDropdown"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
                   <i className="fa fa-fw fa-user text-dark"></i>
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end mt-2" aria-labelledby="accountDropdown">
-                  <li><Link href="/login" className="dropdown-item">Đăng nhập</Link></li>
-                  <li><Link href="/register" className="dropdown-item">Đăng ký</Link></li>
-                  <li><Link href="/profile" className="dropdown-item">Tài khoản</Link></li>
-                  <li><Link href="/logout" className="dropdown-item">Đăng xuất</Link></li>
+                  {!isLoggedIn ? (
+                    <>
+                      <li>
+                        <Link href="/login" className="dropdown-item">
+                          Đăng nhập
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/register" className="dropdown-item">
+                          Đăng ký
+                        </Link>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        <Link href="/profile" className="dropdown-item">
+                          Tài khoản
+                        </Link>
+                      </li>
+                      <li>
+                        <a onClick={handleLogout} className="dropdown-item" style={{ cursor: 'pointer' }}>
+                          Đăng xuất
+                        </a>
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
             </div>
@@ -110,7 +167,7 @@ const HeaderClient = () => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default HeaderClient
+export default HeaderClient;

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const generateToken = require('../middlewares/auth');
 const { sendOTPByEmail } = require('../helper/sendMail');
 const redisClient = require('../config/redisClient');
+const { Op } = require('sequelize');
 
 // Lấy danh sách tất cả khách hàng
 exports.getAllCustomers = async (req, res) => {
@@ -33,28 +34,29 @@ exports.getCustomerById = async (req, res) => {
 // Cập nhật thông tin khách hàng
 exports.updateCustomer = async (req, res) => {
   const id = req.params.id;
-  const { customer_name, customer_phone, customer_email } = req.body;
+  const { name, phone, email } = req.body;
 
-  if (!customer_name || !customer_phone || !customer_email) {
+  if (!name || !phone || !email) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
   }
 
   try {
-    // Kiểm tra email/SĐT trùng với khách hàng khác
-    const duplicate = await Customer.findOne({
+    // Kiểm tra email trùng với khách hàng khác
+    const duplicateEmail = await Customer.findOne({
       where: {
-        customer_email,
-        id_customer: { [db.Sequelize.Op.ne]: id }
+        email,
+        id_customer: { [Op.ne]: id }
       }
     });
-    if (duplicate) {
+    if (duplicateEmail) {
       return res.status(400).json({ message: 'Email đã được sử dụng bởi người khác' });
     }
 
+    // Kiểm tra phone trùng với khách hàng khác
     const duplicatePhone = await Customer.findOne({
       where: {
-        customer_phone,
-        id_customer: { [db.Sequelize.Op.ne]: id }
+        phone,
+        id_customer: { [Op.ne]: id }
       }
     });
     if (duplicatePhone) {
@@ -62,7 +64,7 @@ exports.updateCustomer = async (req, res) => {
     }
 
     const [updated] = await Customer.update(
-      { customer_name, customer_phone, customer_email },
+      { name, phone, email },
       { where: { id_customer: id } }
     );
 
@@ -88,14 +90,14 @@ exports.toggleCustomerStatus = async (req, res) => {
 
   // Tạo dữ liệu cập nhật
   const updateData = {
-    customer_status: status === 1 || status === true
+    status: status === 1 || status === true
   };
 
   // Nếu chặn thì lưu lý do chặn, nếu mở chặn thì xóa lý do
-  if (status === false || status === 0) {
+  if (updateData.status === false) {
     updateData.block_reason = block_reason || 'Không rõ lý do';
   } else {
-    updateData.block_reason = ''; // Gỡ lý do khi mở chặn
+    updateData.block_reason = null; // Gỡ lý do khi mở chặn
   }
 
   try {
@@ -107,7 +109,7 @@ exports.toggleCustomerStatus = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy khách hàng' });
     }
 
-    const statusMessage = updateData.customer_status
+    const statusMessage = updateData.status
       ? 'Khách hàng đã được mở chặn'
       : 'Khách hàng đã bị chặn';
 
@@ -120,33 +122,32 @@ exports.toggleCustomerStatus = async (req, res) => {
   }
 };
 
-
 // Đăng ký khách hàng
 exports.register = async (req, res) => {
-  const { customer_name, customer_phone, customer_email, customer_password } = req.body;
+  const { name, phone, email, password } = req.body;
 
-  if (!customer_name || !customer_phone || !customer_email || !customer_password) {
+  if (!name || !phone || !email || !password) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
   }
 
   try {
     // Kiểm tra trùng email hoặc điện thoại
-    const existsEmail = await Customer.findOne({ where: { customer_email } });
+    const existsEmail = await Customer.findOne({ where: { email } });
     if (existsEmail) return res.status(409).json({ message: 'Email đã tồn tại' });
 
-    const existsPhone = await Customer.findOne({ where: { customer_phone } });
+    const existsPhone = await Customer.findOne({ where: { phone } });
     if (existsPhone) return res.status(409).json({ message: 'Số điện thoại đã tồn tại' });
 
     // Hash mật khẩu
-    const hashedPassword = await bcrypt.hash(customer_password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Tạo khách hàng mới
     const newCustomer = await Customer.create({
-      customer_name,
-      customer_phone,
-      customer_email,
-      customer_password: hashedPassword,
-      customer_status: true,
+      name,
+      phone,
+      email,
+      password: hashedPassword,
+      status: false,  // Mặc định chưa chặn
     });
 
     const token = generateToken(newCustomer);
@@ -156,10 +157,10 @@ exports.register = async (req, res) => {
       token,
       customer: {
         id_customer: newCustomer.id_customer,
-        customer_name: newCustomer.customer_name,
-        customer_email: newCustomer.customer_email,
-        customer_phone: newCustomer.customer_phone,
-        customer_status: newCustomer.customer_status,
+        name: newCustomer.name,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        status: newCustomer.status,
       }
     });
   } catch (error) {
@@ -177,16 +178,16 @@ exports.login = async (req, res) => {
 
   try {
     // Tìm user theo email hoặc điện thoại
-    let user = await Customer.findOne({ where: { customer_email: phoneOrEmail } });
+    let user = await Customer.findOne({ where: { email: phoneOrEmail } });
     if (!user) {
-      user = await Customer.findOne({ where: { customer_phone: phoneOrEmail } });
+      user = await Customer.findOne({ where: { phone: phoneOrEmail } });
       if (!user) {
         return res.status(404).json({ message: 'Tài khoản không tồn tại' });
       }
     }
 
     // So sánh mật khẩu
-    const isMatch = await bcrypt.compare(password, user.customer_password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Sai mật khẩu' });
     }
@@ -198,10 +199,10 @@ exports.login = async (req, res) => {
       token,
       customer: {
         id_customer: user.id_customer,
-        customer_name: user.customer_name,
-        customer_email: user.customer_email,
-        customer_phone: user.customer_phone,
-        customer_status: user.customer_status,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        status: user.status,
       }
     });
   } catch (error) {
@@ -220,10 +221,10 @@ exports.sendOTP = async (req, res) => {
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
 
   try {
-    let user = await Customer.findOne({ where: { customer_email: phoneOrEmail } });
+    let user = await Customer.findOne({ where: { email: phoneOrEmail } });
 
     if (!user) {
-      user = await Customer.findOne({ where: { customer_phone: phoneOrEmail } });
+      user = await Customer.findOne({ where: { phone: phoneOrEmail } });
       if (!user) {
         return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
       }
@@ -232,7 +233,7 @@ exports.sendOTP = async (req, res) => {
       return res.json({ message: 'OTP đã được gửi đến số điện thoại (demo: gửi thành công)' });
     } else {
       // Gửi OTP qua Email
-      await sendOTPByEmail(phoneOrEmail, otp, user.customer_name);
+      await sendOTPByEmail(phoneOrEmail, otp, user.name);
       await redisClient.setEx(phoneOrEmail, 300, JSON.stringify({ otp, expiresAt }));
       return res.json({ message: 'OTP đã được gửi đến email' });
     }
@@ -282,9 +283,9 @@ exports.resetPassword = async (req, res) => {
     if (!parsed.verified) return res.status(400).json({ message: 'Vui lòng xác thực OTP trước' });
 
     // Tìm user
-    let user = await Customer.findOne({ where: { customer_email: phoneOrEmail } });
+    let user = await Customer.findOne({ where: { email: phoneOrEmail } });
     if (!user) {
-      user = await Customer.findOne({ where: { customer_phone: phoneOrEmail } });
+      user = await Customer.findOne({ where: { phone: phoneOrEmail } });
       if (!user) {
         return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
       }
@@ -294,7 +295,7 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Cập nhật mật khẩu
-    await Customer.update({ customer_password: hashedPassword }, { where: { id_customer: user.id_customer } });
+    await Customer.update({ password: hashedPassword }, { where: { id_customer: user.id_customer } });
 
     // Xóa key redis sau khi đổi mật khẩu thành công
     await redisClient.del(phoneOrEmail);

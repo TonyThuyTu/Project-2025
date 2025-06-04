@@ -5,20 +5,20 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true,
     },
-    customer_name: {
+    name: {
       type: DataTypes.STRING(100),
       allowNull: false,
     },
-    customer_phone: {
+    phone: {
       type: DataTypes.STRING(20),
       allowNull: true,
     },
-    customer_email: {
+    email: {
       type: DataTypes.STRING(100),
       allowNull: false,
       unique: true,
     },
-    customer_password: {
+    password: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
@@ -27,9 +27,9 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    customer_status: {
+    status: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false, // mới đúng theo yêu cầu
     },
     block_reason: {
       type: DataTypes.TEXT,
@@ -37,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: '',
     },
   }, {
-    tableName: 'customers',  // chú ý tên bảng viết thường
+    tableName: 'customers',
     timestamps: false,
   });
 

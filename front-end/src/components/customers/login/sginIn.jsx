@@ -1,10 +1,80 @@
-"use client"
+"use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function SginIn() {
+export default function SignIn() {
+  const router = useRouter();
+
+  const [form, setForm] = useState({
+    phoneOrEmail: "",
+    password: "",
+  });
+
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const togglePassword = () => setShowPassword(!showPassword);
+
+  // Validate email format
+  const validateEmail = (email) => {
+    const re = /\S+@\S+\.\S+/;
+    return re.test(email);
+  };
+
+  // Validate phone format (simple)
+  const validatePhone = (phone) => {
+    const re = /^[0-9]{9,11}$/;
+    return re.test(phone);
+  };
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.phoneOrEmail || !form.password) {
+      setError("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    // Check input is email or phone
+    const isEmail = validateEmail(form.phoneOrEmail);
+    const isPhone = validatePhone(form.phoneOrEmail);
+
+    if (!isEmail && !isPhone) {
+      setError("Vui lòng nhập đúng định dạng Email hoặc Số điện thoại");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/customers/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneOrEmail: form.phoneOrEmail,
+          password: form.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Đăng nhập thất bại");
+        return;
+      }
+
+      // Lưu token vào localStorage
+      localStorage.setItem("token", data.token);
+
+      // Redirect về trang chủ
+      router.push("/");
+    } catch (err) {
+      setError("Lỗi mạng, vui lòng thử lại sau");
+    }
+  };
 
   return (
     <section className="container py-5">
@@ -13,19 +83,27 @@ export default function SginIn() {
           <div className="card shadow p-4">
             <h3 className="text-center mb-4">Đăng Nhập</h3>
 
-            <form action="/login" method="POST">
-              {/* Email */}
+            {error && (
+              <div className="alert alert-danger" role="alert">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              {/* Email hoặc SĐT */}
               <div className="mb-3">
-                <label htmlFor="email" className="form-label">
-                  Email:
+                <label htmlFor="phoneOrEmail" className="form-label">
+                  Email hoặc Số điện thoại:
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   className="form-control"
-                  id="email"
-                  name="email"
+                  id="phoneOrEmail"
+                  name="phoneOrEmail"
+                  value={form.phoneOrEmail}
+                  onChange={handleChange}
+                  placeholder="Nhập email hoặc số điện thoại"
                   required
-                  placeholder="Nhập email"
                 />
               </div>
 
@@ -40,15 +118,21 @@ export default function SginIn() {
                     className="form-control"
                     id="password"
                     name="password"
-                    required
+                    value={form.password}
+                    onChange={handleChange}
                     placeholder="Nhập mật khẩu"
+                    required
                   />
                   <span
                     className="input-group-text"
                     style={{ cursor: "pointer" }}
                     onClick={togglePassword}
                   >
-                    <i className={`fa ${showPassword ? "fa-eye" : "fa-eye-slash"}`}></i>
+                    <i
+                      className={`fa ${
+                        showPassword ? "fa-eye" : "fa-eye-slash"
+                      }`}
+                    ></i>
                   </span>
                 </div>
               </div>
