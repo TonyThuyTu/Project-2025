@@ -1,6 +1,41 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 export default function ForgotPass() {
+  const [phoneOrEmail, setPhoneOrEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/customers/forgot/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneOrEmail }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Gửi OTP thất bại");
+
+      setMessage(data.message);
+
+      // ✅ Điều hướng sang trang xác thực OTP, gửi kèm phone/email nếu cần
+      setTimeout(() => {
+        router.push(`/verify-otp?phoneOrEmail=${encodeURIComponent(phoneOrEmail)}`);
+      }, 1000); // đợi 1s để hiển thị thông báo
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <section className="container py-5">
       <div className="row justify-content-center">
@@ -8,8 +43,7 @@ export default function ForgotPass() {
           <div className="card shadow p-4">
             <h3 className="text-center mb-4">Quên Mật Khẩu</h3>
 
-            <form action="/forgot-password" method="POST">
-              {/* Nhập email hoặc số điện thoại */}
+            <form onSubmit={handleSendOTP}>
               <div className="mb-3">
                 <label htmlFor="emailOrPhone" className="form-label">
                   Email hoặc Số điện thoại:
@@ -18,20 +52,22 @@ export default function ForgotPass() {
                   type="text"
                   className="form-control"
                   id="emailOrPhone"
-                  name="emailOrPhone"
+                  value={phoneOrEmail}
+                  onChange={(e) => setPhoneOrEmail(e.target.value)}
                   required
                   placeholder="Nhập email hoặc số điện thoại"
                 />
               </div>
 
-              {/* Nút gửi OTP */}
               <div className="d-grid mb-3">
                 <button type="submit" className="btn btn-primary">
                   Gửi mã OTP
                 </button>
               </div>
 
-              {/* Link quay lại đăng nhập */}
+              {message && <div className="alert alert-success">{message}</div>}
+              {error && <div className="alert alert-danger">{error}</div>}
+
               <p className="text-center mb-0">
                 Quay lại{" "}
                 <a href="/login" className="text-primary text-decoration-none">

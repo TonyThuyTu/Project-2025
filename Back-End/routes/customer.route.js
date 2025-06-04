@@ -22,9 +22,13 @@ router.post('/login', customerController.login);
 
 // Quên mật khẩu có otp
 const forgotRouter = express.Router();
+
 forgotRouter.post('/send-otp', customerController.sendOTP);
+
 forgotRouter.post('/verify-otp', customerController.verifyOTP);
+
 forgotRouter.post('/reset-password', customerController.resetPassword);
+
 router.use('/forgot', forgotRouter);
 
 
