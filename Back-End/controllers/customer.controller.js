@@ -305,3 +305,38 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
+
+// Đổi mật khẩu khi user đã đăng nhập (có currentPassword)
+exports.changePasswordById = async (req, res) => {
+  try {
+    const { id } = req.params; // Lấy id_customer từ URL
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
+    }
+
+    // Tìm user theo id_customer
+    const user = await Customer.findOne({ where: { id_customer: id } });
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản" });
+    }
+
+    // So sánh mật khẩu hiện tại với mật khẩu đã hash
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại không đúng" });
+    }
+
+    // Hash mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Cập nhật mật khẩu mới
+    await Customer.update({ password: hashedPassword }, { where: { id_customer: id } });
+
+    res.json({ message: "Đổi mật khẩu thành công" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};

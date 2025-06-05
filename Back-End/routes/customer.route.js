@@ -20,6 +20,9 @@ router.post('/register', customerController.register);
 // Đăng nhập
 router.post('/login', customerController.login);
 
+// Đổi mật khẩu 
+router.put('/:id/change-password', customerController.changePasswordById);
+
 // Quên mật khẩu có otp
 const forgotRouter = express.Router();
 
