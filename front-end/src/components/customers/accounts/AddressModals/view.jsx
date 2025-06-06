@@ -1,7 +1,37 @@
 "use client";
 
-export default function ViewAddressModal({ address, modalId }) {
-  if (!address) return null; // Nếu chưa có dữ liệu thì không render
+import { useEffect, useState } from "react";
+import axios from "axios";
+
+export default function ViewAddressModal({ addressId, modalId }) {
+  const [address, setAddress] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load chi tiết địa chỉ khi modal được mở
+    useEffect(() => {
+    const modalElement = document.getElementById(modalId);
+    if (!modalElement) return;
+
+    const handleShowWrapper = () => {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const res = await axios.get(`http://localhost:5000/api/address/${addressId}`);
+          setAddress(res.data);
+        } catch (error) {
+          console.error("Lỗi khi lấy địa chỉ:", error);
+          setAddress(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    };
+
+    modalElement.addEventListener("show.bs.modal", handleShowWrapper);
+    return () => modalElement.removeEventListener("show.bs.modal", handleShowWrapper);
+  }, [addressId, modalId]);
+
 
   return (
     <div
@@ -25,28 +55,38 @@ export default function ViewAddressModal({ address, modalId }) {
             ></button>
           </div>
           <div className="modal-body">
-            <dl className="row">
-              <dt className="col-sm-4">Tên địa chỉ</dt>
-              <dd className="col-sm-8">{address.label}</dd>
+            {loading && <p>Đang tải...</p>}
+            {!loading && address && (
+              <dl className="row">
+                <dt className="col-sm-4">Tên địa chỉ</dt>
+                <dd className="col-sm-8">{address.address_label}</dd>
 
-              <dt className="col-sm-4">Thành phố / Tỉnh</dt>
-              <dd className="col-sm-8">{address.city}</dd>
+                <dt className="col-sm-4">Thành phố / Tỉnh</dt>
+                <dd className="col-sm-8">{address.name_city}</dd>
 
-              <dt className="col-sm-4">Quận / Huyện</dt>
-              <dd className="col-sm-8">{address.district}</dd>
+                <dt className="col-sm-4">Quận / Huyện</dt>
+                <dd className="col-sm-8">{address.name_district}</dd>
 
-              <dt className="col-sm-4">Phường / Xã</dt>
-              <dd className="col-sm-8">{address.ward}</dd>
+                <dt className="col-sm-4">Phường / Xã</dt>
+                <dd className="col-sm-8">{address.name_ward}</dd>
 
-              <dt className="col-sm-4">Số nhà, tên đường</dt>
-              <dd className="col-sm-8">{address.street}</dd>
+                <dt className="col-sm-4">Số nhà, tên đường</dt>
+                <dd className="col-sm-8">{address.name_address}</dd>
 
-              <dt className="col-sm-4">Địa chỉ mặc định</dt>
-              <dd className="col-sm-8">{address.isPrimary ? "Có" : "Không"}</dd>
-            </dl>
+                <dt className="col-sm-4">Địa chỉ mặc định</dt>
+                <dd className="col-sm-8">{address.is_primary ? "Có" : "Không"}</dd>
+              </dl>
+            )}
+            {!loading && !address && (
+              <p className="text-danger">Không tìm thấy địa chỉ.</p>
+            )}
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
               Đóng
             </button>
           </div>

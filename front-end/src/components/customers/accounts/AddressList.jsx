@@ -1,55 +1,51 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AddAddressModal from "./AddressModals/add";
 import ViewAddressModal from "./AddressModals/view";
 import UpdateAddress from "./AddressModals/update";
+import axios from "axios";
 
-export default function AddressList() {
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      label: "Nhà riêng",
-      city: "TP.HCM",
-      district: "Quận 1",
-      ward: "Phường Bến Nghé",
-      street: "123 Đường Lê Lợi",
-      isPrimary: true,
-    },
-    // Bạn có thể thêm data thật ở đây
-    {
-      id: 2,
-      label: "Cơ quan",
-      city: "Đà Nẵng",
-      district: "Quận Hải Châu",
-      ward: "Phường Tân Chính",
-      street: "123 Hoàng Hoa Thám",
-      isPrimary: false,
-    },
+export default function AddressList({ id_customer }) {
+  const [addresses, setAddresses] = useState([]);
 
-    {
-      id: 3,
-      label: "Nhà riêng",
-      city: "TP.HCM",
-      district: "Quận 1",
-      ward: "Phường Bến Nghé",
-      street: "123 Đường Lê Lợi",
-      isPrimary: false,
-    },
+  // Lấy danh sách địa chỉ theo id_customer
+  const fetchAddresses = async () => {
+    if (!id_customer) return;
+    try {
+      const res = await axios.get(`http://localhost:5000/api/address/customer/${id_customer}`);
+      console.log("Fetch addresses:", res.data); // Debug dữ liệu
+      // Lấy mảng trong key data, nếu không có thì trả về mảng rỗng
+      setAddresses(Array.isArray(res.data.data) ? res.data.data : []);
+    } catch (error) {
+      console.error("Lỗi khi lấy địa chỉ:", error);
+      setAddresses([]);
+    }
+  };
 
-    {
-      id: 4,
-      label: "Nhà riêng",
-      city: "TP.HCM",
-      district: "Quận 1",
-      ward: "Phường Bến Nghé",
-      street: "123 Đường Lê Lợi",
-      isPrimary: false,
-    },
-  ]);
+  // Load danh sách khi id_customer thay đổi
+  useEffect(() => {
+    fetchAddresses();
+  }, [id_customer]);
+
+  // Reload danh sách (sau thêm/sửa/xóa)
+  const reloadAddresses = () => {
+    fetchAddresses();
+  };
+
+  // Xóa địa chỉ
+  const handleDelete = async (id) => {
+    if (!confirm("Bạn có chắc muốn xóa địa chỉ này?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/address/${id}`);
+      reloadAddresses();
+    } catch (error) {
+      alert("Xóa thất bại: " + (error.response?.data?.message || error.message));
+    }
+  };
 
   return (
     <div>
-    
       <div className="mb-3 d-flex justify-content-between align-items-center">
         <h5>Danh sách địa chỉ</h5>
         <button
@@ -63,72 +59,74 @@ export default function AddressList() {
       </div>
 
       <ul className="list-group" style={{ maxHeight: "300px", overflowY: "auto" }}>
-        {addresses.map((address) => (
-          <li key={address.id} className="list-group-item d-flex justify-content-between align-items-start">
-            <div>
-              <div>
-                <strong>{address.label}</strong>
-                {address.isPrimary && <span className="badge bg-success ms-2">Mặc định</span>}
-              </div>
-              <div>
-                {address.street}, {address.ward}, {address.district}, {address.city}
-              </div>
-            </div>
-
-            <div>
-              <button
-                className="btn btn-sm btn-info me-1"
-                data-bs-toggle="modal"
-                data-bs-target={`#modalViewAddress${address.id}`}
+        {Array.isArray(addresses) && addresses.length > 0 ? (
+          addresses.map((address) => (
+            <li
+              key={address.id_address}
+              className="list-group-item d-flex justify-content-between align-items-start"
             >
-                Xem
-            </button>
+              <div>
+                <div>
+                  <strong>{address.address_label}</strong>
+                  {address.is_primary && (
+                    <span className="badge bg-success ms-2">Mặc định</span>
+                  )}
+                </div>
+                <div>
+                  {address.name_address}, {address.name_ward}, {address.name_district},{" "}
+                  {address.name_city}
+                </div>
+              </div>
 
-              <button
-                type="button"
-                className="btn btn-sm btn-warning me-1"
-                data-bs-toggle="modal"
-                data-bs-target={`#modalEditAddress${address.id}`}
+              <div>
+                <button
+                  className="btn btn-sm btn-info me-1"
+                  data-bs-toggle="modal"
+                  data-bs-target={`#modalViewAddress${address.id_address}`} // ✅ trùng khớp
                 >
-                Sửa
-            </button>
+                  Xem
+                </button>
 
+                <button
+                  type="button"
+                  className="btn btn-sm btn-warning me-1"
+                  data-bs-toggle="modal"
+                  data-bs-target={`#modalEditAddress${address.id_address}`}
+                >
+                  Sửa
+                </button>
 
-              <button
-                type="button"
-                className="btn btn-sm btn-danger"
-                onClick={() => {
-                  if (confirm("Bạn có chắc muốn xóa địa chỉ này?")) {
-                    setAddresses((prev) => prev.filter((a) => a.id !== address.id));
-                  }
-                }}
-              >
-                Xóa
-              </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  onClick={() => handleDelete(address.id_address)}
+                >
+                  Xóa
+                </button>
+              </div>
 
-            </div>
-
-            {/* Model xem chi tiết địa chỉ */}
-            <ViewAddressModal
-            key={`modal-${address.id}`}
-            address={address}
-            modalId={`modalViewAddress${address.id}`}
-            />
-            {/* Model chỉnh sửa địa chỉ */}
-            <UpdateAddress
-            key={`edit-modal-${address.id}`}
-            address={address}
-            modalId={`modalEditAddress${address.id}`}
-            />
-
-          </li>
-        ))}
+              <ViewAddressModal
+                key={`modal-${address.id_address}`}
+                addressId={address.id_address}
+                modalId={`modalViewAddress${address.id_address}`}
+              />
+              <UpdateAddress
+                key={`edit-modal-${address.id_address}`}
+                address={address}
+                modalId={`modalEditAddress${address.id_address}`}
+                onUpdateSuccess={reloadAddresses} // reload sau khi sửa
+              />
+            </li>
+          ))
+        ) : (
+          <li className="list-group-item text-center">Chưa có địa chỉ nào.</li>
+        )}
       </ul>
 
-      {/* Modal Thêm địa chỉ */}
-      <AddAddressModal />
-
-      
+      <AddAddressModal
+        id_customer={id_customer}
+        onSuccess={reloadAddresses} // reload sau khi thêm
+      />
     </div>
   );
 }

@@ -13,6 +13,8 @@ const ProductModel = require('./products')(sequelize, DataTypes);
 
 const EmployeeModel = require('./employees')(sequelize, DataTypes);
 
+const Address = require('./userAddress')(sequelize, DataTypes);
+
 const db = {
   sequelize,
   Sequelize,
@@ -22,6 +24,7 @@ const db = {
   Customer: CustomerModel,
   Product: ProductModel,
   Empolyee: EmployeeModel,
+  Address: Address,
 };
 
 db.Category.hasMany(db.Product, {
@@ -33,5 +36,17 @@ db.Product.belongsTo(db.Category, {
   foreignKey: 'category_id',
   as: 'category'
 });
+
+// Thiết lập quan hệ: Một khách hàng có nhiều địa chỉ
+db.Customer.hasMany(db.Address, {
+  foreignKey: 'id_customer',
+  as: 'addresses'
+});
+
+db.Address.belongsTo(db.Customer, {
+  foreignKey: 'id_customer',
+  as: 'customer'
+});
+
 
 module.exports = db;
