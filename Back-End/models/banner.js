@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    banner_img_url: {
+    banner_img: {
       type: DataTypes.STRING,
       allowNull: false
     }

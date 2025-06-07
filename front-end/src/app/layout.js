@@ -5,6 +5,7 @@ import "../../public/assets/css/bootstrap.min.css";
 import "../../public/assets/css/templatemo.css";
 import "../../public/assets/css/custom.css";
 import "../../public/assets/css/fontawesome.min.css";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 
 

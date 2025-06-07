@@ -8,7 +8,7 @@ export default function RedirectToDefault () {
     const router = useRouter();
 
     useEffect(() => {
-        router.push("/dashboard");
+        router.push("/admin/dashboard");
     }, [router]);
 
     return null;

@@ -38,7 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', routes);
 
 // cho phép upload
-app.use("/upload", express.static(path.join(__dirname, "upload")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Test route
 app.get('/', (req, res) => {
