@@ -1,5 +1,8 @@
 // src/app/layout.js
-import { Geist, Geist_Mono } from "next/font/google";
+import { Roboto, Roboto_Mono } from "next/font/google";
+
+
+
 import "./globals.css";
 import "../../public/assets/css/bootstrap.min.css";
 import "../../public/assets/css/templatemo.css";
@@ -9,14 +12,16 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const roboto = Roboto({
+  weight: ["100", "300", "400", "500", "700", "900"],  // khai báo weights hợp lệ
   subsets: ["latin"],
+  variable: "--font-roboto",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const robotoMono = Roboto_Mono({
+  weight: ["400", "700"],  // khai báo weights hợp lệ cho mono (nếu cần)
   subsets: ["latin"],
+  variable: "--font-roboto-mono",
 });
 
 export const metadata = {
@@ -38,7 +43,8 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;200;300;400;500;700;900&display=swap"
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${roboto.variable} ${robotoMono.variable}`}>
+
         {children}
       </body>
     </html>

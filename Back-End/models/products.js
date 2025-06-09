@@ -1,9 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
-  const Product = sequelize.define('Product', {
+  const Product = sequelize.define("products", {
     id_products: {
       type: DataTypes.INTEGER,
-      primaryKey: true,
       autoIncrement: true,
+      primaryKey: true,
+      allowNull: false,
     },
     category_id: {
       type: DataTypes.INTEGER,
@@ -14,12 +15,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     products_market_price: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+      defaultValue: 0.00,
     },
     products_sale_price: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+      defaultValue: 0.00,
     },
     products_description: {
       type: DataTypes.TEXT,
@@ -27,11 +30,15 @@ module.exports = (sequelize, DataTypes) => {
     },
     products_status: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false,
+    },
+    products_primary: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
   }, {
     tableName: 'products',
-    timestamps: false,
+    timestamps: false,  // hoặc false nếu bạn không dùng createdAt, updatedAt
   });
 
   return Product;
