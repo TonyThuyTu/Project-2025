@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/admin/dashboard", label: "Tổng quan" },
   { href: "/admin/banner", label: "Quảng cáo" },
+  { href: "/admin/categories", label: "Danh mục" },
+  { href: "/admin/products", label: "Sản phẩm" },
   // { href: "/admin/categories", label: "Danh mục" },
   // { href: "/admin/products", label: "Sản phẩm" },
   // { href: "/admin/orders", label: "Đơn hàng" },

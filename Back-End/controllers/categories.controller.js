@@ -35,51 +35,92 @@ exports.getChildrenByParentId = async (req, res) => {
 
 // Thêm danh mục
 exports.createCategory = async (req, res) => {
-  const { name, parent_id } = req.body;
   try {
-    const existing = await Category.findOne({
-      where: {
-        name,
-        parent_id: parent_id || null,
-      }
+    const { name, parent_id, is_active, is_primary } = req.body;
+    const banner = req.file ? req.file.filename : null;
+
+    const exists = await Category.findOne({ where: { name, parent_id: parent_id ?? null } });
+    if (exists) return res.status(400).json({ message: 'Danh mục đã tồn tại' });
+
+    const newCat = await Category.create({
+      name,
+      parent_id: parent_id || null,
+      is_active: is_active === 'true' || is_active === true,
+      is_primary: is_primary === 'true' || is_primary === true,
+      img: banner
     });
 
-    if (existing) {
-      return res.status(400).json({ message: 'Danh mục đã tồn tại' });
+    res.status(201).json(newCat);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+//ẩn hiện danh mục
+exports.toggleActive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Lấy category theo id
+    const category = await Category.findByPk(id);
+    if (!category) return res.status(404).json({ message: 'Danh mục không tồn tại' });
+
+    // Đảo trạng thái is_active
+    category.is_active = !category.is_active;
+    await category.save();
+
+    res.json({ message: 'Cập nhật trạng thái ẩn/hiện thành công', category });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+
+//ghim danh mục lên trang chủ
+exports.togglePrimary = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ message: 'Danh mục không tồn tại' });
     }
 
-    const category = await Category.create({ name, parent_id: parent_id || null });
-    res.status(201).json({ message: 'Created', id: category.category_id });
+    // Đổi trạng thái is_primary (ghim hoặc bỏ ghim)
+    category.is_primary = !category.is_primary;
+    await category.save();
+
+    return res.status(200).json({ 
+      message: category.is_primary ? 'Đã ghim danh mục' : 'Đã bỏ ghim danh mục',
+      category 
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
 // Cập nhật danh mục
 exports.updateCategory = async (req, res) => {
-  const { name, parent_id } = req.body;
-  const id = req.params.id;
+  const { id } = req.params;
+  const { name, parent_id, is_active, is_primary } = req.body;
 
   try {
-    const existing = await Category.findOne({
-      where: {
-        name,
-        parent_id: parent_id || null,
-      }
-    });
+    const category = await Category.findByPk(id);
+    if (!category) return res.status(404).json({ message: 'Danh mục không tồn tại' });
 
-    if (existing && existing.category_id != id) {
-      return res.status(400).json({ message: 'Danh mục đã tồn tại' });
+    // Nếu có file ảnh mới, xử lý upload (nếu dùng multer)
+    if (req.file) {
+      category.img = req.file.filename;
     }
 
-    const [updated] = await Category.update(
-      { name, parent_id: parent_id || null },
-      { where: { category_id: id } }
-    );
+    category.name = name || category.name;
+    category.parent_id = parent_id || null;
+    category.is_active = is_active !== undefined ? is_active : category.is_active;
+    category.is_primary = is_primary !== undefined ? is_primary : category.is_primary;
 
-    if (updated === 0) return res.status(404).json({ message: 'Không tìm thấy danh mục' });
-
-    res.json({ message: 'Updated' });
+    await category.save();
+    res.json({ message: 'Cập nhật thành công', category });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -8,10 +8,27 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      unique: true,
+    },
+    img: {
+      type: DataTypes.STRING(225),
+      allowNull: true,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, // false: hiện
+    },
+    is_primary: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, // false: không hiển thị trang chủ
     },
     parent_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: 'categories',
+        key: 'category_id',
+      },
     },
   }, {
     tableName: 'categories',
