@@ -1,6 +1,8 @@
 const db = require('../models/index.model');
 const bcrypt = require('bcryptjs');
-const Employee = db.Empolyee;
+const Employee = db.Employee;
+const employeeToken = require('../middlewares/tokenForStaff');
+const { Op } =  require('sequelize'); 
 const jwt = require('jsonwebtoken');
 
 exports.login = async (req, res) => {
@@ -17,8 +19,8 @@ exports.login = async (req, res) => {
     const employee = await Employee.findOne({
       where: {
         [db.Sequelize.Op.or]: [
-          { employee_email: identifier },
-          { employee_phone: identifier }
+          { email: identifier },
+          { phone: identifier }
         ]
       }
     });
@@ -30,12 +32,12 @@ exports.login = async (req, res) => {
     }
 
     // Kiểm tra trạng thái block
-    if (employee.employee_block === true || employee.employee_block === 1) {
+    if (employee.block === true || employee.block === 1) {
         return res.status(403).json({ error: 'Tài khoản đã bị chặn. Lý do: ' + (employee.block_reason || 'Không có lý do') });
     }
 
     // Kiểm tra mật khẩu
-    const isPasswordValid = await bcrypt.compare(password, employee.employee_password);
+    const isPasswordValid = await bcrypt.compare(password, employee.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Mật khẩu không chính xác' });
     }
@@ -43,8 +45,8 @@ exports.login = async (req, res) => {
     // Tạo JWT token (ví dụ thời hạn 2 giờ)
     const payload = {
       id_employee: employee.id_employee,
-      employee_name: employee.employee_name,
-      employee_role: employee.employee_role,
+      employee_name: employee.name,
+      employee_role: employee.role,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', { expiresIn: '2h' });
@@ -54,12 +56,12 @@ exports.login = async (req, res) => {
       token,
       employee: {
         id_employee: employee.id_employee,
-        employee_name: employee.employee_name,
-        employee_email: employee.employee_email,
-        employee_phone: employee.employee_phone,
-        employee_role: employee.employee_role,
-        employee_status: employee.employee_status,
-        employee_block: employee.employee_block,
+        employee_name: employee.name,
+        employee_email: employee.email,
+        employee_phone: employee.phone,
+        employee_role: employee.role,
+        employee_status: employee.status,
+        employee_block: employee.block,
       }
     });
 
@@ -93,101 +95,142 @@ exports.getEmployeeById = async (req, res) => {
 exports.createEmployee = async (req, res) => {
   try {
     const {
-      employee_name,
-      empolyee_sex,
-      employee_phone,
-      employee_email,
-      employee_password,
-      employee_position,
-      employee_status,
-      employee_role
+      name,
+      gender,
+      phone,
+      email,
+      password,
+      position,
+      status,
+      role,
+      block_reason
     } = req.body;
 
     // Check email đã tồn tại chưa
-    const emailExists = await Employee.findOne({ where: { employee_email } });
+    const emailExists = await Employee.findOne({ where: { email } });
     if (emailExists) {
       return res.status(400).json({ error: 'Email này đã được sử dụng' });
     }
 
     // Check phone đã tồn tại chưa
-    const phoneExists = await Employee.findOne({ where: { employee_phone } });
+    const phoneExists = await Employee.findOne({ where: { phone } });
     if (phoneExists) {
       return res.status(400).json({ error: 'Số điện thoại này đã được sử dụng' });
     }
 
-    const hashedPassword = await bcrypt.hash(employee_password, 10);
+    // Hash mật khẩu
+    const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Tạo mới nhân viên
     const newEmployee = await Employee.create({
-      employee_name,
-      empolyee_sex,
-      employee_phone,
-      employee_email,
-      employee_password: hashedPassword,
-      employee_position,
-      employee_status: employee_status || 1,  // Mặc định là 1 nếu không truyền
-      employee_role,
-      employee_block: false,
-      block_reason: req.body.block_reason || '', 
+      name,
+      gender,
+      phone,
+      email,
+      password: hashedPassword,
+      position,
+      status: '1',  // mặc định trạng thái '1'
+      role,
+      block: false,
+      block_reason: block_reason || '',
+      created_at: new Date(),
     });
 
-    res.status(201).json(newEmployee);
+    // Tạo token cho nhân viên mới
+    const token = employeeToken(newEmployee);
+
+    // Trả về nhân viên + token
+    res.status(201).json({ employee: newEmployee, token });
   } catch (error) {
+    console.error('Error creating employee:', error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Cập nhật nhân viên
 exports.updateEmployee = async (req, res) => {
   try {
     const id = req.params.id;
-    const updatedData = req.body;
+    const updatedData = { ...req.body };
 
-    if (updatedData.employee_password) {
-      updatedData.employee_password = await bcrypt.hash(updatedData.employee_password, 10);
+    // Xoá không cho cập nhật các trường chặn
+    delete updatedData.block;
+    delete updatedData.block_reason;
+
+    // Không cho cập nhật role (role chỉ được set ban đầu)
+    delete updatedData.role;
+
+    // Kiểm tra trùng email hoặc phone (ngoại trừ chính nhân viên này)
+    const existing = await Employee.findOne({
+      where: {
+        id_employee: { [Op.ne]: id },
+        [Op.or]: [
+          { email: updatedData.email },
+          { phone: updatedData.phone }
+        ]
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ message: 'Email hoặc số điện thoại đã được sử dụng bởi nhân viên khác' });
     }
 
-    const [updated] = await Employee.update(updatedData, { where: { id_employee: id } });
-    if (updated === 0) return res.status(404).json({ message: 'Employee not found' });
+    // Nếu có mật khẩu mới thì hash lại
+    if (updatedData.password || updatedData.employee_password) {
+      // Tùy biến tên trường pass trên FE hay BE
+      const passField = updatedData.password ? 'password' : 'employee_password';
+      updatedData[passField] = await bcrypt.hash(updatedData[passField], 10);
+    }
 
-    res.json({ message: 'Employee updated successfully' });
+    // Cập nhật
+    const [updated] = await Employee.update(updatedData, {
+      where: { id_employee: id }
+    });
+
+    if (updated === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy nhân viên để cập nhật' });
+    }
+
+    return res.json({ message: 'Cập nhật nhân viên thành công' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Lỗi cập nhật nhân viên:', error);
+    return res.status(500).json({ error: error.message });
   }
 };
+
 
 // Block hoặc un-block nhân viên
 exports.blockEmployee = async (req, res) => {
   const id = req.params.id;
-  const { block, reason } = req.body; // block = 1 (chặn), 2 (bỏ chặn)
+  let { block, reason } = req.body;
+  block = Number(block);
 
   try {
     const employee = await Employee.findByPk(id);
     if (!employee) return res.status(404).json({ message: "Employee not found" });
 
-    if (employee.employee_role === 1) {
-      // Nếu là Super Admin thì không cho chặn
+    if (employee.role === 1) {
       return res.status(403).json({ message: "Super Admin cannot be blocked" });
     }
 
     if (block === 1) { // chặn
-        employee.employee_block = true;
-        employee.block_reason = reason || "Không có lý do";
-        employee.employee_status = 3;
-
+      employee.block = true;
+      employee.block_reason = reason || "Không có lý do";
+      employee.status = '3'; // nghỉ việc
     } else if (block === 2) { // bỏ chặn
-        employee.employee_block = false;
-        employee.block_reason = reason || "";
-    if (employee.employee_status === 3) {
-        employee.employee_status = 1;
-    }
-
+      employee.block = false;
+      employee.block_reason = '';
+      if (employee.status === '3') {
+        employee.status = '1'; // quay lại đi làm
+      }
     } else {
-        return res.status(400).json({ message: "Giá trị block không hợp lệ" });
+      return res.status(400).json({ message: "Giá trị block không hợp lệ" });
     }
-
 
     await employee.save();
     res.json({ message: "Employee block status updated", employee });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

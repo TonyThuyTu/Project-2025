@@ -23,7 +23,7 @@ const db = {
   Category: CategoriesModel,
   Customer: CustomerModel,
   Product: ProductModel,
-  Empolyee: EmployeeModel,
+  Employee: EmployeeModel,
   Address: Address,
 };
 

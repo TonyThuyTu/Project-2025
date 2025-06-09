@@ -5,40 +5,40 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true,
       primaryKey: true,
     },
-    employee_name: {
+    name: {
       type: DataTypes.STRING(100),
       allowNull: false,
     },
-    empolyee_sex: {
+    gender: {
       type: DataTypes.INTEGER,
       allowNull: false, // 1: Nam, 2: Nữ
     },
-    employee_phone: {
+    phone: {
       type: DataTypes.STRING(20),
       allowNull: false,
     },
-    employee_email: {
+    email: {
       type: DataTypes.STRING(100),
       allowNull: false,
       unique: true,
     },
-    employee_password: {
+    password: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    employee_position: {
+    position: {
       type: DataTypes.STRING(100),
       allowNull: false,
     },
-    employee_status: {
+    status: {
       type: DataTypes.ENUM('1', '2', '3'), // 1: đi làm, 2: nghỉ phép, 3: nghỉ việc
       defaultValue: '1',
     },
-    employee_role: {
+    role: {
       type: DataTypes.INTEGER, // 1: Super Admin, 2: Seller
       allowNull: false,
     },
-    employee_block: {
+    block: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: '',
     },
-    employee_created_at: {
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
