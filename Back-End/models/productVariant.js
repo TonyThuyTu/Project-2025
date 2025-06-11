@@ -1,11 +1,25 @@
 module.exports = (sequelize, DataTypes) => {
-  const ProductVariant = sequelize.define("product_variants", {
-    id_variant: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    id_products: DataTypes.INTEGER,
-    sku: DataTypes.STRING,
+  const ProductVariant = sequelize.define("ProductVariant", {
+    id_variant: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    id_products: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    sku: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
     price: DataTypes.DECIMAL(10, 2),
     quantity: DataTypes.INTEGER,
-    status: { type: DataTypes.BOOLEAN, defaultValue: true },
+    status: DataTypes.BOOLEAN,
+  }, {
+    tableName: "product_variants",
+    timestamps: false,
   });
+
   return ProductVariant;
 };

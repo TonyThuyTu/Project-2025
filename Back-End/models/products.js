@@ -1,44 +1,37 @@
+// models/products.js
 module.exports = (sequelize, DataTypes) => {
-  const Product = sequelize.define("products", {
-    id_products: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-      allowNull: false,
-    },
-    category_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    products_name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    products_market_price: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
-      defaultValue: 0.00,
-    },
-    products_sale_price: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
-      defaultValue: 0.00,
-    },
-    products_description: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    products_status: {
+  const Product = sequelize.define("Product", {
+    id_products: { 
+      type: DataTypes.INTEGER, 
+      primaryKey: true, 
+      autoIncrement: true },
+
+    category_id: { 
+      type: DataTypes.INTEGER },
+
+    products_name: { 
+      type: DataTypes.STRING },
+
+    products_market_price: { 
+      type: DataTypes.DECIMAL(10, 2) },
+
+    products_sale_price: { 
+      type: DataTypes.DECIMAL(10, 2) },
+
+    products_description: { 
+      type: DataTypes.TEXT },
+
+    products_status: { 
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    products_primary: {
+
+       defaultValue: false },
+    products_primary: { 
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
+
+      defaultValue: false }
   }, {
-    tableName: 'products',
-    timestamps: false,  // hoặc false nếu bạn không dùng createdAt, updatedAt
+    tableName: "products",
+    timestamps: false
   });
 
   return Product;

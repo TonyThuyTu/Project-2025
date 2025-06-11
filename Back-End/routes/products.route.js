@@ -3,13 +3,25 @@ const router = express.Router();
 const upload = require('../helper/upload'); // dùng multer
 const productController = require('../controllers/product.controller');
 
+//add product
+router.post(
+  '/',
+  upload.fields([
+    { name: 'images', maxCount: 20 } // chứa ảnh sản phẩm + ảnh theo option
+  ]),
+  productController.createProducts
+);
+
+//delete product for tester
+router.delete('/:id', productController.deleteProduct);
+
 // Thêm sản phẩm
-router.post('/', upload.fields([
-  { name: 'product_images', maxCount: 10 },
-  { name: 'option_images_0', maxCount: 10 },
-  { name: 'option_images_1', maxCount: 10 }
-])
-, productController.createProduct);
+// router.post('/', upload.fields([
+//   { name: 'product_images', maxCount: 10 },
+//   { name: 'option_images_0', maxCount: 10 },
+//   { name: 'option_images_1', maxCount: 10 }
+// ])
+// , productController.createProduct);
 
 // Cập nhật sản phẩm
 // router.put('/:id', productController.updateProduct);
@@ -18,7 +30,7 @@ router.post('/', upload.fields([
 // router.delete('/:id', productController.deleteProduct);
 
 // Lấy tất cả sản phẩm
-router.get('/', productController.getAllProducts);
+// router.get('/', productController.getAllProducts);
 
 // // Lấy sản phẩm theo id
 // router.get('/:id', productController.getProductById);
