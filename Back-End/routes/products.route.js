@@ -12,6 +12,14 @@ router.post(
   productController.createProducts
 );
 
+//update product
+router.put(
+  '/:id',
+  upload.fields([{ name: 'images', maxCount: 20 }]),
+  productController.updateProduct
+);
+
+
 //delete product for tester
 router.delete('/:id', productController.deleteProduct);
 
