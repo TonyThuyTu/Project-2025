@@ -1,5 +1,6 @@
-import Image from 'next/image';
-import { useState } from 'react';
+"use client";
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import AddProductModal from './form/addProduct'; // Đảm bảo đúng đường dẫn
 
 // Khởi tạo dữ liệu mẫu ban đầu cho sản phẩm
@@ -8,26 +9,78 @@ const initialProducts = [];
 export default function ProductList() {
   const [products, setProducts] = useState(initialProducts);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddProduct = (newProduct) => {
-    setProducts((prev) => [...prev, newProduct]);
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  //thêm sản phẩm
+  const handleAddProduct = async (newProductData) => {
+    try {
+      const formData = new FormData();
+
+      // Giả sử newProductData gồm các trường như name, price, images, specs...
+      Object.keys(newProductData).forEach((key) => {
+        if (key === "images") {
+          newProductData.images.forEach((img) => {
+            formData.append("images", img);
+          });
+        } else {
+          formData.append(key, newProductData[key]);
+        }
+      });
+
+      await axios.post("http://localhost:5000/api/products", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      fetchProducts(); // gọi lại để load danh sách mới
+    } catch (error) {
+      console.error("Lỗi khi thêm sản phẩm:", error);
+    }
   };
 
-  const handleEdit = (id) => {
-    console.log('Edit product', id);
+  //tải danh sách sản phẩm
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/products");
+      console.log("Dữ liệu trả về:", res.data); // ← Kiểm tra field chính xác là gì
+      setProducts(res.data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách sản phẩm:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleHidden = (id) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isHidden: !p.isHidden } : p))
-    );
+
+  //ghim sản phẩm
+  const togglePrimary = async (productId, currentPrimary) => {
+    try {
+      await axios.patch(`http://localhost:5000/api/products/${productId}/toggle-primary`, {
+        products_primary: currentPrimary === 2 ? 1 : 2,
+      });
+      fetchProducts();
+    } catch (err) {
+      console.error("Lỗi khi cập nhật ghim:", err);
+    }
   };
 
-  const handleTogglePinned = (id) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isPinned: !p.isPinned } : p))
-    );
+  //trạng thái khi thêm
+  const getStatusText = (status) => {
+    switch (Number(status)) {
+      case 1:
+        return "Đang chờ duyệt";
+      case 2:
+        return "Đang hiển thị";
+      case 3:
+        return "Đã ẩn";
+      default:
+        return "Không xác định";
+    }
   };
+
 
   return (
     <div className="container p-3">
@@ -38,79 +91,72 @@ export default function ProductList() {
         </button>
       </div>
 
-      <table className="table table-bordered table-hover mt-3">
-        <thead className="table-secondary">
-          <tr>
-            <th>Tên sản phẩm</th>
-            <th>Hình ảnh</th>
-            <th>Giá</th>
-            <th>Mô tả</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.length === 0 ? (
+      {loading ? (
+        <p>Đang tải sản phẩm...</p>
+      ) : (
+        <table className="table table-bordered table-hover mt-3">
+          <thead className="table-secondary">
             <tr>
-              <td colSpan="6" className="text-center">
-                Không có sản phẩm nào.
-              </td>
+              <th>Tên sản phẩm</th>
+              <th>Hình ảnh</th>
+              <th>Giá thị trường</th>
+              <th>Giá bán</th>
+              <th>Ghim</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
             </tr>
-          ) : (
-            products.map((product) => (
-              <tr key={product.id} style={{ opacity: product.isHidden ? 0.5 : 1 }}>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.products_id}>
+                <td>{product.products_name}</td>
                 <td>
-                  {product.name}
-                  {product.isPinned && (
-                    <span
-                      style={{
-                        marginLeft: 6,
-                        padding: '2px 6px',
-                        backgroundColor: '#ff0',
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        fontSize: '12px',
-                      }}
-                    >
-                      Ghim
-                    </span>
-                  )}
-                </td>
-                <td style={{ width: '100px', textAlign: 'center' }}>
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    width={80}
-                    height={50}
-                    style={{ borderRadius: '4px', objectFit: 'cover' }}
+                  <img
+                    src={`http://localhost:5000/api/products/uploads/${product.Img_url}`}
+                    alt=""
+                    width="80"
+                    height="80"
+                    style={{ objectFit: "cover" }}
                   />
                 </td>
-                <td>{product.price.toLocaleString('vi-VN')}₫</td>
-                <td>{product.description}</td>
-                <td>{product.isHidden ? 'Đang ẩn' : 'Đang hiện'}</td>
-                <td style={{ minWidth: '200px' }}>
-                  <button className="btn btn-primary btn-sm me-2" onClick={() => handleEdit(product.id)}>
-                    Sửa
-                  </button>
-                  <button className="btn btn-warning btn-sm me-2" onClick={() => handleToggleHidden(product.id)}>
-                    {product.isHidden ? 'Hiện' : 'Ẩn'}
+                <td>{product.market_price.toLocaleString('vi-VN')} ₫</td>
+                <td>{product.sale_price.toLocaleString('vi-VN')} ₫</td>
+                <td>
+                  {product.products_primary === 2 ? (
+                    <span className="badge bg-success">Đã ghim</span>
+                  ) : (
+                    <span className="badge bg-secondary">Chưa ghim</span>
+                  )}
+                </td>
+                <td>{getStatusText(product.products_status)}</td>
+                <td>
+                  <button
+                    className="btn btn-info btn-sm me-2"
+                    onClick={() => {
+                      // Mở modal xem / sửa sản phẩm
+                      console.log("Xem sản phẩm", product.products_id);
+                    }}
+                  >
+                    Xem
                   </button>
                   <button
-                    className={`btn btn-sm me-2 ${product.isPinned ? 'btn-secondary' : 'btn-success'}`}
-                    onClick={() => handleTogglePinned(product.id)}
+                    className={`btn btn-sm ${
+                      product.products_primary === 2
+                        ? "btn-warning"
+                        : "btn-success"
+                    }`}
+                    onClick={() =>
+                      togglePrimary(product.products_id, product.products_primary)
+                    }
                   >
-                    {product.isPinned ? 'Bỏ ghim' : 'Ghim'}
-                  </button>
-                  <button className="btn btn-primary btn-gray" onClick={() => handleEdit(product.id)}>
-                    Chi tiết
+                    {product.products_primary === 2 ? "Bỏ ghim" : "Ghim"}
                   </button>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-
+            ))}
+          </tbody>
+        </table>
+      )}
       {/* Modal thêm */}
       <AddProductModal show={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddProduct} />
     </div>

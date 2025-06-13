@@ -19,6 +19,11 @@ router.put(
   productController.updateProduct
 );
 
+//get all products
+router.get('/', productController.getAllProducts);
+
+//primany products
+router.patch('/:id/toggle-primary', productController.togglePrimary);
 
 //delete product for tester
 router.delete('/:id', productController.deleteProduct);

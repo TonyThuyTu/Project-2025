@@ -370,6 +370,59 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
+//get all products 
+exports.getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      include: [
+        {
+          model: ProductImg,
+          as: 'images',
+          where: { is_main: true },
+          required: false,
+        },
+      ],
+      
+    });
+
+    const formatted = products.map((p) => ({
+      products_id: p.id_products,
+      products_name: p.products_name,
+      market_price: parseFloat(p.products_market_price),
+      sale_price: parseFloat(p.products_sale_price),
+      products_primary: p.products_primary,
+      products_status: p.products_status,
+      main_image_url: p.images?.[0]?.img_url || null,
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error("Lỗi khi lấy danh sách sản phẩm:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+//primary products
+exports.togglePrimary = async (req, res) => {
+  const productId = req.params.id;
+  const { products_primary } = req.body;
+
+  try {
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
+    }
+
+    product.products_primary = products_primary; // 1 = không ghim, 2 = ghim
+    await product.save();
+
+    res.json({ message: "Cập nhật trạng thái ghim thành công." });
+  } catch (err) {
+    console.error("Lỗi khi cập nhật trạng thái ghim:", err);
+    res.status(500).json({ message: "Lỗi server khi cập nhật trạng thái ghim." });
+  }
+};
+
 // delete products
 exports.deleteProduct = async (req, res) => {
   const t = await db.sequelize.transaction();
