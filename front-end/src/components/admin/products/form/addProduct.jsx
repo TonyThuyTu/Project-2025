@@ -73,7 +73,8 @@ export default function AddProductModal({ show, onClose, onAdd }) {
         formData.append('imageOptionKeys', img.optionKey || '');
         formData.append('imageOptionValues', img.optionValue || '');
       });
-
+      console.log('Dữ liệu SKU gửi lên:', skuList);
+      
       const res = await axios.post('http://localhost:5000/api/products', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

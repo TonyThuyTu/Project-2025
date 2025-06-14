@@ -2,32 +2,19 @@ const db = require('../models/index.model');
 const path = require('path');
 const fs = require('fs');
 const { Op, Sequelize } = require('sequelize');
+const { parseJSONSafe } = require('../helper/parseJson');
+const generateSKU = require('../helper/generateSKU');
 
 const {
-  Product,
-
-  ProductImg,
-
-  ProductSpec,
-
-  ProductAttribute,
-
-  ProductVariant,
-
-  VariantValue,
-
-  AttributeValue,
-
-  Attribute,
-
+  Product, ProductImg, ProductSpec, ProductAttribute,
+  ProductVariant, VariantValue, AttributeValue, Attribute,
 } = db;
 
-//add product
 exports.createProducts = async (req, res) => {
   const t = await db.sequelize.transaction();
-
   try {
-    // Lấy dữ liệu từ body
+    console.log("🔔 Bắt đầu tạo sản phẩm với dữ liệu:", req.body);
+
     const {
       products_name,
       category_id,
@@ -40,82 +27,87 @@ exports.createProducts = async (req, res) => {
       variants,
     } = req.body;
 
-    // Validate bắt buộc và kiểu dữ liệu
-    if (!products_name || typeof products_name !== 'string' || !products_name.trim()) {
-      return res.status(400).json({ message: "Tên sản phẩm là bắt buộc và phải là chuỗi" });
+    // Validate cơ bản
+    if (!products_name?.trim()) {
+      console.warn("⚠️ Tên sản phẩm trống");
+      return res.status(400).json({ message: "Tên sản phẩm là bắt buộc" });
     }
-
     if (!category_id || isNaN(parseInt(category_id))) {
-      return res.status(400).json({ message: "Danh mục sản phẩm là bắt buộc và phải là số" });
+      console.warn("⚠️ Category ID không hợp lệ:", category_id);
+      return res.status(400).json({ message: "Danh mục không hợp lệ" });
     }
 
     const marketPrice = parseFloat(products_market_price) || 0;
     const salePrice = parseFloat(products_sale_price) || 0;
-
     if (marketPrice < 0 || salePrice < 0) {
-      return res.status(400).json({ message: "Giá sản phẩm không được âm" });
+      console.warn("⚠️ Giá thị trường hoặc giá bán âm", marketPrice, salePrice);
+      return res.status(400).json({ message: "Giá không được âm" });
     }
 
-    // Parse các trường JSON
-    const specsParsed = parseJSONSafe(specs);
-    const attributesParsed = parseJSONSafe(attributes);
-    const variantsParsed = parseJSONSafe(variants);
+    const specsParsed = parseJSONSafe(specs, []);
+    const attributesParsed = parseJSONSafe(attributes, []);
+    const variantsParsed = parseJSONSafe(variants, []);
 
     if (!Array.isArray(specsParsed)) {
+      console.warn("⚠️ Specs không phải array:", specsParsed);
       return res.status(400).json({ message: "Thông số kỹ thuật không hợp lệ" });
     }
-
     if (!Array.isArray(attributesParsed)) {
+      console.warn("⚠️ Attributes không phải array:", attributesParsed);
       return res.status(400).json({ message: "Thuộc tính sản phẩm không hợp lệ" });
     }
-
     if (!Array.isArray(variantsParsed)) {
+      console.warn("⚠️ Variants không phải array:", variantsParsed);
       return res.status(400).json({ message: "Biến thể sản phẩm không hợp lệ" });
     }
 
-    // 1. Tạo sản phẩm mới
+    // Tạo sản phẩm chính
     const newProduct = await Product.create({
       products_name: products_name.trim(),
       category_id: parseInt(category_id),
       products_market_price: marketPrice,
       products_sale_price: salePrice,
       products_description: products_description || '',
-      products_status: 1, // chờ duyệt
+      products_status: 1,
       products_primary: false,
     }, { transaction: t });
 
-    // 2. Xử lý ảnh chung
+    console.log("✅ Tạo sản phẩm thành công với id:", newProduct.id_products);
+
+    // Xử lý ảnh upload
     const uploadedImages = req.files?.images || [];
     const mainImgIndex = parseInt(main_image_index);
     const isValidMainImgIndex = !isNaN(mainImgIndex) && mainImgIndex >= 0 && mainImgIndex < uploadedImages.length;
 
     if (uploadedImages.length > 0) {
-      const imageData = uploadedImages.map((file, index) => ({
+      const imageData = uploadedImages.map((file, idx) => ({
         id_products: newProduct.id_products,
         Img_url: `/uploads/${file.filename}`,
-        is_main: isValidMainImgIndex && mainImgIndex === index,
+        is_main: isValidMainImgIndex && idx === mainImgIndex,
       }));
-
       await ProductImg.bulkCreate(imageData, { transaction: t });
+      console.log(`✅ Đã lưu ${imageData.length} ảnh sản phẩm.`);
+    } else {
+      console.log("ℹ️ Không có ảnh sản phẩm upload.");
     }
 
-    // 3. Xử lý specs
-    for (const { name, value } of specsParsed) {
-      if (typeof name === 'string' && name.trim() && typeof value === 'string' && value.trim()) {
+    // Thêm specs
+    for (const spec of specsParsed) {
+      if (spec.name?.trim() && spec.value?.trim()) {
         await ProductSpec.create({
           id_products: newProduct.id_products,
-          spec_name: name.trim(),
-          spec_value: value.trim(),
+          spec_name: spec.name.trim(),
+          spec_value: spec.value.trim(),
         }, { transaction: t });
       }
     }
+    console.log(`✅ Đã lưu ${specsParsed.length} specs.`);
 
-    // 4. Xử lý attributes và values
-    const attributeValueMap = {}; // { optionName: { valueName: id_value } }
-
+    // Map attribute + value
+    const attributeValueMap = {};
     for (const attr of attributesParsed) {
-      if (!attr.name || typeof attr.name !== 'string' || !attr.values || !Array.isArray(attr.values)) {
-        console.warn(`⚠️ Bỏ qua attribute không hợp lệ: ${JSON.stringify(attr)}`);
+      if (!attr.name || !Array.isArray(attr.values)) {
+        console.warn("⚠️ Thuộc tính không hợp lệ, bỏ qua:", attr);
         continue;
       }
 
@@ -130,99 +122,121 @@ exports.createProducts = async (req, res) => {
         id_attribute: attribute.id_attribute,
       }, { transaction: t });
 
-      attributeValueMap[attr.name.trim()] = attributeValueMap[attr.name.trim()] || {};
+      attributeValueMap[attr.name.trim()] = {};
 
       for (const val of attr.values) {
-        if (typeof val !== 'string' || !val.trim()) {
-          console.warn(`⚠️ Bỏ qua giá trị attribute không hợp lệ: ${val}`);
-          continue;
-        }
+        const label = typeof val === 'string' ? val : val?.label;
+        if (!label?.trim()) continue;
+
         const [attributeValue] = await AttributeValue.findOrCreate({
           where: {
             id_attribute: attribute.id_attribute,
-            value: val.trim(),
+            value: label.trim(),
           },
           defaults: {
             id_attribute: attribute.id_attribute,
-            value: val.trim(),
+            value: label.trim(),
           },
           transaction: t,
         });
 
-        attributeValueMap[attr.name.trim()][val.trim()] = attributeValue.id_value;
+        attributeValueMap[attr.name.trim()][label.trim()] = attributeValue.id_value;
       }
     }
+    console.log("✅ Map attributeValueMap:", attributeValueMap);
 
-    // 5. Xử lý variants
-    // Lưu ý: bạn có thể cấu hình tên thuộc tính chính (ví dụ: "Màu sắc") từ FE hoặc config
-    const mainAttrName = "Màu sắc";
-
-    for (const v of variantsParsed) {
-      if (!v.sku || !v.price || !v.values || typeof v.values !== 'object') {
-        console.warn(`⚠️ Bỏ qua variant không hợp lệ: ${JSON.stringify(v)}`);
-        continue;
-      }
-
-      const quantity = parseInt(v.quantity) || 0;
-      const variantImgIndex = parseInt(v.main_image_index);
-      const isValidVariantImgIndex = !isNaN(variantImgIndex) && variantImgIndex >= 0 && variantImgIndex < uploadedImages.length;
-
-      const variant = await ProductVariant.create({
-        id_products: newProduct.id_products,
-        sku: v.sku.trim(),
-        price: parseFloat(v.price),
-        quantity,
-        status: quantity > 0,
-      }, { transaction: t });
-
-      // Tạo variant_values liên kết
-      for (const [attrName, attrValue] of Object.entries(v.values)) {
-        const attrNameTrim = attrName.trim();
-        const attrValueTrim = attrValue.trim();
-
-        const id_value = attributeValueMap[attrNameTrim]?.[attrValueTrim];
-        if (!id_value) {
-          throw new Error(`Không tìm thấy id_value cho: ${attrNameTrim} = ${attrValueTrim}`);
-        }
-
-        await VariantValue.create({
-          id_variant: variant.id_variant,
-          id_value,
-        }, { transaction: t });
-      }
-
-      // Gán ảnh variant nếu có
-      const variantImage = isValidVariantImgIndex ? uploadedImages[variantImgIndex] : null;
-      const mainAttrValue = v.values[mainAttrName];
-      const mainValueId = mainAttrValue ? attributeValueMap[mainAttrName]?.[mainAttrValue.trim()] : null;
-
-      if (variantImage && mainValueId) {
-        await ProductImg.create({
-          id_products: newProduct.id_products,
-          id_variant: variant.id_variant,
-          id_value: mainValueId,
-          Img_url: `/uploads/${variantImage.filename}`,
-          is_main: true,
-        }, { transaction: t });
-      }
-    }
+    // Gọi hàm lưu variants
+    console.log("🔔 Bắt đầu lưu variants:", variantsParsed.length);
+    await saveVariants(variantsParsed, newProduct, uploadedImages, attributeValueMap, t);
 
     await t.commit();
+    console.log("🎉 Tạo sản phẩm hoàn tất, commit transaction.");
 
-    res.status(201).json({
-      message: "Tạo sản phẩm thành công",
-      product: newProduct,
-    });
+    res.status(201).json({ message: "Tạo sản phẩm thành công", product: newProduct });
 
-  } catch (error) {
-    console.error("❌ createProducts error:", error);
+  } catch (err) {
+    console.error("❌ Lỗi tạo sản phẩm:", err);
     await t.rollback();
-    res.status(500).json({
-      message: "Đã xảy ra lỗi khi tạo sản phẩm",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi khi tạo sản phẩm", error: err.message });
   }
 };
+
+// Hàm xử lý biến thể, thêm log chi tiết
+async function saveVariants(variantsParsed, newProduct, uploadedImages, attributeValueMap, transaction) {
+  console.log("🔔 saveVariants bắt đầu với", variantsParsed.length, "variants");
+  const mainAttrName = Object.keys(attributeValueMap)[0];
+  console.log("▶️ Thuộc tính chính (mainAttrName):", mainAttrName);
+
+  for (const v of variantsParsed) {
+    // Chuyển combo thành values object
+    const values = {};
+    if (Array.isArray(v.combo)) {
+      for (const item of v.combo) {
+        if (item.optionName && item.value) {
+          values[item.optionName] = item.value;
+        }
+      }
+    }
+
+    if (!v.price || typeof values !== "object" || Object.keys(values).length === 0) {
+      console.warn("⚠️ Variant thiếu price hoặc values:", v);
+      continue;
+    }
+
+    console.log("⏳ Xử lý variant:", v);
+
+    const quantity = parseInt(v.quantity) || 0;
+    const status = quantity > 0 ? 2 : 1;
+
+    const variantImgIndex = parseInt(v.main_image_index);
+    const isValidVariantImgIndex =
+      !isNaN(variantImgIndex) &&
+      variantImgIndex >= 0 &&
+      variantImgIndex < uploadedImages.length;
+
+    const autoSKU = generateSKU(newProduct.products_name, values);
+    const finalSKU = v.sku?.trim() || autoSKU;
+
+    const variant = await ProductVariant.create({
+      id_products: newProduct.id_products,
+      sku: finalSKU,
+      price: parseFloat(v.price),
+      quantity,
+      status,
+    }, { transaction });
+
+    for (const [attrName, attrValue] of Object.entries(values)) {
+      const id_value = attributeValueMap[attrName?.trim()]?.[attrValue?.trim()];
+      if (!id_value) {
+        console.warn(`❌ Không tìm thấy id_value cho ${attrName} = ${attrValue}`);
+        throw new Error(`Thiếu giá trị thuộc tính: ${attrName} = ${attrValue}`);
+      }
+
+      await VariantValue.create({
+        id_variant: variant.id_variant,
+        id_value,
+      }, { transaction });
+    }
+
+    const variantImage = isValidVariantImgIndex ? uploadedImages[variantImgIndex] : null;
+    const mainAttrValue = values[mainAttrName];
+    const mainValueId = mainAttrValue
+      ? attributeValueMap[mainAttrName]?.[mainAttrValue.trim()]
+      : null;
+
+    if (variantImage && mainValueId) {
+      await ProductImg.create({
+        id_products: newProduct.id_products,
+        id_variant: variant.id_variant,
+        id_value: mainValueId,
+        Img_url: `/uploads/${variantImage.filename}`,
+        is_main: true,
+      }, { transaction });
+    }
+  }
+
+  console.log("✅ Hoàn thành lưu variants.");
+}
 
 //update products
 exports.updateProduct = async (req, res) => {

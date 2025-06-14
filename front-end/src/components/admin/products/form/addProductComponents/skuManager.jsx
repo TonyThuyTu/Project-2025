@@ -1,25 +1,10 @@
 import { useEffect } from "react";
 import { Table, Form, Button } from "react-bootstrap";
 
-
-// Kiểm tra mã màu hex
 function isHexColor(value) {
   return /^#([0-9A-F]{3}){1,2}$/i.test(value);
 }
 
-// Tạo mã SKU từ tên sản phẩm và tổ hợp combo
-function generateSKU(productName, combo) {
-  if (!productName || !Array.isArray(combo)) return "";
-
-  const namePart = productName.toUpperCase().replace(/\s+/g, "").slice(0, 5);
-  const comboPart = combo
-    .map((opt) => (opt.value ? opt.value.toString().toUpperCase().slice(0, 3) : "UNK"))
-    .join("-");
-
-  return `${namePart}-${comboPart}`;
-}
-
-// Lấy tổ hợp giá trị options
 function getOptionCombinations(optionValues) {
   if (optionValues.length === 0) return [];
   return optionValues.reduce((acc, curr) => {
@@ -43,8 +28,7 @@ function isSameSkuList(listA, listB) {
   return true;
 }
 
-export default function SkuManager({ options = [], skuList, setSkuList, productName }) {
-    
+export default function SkuManager({ options = [], skuList, setSkuList }) {
   useEffect(() => {
     if (options.length >= 2) {
       const valuesList = options.map(opt =>
@@ -69,7 +53,7 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
           price: existingSku ? existingSku.price : 0,
           quantity: existingSku ? existingSku.quantity : 0,
           status: existingSku ? existingSku.status : 2,
-          sku: existingSku ? existingSku.sku : generateSKU(productName, combo),
+          // Không cần field `sku`
         };
       });
 
@@ -81,7 +65,7 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
         setSkuList([]);
       }
     }
-  }, [options, productName]);
+  }, [options]);
 
   const handleChange = (i, field, value) => {
     const updated = [...skuList];
@@ -103,7 +87,7 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
             <th>Giá cộng thêm</th>
             <th>Số lượng</th>
             <th>Trạng thái</th>
-            <th>SKU</th>
+            {/* <th>SKU</th> Nếu muốn ẩn hẳn luôn cột SKU */}
             <th>Xoá</th>
           </tr>
         </thead>
@@ -159,9 +143,11 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
                   <option value={1}>Ẩn</option>
                 </Form.Select>
               </td>
+              {/* Nếu vẫn muốn hiển thị SKU (readonly hoặc dummy) thì bật lại:
               <td>
-                <Form.Control value={skuItem.sku} disabled readOnly />
+                <Form.Control value={skuItem.sku || 'Sẽ tạo ở BE'} disabled readOnly />
               </td>
+              */}
               <td>
                 <Button
                   variant="danger"

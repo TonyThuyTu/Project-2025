@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
     sku: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      unique: true,
     },
     price: DataTypes.DECIMAL(10, 2),
     quantity: DataTypes.INTEGER,
