@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Table, Form, Button, Row, Col } from 'react-bootstrap';
 import { Trash } from 'react-bootstrap-icons';
 
 export default function SpecEditor({ specs, setSpecs }) {
-  // specs là array các cặp { name: '', value: '' }
+  const lastInputRef = useRef(null);
 
   const handleAddSpec = () => {
     setSpecs([...specs, { name: '', value: '' }]);
   };
+
+  useEffect(() => {
+    if (lastInputRef.current) {
+      lastInputRef.current.focus();
+    }
+  }, [specs.length]);
 
   const handleRemoveSpec = (index) => {
     const newSpecs = specs.filter((_, i) => i !== index);
@@ -21,7 +27,7 @@ export default function SpecEditor({ specs, setSpecs }) {
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-4" style={{ maxHeight: 300, overflowY: 'auto' }}>
       <h5 className="mb-3">Thông số kỹ thuật</h5>
       <Table bordered responsive>
         <thead>
@@ -40,6 +46,7 @@ export default function SpecEditor({ specs, setSpecs }) {
                   placeholder="VD: Kích thước màn hình"
                   value={spec.name}
                   onChange={(e) => handleSpecChange(index, 'name', e.target.value)}
+                  ref={index === specs.length - 1 ? lastInputRef : null}
                 />
               </td>
               <td>
@@ -55,6 +62,7 @@ export default function SpecEditor({ specs, setSpecs }) {
                   variant="danger"
                   size="sm"
                   onClick={() => handleRemoveSpec(index)}
+                  disabled={specs.length === 1} // không cho xóa nếu chỉ còn 1 dòng
                 >
                   <Trash />
                 </Button>

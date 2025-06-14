@@ -1,287 +1,240 @@
-import { useState } from 'react';
-import { Form, Row, Col, Button, Table, Badge } from 'react-bootstrap';
-import { Trash, Image, StarFill } from 'react-bootstrap-icons';
+import React, { useState } from 'react';
+import { Form, Row, Col, Button, Table } from 'react-bootstrap';
+import { Trash } from 'react-bootstrap-icons';
 
-export default function OptionsManager({ options = [], setOptions }) {
-    const [newOptionName, setNewOptionName] = useState('');
-    const [newOptionType, setNewOptionType] = useState("text"); // 'text' hoặc 'color'
+export default function OptionsManager({ options, setOptions }) {
+  const [newOptionName, setNewOptionName] = useState('');
+  const [newOptionType, setNewOptionType] = useState('text');
 
-    const handleAddOption = () => {
+  const addOption = () => {
     if (!newOptionName.trim()) return;
+    setOptions(prev => [...prev, {
+      name: newOptionName,
+      type: newOptionType,
+      values: [],
+    }]);
+    setNewOptionName('');
+    setNewOptionType('text');
+  };
 
-        const newOption = {
-            name: newOptionName,
-            type: newOptionType,
-            values: [],
-            images: [],
-        };
+  const addValue = (i) => {
+    const updated = [...options];
+    updated[i].values.push({
+      label: '',
+      extraPrice: 0,
+      quantity: 0,
+      status: 2,
+      images: [],
+    });
+    setOptions(updated);
+  };
 
-        setOptions([...options, newOption]);
-        setNewOptionName("");
-        setNewOptionType("text");
-    };
+  const updateOption = (i, key, value) => {
+    const updated = [...options];
+    updated[i][key] = value;
+    setOptions(updated);
+  };
 
-    const handleAddValue = (index) => {
-        const updated = [...options];
-        updated[index].values.push({
-        label: '',
-        extraPrice: 0,
-        quantity: 0,
-        status: 2,
-        image: null,
-        isMain: false,
-        color: '#000000',
-        });
-        setOptions(updated);
-    };
+  const updateValue = (i, j, key, value) => {
+    const updated = [...options];
+    updated[i].values[j][key] = value;
+    setOptions(updated);
+  };
 
-    const handleImageSelect = (optionIndex, valueIndex, file) => {
-        const updated = [...options];
-        updated[optionIndex].values[valueIndex].image = file;
-        setOptions(updated);
-    };
+  const handleUploadValueImage = (e, i, j) => {
+    const files = Array.from(e.target.files);
+    const images = files.map(file => ({
+      file,
+      url: URL.createObjectURL(file),
+      isMain: 2,
+    }));
+    const updated = [...options];
+    updated[i].values[j].images = [...(updated[i].values[j].images || []), ...images];
+    setOptions(updated);
+  };
 
-    const handleToggleImageMain = (optionIndex, imgIndex) => {
-        const updated = [...options];
-        const images = updated[optionIndex].images;
+  const handleToggleMainValueImage = (i, j, k) => {
+    const updated = [...options];
+    updated[i].values[j].images.forEach(img => img.isMain = 2);
+    updated[i].values[j].images[k].isMain = 1;
+    setOptions(updated);
+  };
 
-        const isPinned = images[imgIndex].isMain === 1;
+  const handleRemoveValueImage = (i, j, k) => {
+    const updated = [...options];
+    updated[i].values[j].images.splice(k, 1);
+    setOptions(updated);
+  };
 
-        // Nếu đang ghim → bỏ ghim
-        if (isPinned) {
-            images[imgIndex].isMain = 2;
-        } else {
-            // Bỏ ghim các ảnh khác
-            images.forEach(img => img.isMain = 2);
-            images[imgIndex].isMain = 1;
-        }
+  const removeOption = (i) => {
+    const updated = [...options];
+    updated.splice(i, 1);
+    setOptions(updated);
+  };
 
-        setOptions(updated);
-    };
-
-
-    const handleRemoveImage = (optionIndex, imgIndex) => {
-        const updated = [...options];
-        updated[optionIndex].images.splice(imgIndex, 1);
-        setOptions(updated);
-    };
-
-
-    const handleImageUpload = (e, optionIndex) => {
-        const files = Array.from(e.target.files);
-
-        const imageObjs = files.map(file => ({
-            file,
-            url: URL.createObjectURL(file),
-            isMain: 2, // 2 là mặc định chưa ghim
-        }));
-
-        const updated = [...options];
-        updated[optionIndex].images = [...(updated[optionIndex].images || []), ...imageObjs];
-        setOptions(updated);
-    };
-
-
+  const removeValue = (i, j) => {
+    const updated = [...options];
+    updated[i].values.splice(j, 1);
+    setOptions(updated);
+  };
 
   return (
-    <div className="mb-3">
-        <h5>Quản lý Option</h5>
+    <div className="mb-4">
+      <h5 className="fw-bold">Quản lý Option sản phẩm</h5>
+      <Row className="mb-3">
+        <Col sm={4}>
+          <Form.Control
+            value={newOptionName}
+            onChange={(e) => setNewOptionName(e.target.value)}
+            placeholder="Tên option (VD: Màu sắc)"
+          />
+        </Col>
+        <Col sm={3}>
+          <Form.Select
+            value={newOptionType}
+            onChange={(e) => setNewOptionType(e.target.value)}
+          >
+            <option value="text">Chữ</option>
+            <option value="color">Màu</option>
+          </Form.Select>
+        </Col>
+        <Col sm="auto">
+          <Button onClick={addOption}>Thêm Option</Button>
+        </Col>
+      </Row>
 
-        {/* Thêm option mới */}
-        <Row className="mb-3">
-            <Col sm={4}>
-            <Form.Control
-                value={newOptionName}
-                onChange={(e) => setNewOptionName(e.target.value)}
-                placeholder="Tên option (VD: Màu sắc, Dung lượng)"
-            />
-            </Col>
-            <Col sm={3}>
-            <Form.Select
-                value={newOptionType}
-                onChange={(e) => setNewOptionType(e.target.value)}
-            >
-                <option value="text">Kiểu chữ/số</option>
-                <option value="color">Kiểu màu sắc</option>
-            </Form.Select>
+      {options.map((option, i) => (
+        <div key={i} className="border p-3 rounded mb-3">
+          <Row className="mb-2">
+            <Col>
+              <Form.Control
+                value={option.name}
+                onChange={(e) => updateOption(i, 'name', e.target.value)}
+                placeholder="Tên option"
+              />
             </Col>
             <Col sm="auto">
-            <Button onClick={handleAddOption}>Thêm Option</Button>
+              {options.length > 1 && (
+                <Button variant="danger" size="sm" onClick={() => removeOption(i)}>Xoá</Button>
+              )}
             </Col>
-        </Row>
+          </Row>
 
-        {/* Danh sách option */}
-        {options.map((option, i) => (
-            <div key={i} className="mb-4 p-3 border rounded">
-            <Row className="align-items-center mb-2">
-                <Col>
-                <Form.Control
-                    value={option.name}
-                    onChange={(e) => {
-                    const updated = [...options];
-                    updated[i].name = e.target.value;
-                    setOptions(updated);
-                    }}
-                    placeholder="Tên option"
-                />
-                </Col>
-                {options.length > 1 && (
-                <Col sm="auto">
-                    <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => {
-                        const updated = [...options];
-                        updated.splice(i, 1);
-                        setOptions(updated);
-                    }}
-                    >
-                    Xoá Option
-                    </Button>
-                </Col>
-                )}
-            </Row>
-
-            {/* Upload nhiều ảnh */}
-            <Form.Group controlId={`images-${i}`} className="mb-3">
-                <Form.Label>Thêm ảnh cho option</Form.Label>
-                <Form.Control
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, i)}
-                />
-            </Form.Group>
-
-            {/* Hiển thị danh sách ảnh */}
-            <Row>
-                {option.images?.map((img, imgIndex) => (
-                <Col key={imgIndex} xs={3} className="position-relative mb-3">
-                    <img
-                    src={img.url}
-                    alt=""
-                    className="img-fluid border"
-                    style={{ height: 100, objectFit: "cover" }}
+          <Table bordered size="sm" responsive>
+            <thead>
+              <tr>
+                <th>Giá trị</th>
+                <th>+Giá</th>
+                <th>SL</th>
+                <th>Trạng thái</th>
+                <th>Ảnh</th>
+                <th>Xoá</th>
+              </tr>
+            </thead>
+            <tbody>
+              {option.values.map((val, j) => (
+                <tr key={j}>
+                  <td>
+                    {option.type === 'color' ? (
+                      <Form.Control
+                        type="color"
+                        value={val.label || '#000000'}
+                        onChange={(e) => updateValue(i, j, 'label', e.target.value)}
+                      />
+                    ) : (
+                      <Form.Control
+                        value={val.label}
+                        onChange={(e) => updateValue(i, j, 'label', e.target.value)}
+                      />
+                    )}
+                  </td>
+                  <td>
+                    <Form.Control
+                      type="number"
+                      value={val.extraPrice}
+                      onChange={(e) => updateValue(i, j, 'extraPrice', +e.target.value)}
                     />
-                    <Button
-                    variant={img.isMain === 1 ? "success" : "outline-secondary"}
-                    size="sm"
-                    className="mt-1 w-100"
-                    onClick={() => handleToggleImageMain(i, imgIndex)}
+                  </td>
+                  <td>
+                    <Form.Control
+                      type="number"
+                      value={val.quantity}
+                      onChange={(e) => updateValue(i, j, 'quantity', +e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <Form.Select
+                      value={val.status}
+                      onChange={(e) => updateValue(i, j, 'status', +e.target.value)}
                     >
-                    {img.isMain === 1 ? "Bỏ ghim" : "Ghim ảnh"}
-                    </Button>
-                    <Button
-                    variant="danger"
-                    size="sm"
-                    className="mt-1 w-100"
-                    onClick={() => handleRemoveImage(i, imgIndex)}
+                      <option value={2}>Hiển thị</option>
+                      <option value={1}>Ẩn</option>
+                    </Form.Select>
+                  </td>
+                  <td style={{ minWidth: 240 }}>
+                    <Form.Control
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleUploadValueImage(e, i, j)}
+                    />
+                    <div
+                      className="d-flex flex-wrap gap-2 mt-2"
+                      style={{ maxWidth: '100%' }}
                     >
-                    Xoá ảnh
+                      {val.images?.map((img, k) => (
+                        <div
+                          key={k}
+                          style={{ width: '70px', textAlign: 'center' }}
+                        >
+                          <img
+                            src={img.url}
+                            className="img-thumbnail"
+                            style={{
+                              width: '100%',
+                              height: '70px',
+                              objectFit: 'cover',
+                              border: img.isMain === 1 ? '2px solid #198754' : '1px solid #ccc',
+                              borderRadius: '6px',
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            variant={img.isMain === 1 ? 'success' : 'outline-secondary'}
+                            className="mt-1 w-100 p-1"
+                            style={{ fontSize: '0.7rem' }}
+                            onClick={() => handleToggleMainValueImage(i, j, k)}
+                          >
+                            {img.isMain === 1 ? 'Đại diện' : 'Ghim'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            className="mt-1 w-100 p-1"
+                            style={{ fontSize: '0.7rem' }}
+                            onClick={() => handleRemoveValueImage(i, j, k)}
+                          >
+                            Xoá
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <Button size="sm" variant="danger" onClick={() => removeValue(i, j)}>
+                      <Trash />
                     </Button>
-                </Col>
-                ))}
-            </Row>
-
-            {/* Bảng giá trị */}
-            <Table size="sm" bordered responsive>
-                <thead>
-                <tr>
-                    <th>Giá trị</th>
-                    <th>Giá cộng thêm</th>
-                    <th>Số lượng</th>
-                    <th>Trạng thái</th>
-                    <th>Xoá</th>
+                  </td>
                 </tr>
-                </thead>
-                <tbody>
-                {option.values.map((value, j) => (
-                    <tr key={j}>
-                    <td>
-                        {option.type === "color" ? (
-                        <Form.Control
-                            type="color"
-                            value={value.label || "#000000"}
-                            onChange={(e) => {
-                            const updated = [...options];
-                            updated[i].values[j].label = e.target.value;
-                            setOptions(updated);
-                            }}
-                        />
-                        ) : (
-                        <Form.Control
-                            value={value.label}
-                            onChange={(e) => {
-                            const updated = [...options];
-                            updated[i].values[j].label = e.target.value;
-                            setOptions(updated);
-                            }}
-                        />
-                        )}
-                    </td>
-                    <td>
-                        <Form.Control
-                        type="number"
-                        value={value.extraPrice ?? 0}
-                        onChange={(e) => {
-                            const updated = [...options];
-                            updated[i].values[j].extraPrice = Number(e.target.value);
-                            setOptions(updated);
-                        }}
-                        />
-                    </td>
-                    <td>
-                        <Form.Control
-                        type="number"
-                        value={value.quantity ?? 0}
-                        onChange={(e) => {
-                            const updated = [...options];
-                            updated[i].values[j].quantity = Number(e.target.value);
-                            setOptions(updated);
-                        }}
-                        />
-                    </td>
-                    <td>
-                        <Form.Select
-                        value={value.status ?? 2}
-                        onChange={(e) => {
-                            const updated = [...options];
-                            updated[i].values[j].status = Number(e.target.value);
-                            setOptions(updated);
-                        }}
-                        >
-                        <option value={2}>Hiển thị</option>
-                        <option value={1}>Ẩn</option>
-                        </Form.Select>
-                    </td>
-                    <td>
-                        <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => {
-                            const updated = [...options];
-                            updated[i].values.splice(j, 1);
-                            setOptions(updated);
-                        }}
-                        >
-                        <Trash />
-                        </Button>
-                    </td>
-                    </tr>
-                ))}
-                </tbody>
-            </Table>
+              ))}
+            </tbody>
+          </Table>
 
-            <Button
-                variant="outline-primary"
-                size="sm"
-                onClick={() => handleAddValue(i)}
-            >
-                Thêm giá trị
-            </Button>
-            </div>
-        ))}
+          <Button variant="outline-primary" size="sm" onClick={() => addValue(i)}>
+            Thêm giá trị
+          </Button>
         </div>
-
+      ))}
+    </div>
   );
 }

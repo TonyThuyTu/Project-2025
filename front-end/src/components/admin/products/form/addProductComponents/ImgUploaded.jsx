@@ -20,6 +20,7 @@ export default function ImgUploaded({ images, setImages }) {
       reader.onload = () => {
         newImages.push({
           id: nanoid(),
+          file,
           url: reader.result,
           // Nếu chưa có ảnh ghim, ảnh đầu tiên được ghim, còn lại không
           isMain: hasMain ? 2 : (idx === 0 ? 1 : 2),

@@ -33,11 +33,22 @@ function getOptionCombinations(optionValues) {
   }, [[]]);
 }
 
+function isSameSkuList(listA, listB) {
+  if (listA.length !== listB.length) return false;
+  for (let i = 0; i < listA.length; i++) {
+    if (JSON.stringify(listA[i]) !== JSON.stringify(listB[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export default function SkuManager({ options = [], skuList, setSkuList, productName }) {
+    
   useEffect(() => {
-    if (options.length >= 1) {
-      const valuesList = options.map((opt) =>
-        opt.values.map((v) => ({
+    if (options.length >= 2) {
+      const valuesList = options.map(opt =>
+        opt.values.map(v => ({
           label: v.label,
           value: v.value || v.label,
           optionName: opt.name,
@@ -46,8 +57,8 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
 
       const combinations = getOptionCombinations(valuesList);
 
-      const newSkus = combinations.map((combo) => {
-        const existingSku = skuList.find((sku) => {
+      const newSkus = combinations.map(combo => {
+        const existingSku = skuList.find(sku => {
           if (!sku.combo) return false;
           if (sku.combo.length !== combo.length) return false;
           return sku.combo.every((item, idx) => item.value === combo[idx].value);
@@ -62,9 +73,13 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
         };
       });
 
-      setSkuList(newSkus);
+      if (!isSameSkuList(newSkus, skuList)) {
+        setSkuList(newSkus);
+      }
     } else {
-      setSkuList([]);
+      if (skuList.length !== 0) {
+        setSkuList([]);
+      }
     }
   }, [options, productName]);
 
@@ -74,7 +89,7 @@ export default function SkuManager({ options = [], skuList, setSkuList, productN
     setSkuList(updated);
   };
 
-  if (options.length < 1) return null;
+  if (options.length < 2) return null;
 
   return (
     <div className="mt-4">

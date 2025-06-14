@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../helper/upload'); // dùng multer
 const productController = require('../controllers/product.controller');
+const validateJsonMiddleware = require('../middlewares/validateJson');
 
 //add product
 router.post(
   '/',
-  upload.fields([
-    { name: 'images', maxCount: 20 } // chứa ảnh sản phẩm + ảnh theo option
-  ]),
+  upload.fields([{ name: 'images', maxCount: 20 }]),
+  validateJsonMiddleware(['specs', 'attributes', 'variants']), // ⬅️ Thêm dòng này để parse JSON
   productController.createProducts
 );
 
