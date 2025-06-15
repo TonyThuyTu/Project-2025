@@ -27,11 +27,12 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
   useEffect(() => {
     if (productData) {
+      console.log('productData', productData);
+
       setProductName(productData.products_name || '');
-      setMarketPrice(productData.products_market_price || '');
-      setSalePrice(productData.products_sale_price || '');
+      setMarketPrice(productData.market_price?.toString() || '');
+      setSalePrice(productData.sale_price?.toString() || '');
       setDescription(productData.products_description || '');
-      setSelectedParent(productData.parent_category_id || '');
       setSelectedChild(productData.category_id || '');
       setStatus(productData.products_status || 1);
 
@@ -52,8 +53,24 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         fromServer: true,
       }));
       setImages(imageList);
+
+      // ✅ Lấy danh mục cha từ category_id
+      if (!productData.parent_category_id && productData.category_id) {
+        axios.get('http://localhost:5000/api/categories')
+          .then(res => {
+            const allCategories = res.data;
+            const current = allCategories.find(cat => cat.category_id === productData.category_id);
+            if (current?.parent_id) {
+              setSelectedParent(current.parent_id);
+            }
+          })
+          .catch(err => console.error('Lỗi khi lấy danh mục:', err));
+      } else {
+        setSelectedParent(productData.parent_category_id || '');
+      }
     }
   }, [productData]);
+
 
   const validateForm = () => {
     const categoryId = selectedChild || selectedParent;

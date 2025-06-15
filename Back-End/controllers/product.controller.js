@@ -8,6 +8,8 @@ const generateSKU = require('../helper/generateSKU');
 const {
   Product, ProductImg, ProductSpec, ProductAttribute,
   ProductVariant, VariantValue, AttributeValue, Attribute,
+  ProductAttributeValue
+  
 } = db;
 
 exports.createProducts = async (req, res) => {
@@ -370,6 +372,137 @@ exports.updateProduct = async (req, res) => {
     console.error("❌ Lỗi cập nhật sản phẩm:", err);
     await t.rollback();
     res.status(500).json({ message: "Lỗi khi cập nhật sản phẩm", error: err.message });
+  }
+};
+
+//getProductByid
+exports.getProductsById = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    // 1. Thông tin sản phẩm chính
+    const product = await Product.findOne({
+      where: { id_products: id },
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    // 2. Ảnh sản phẩm
+    const images = await ProductImg.findAll({
+      where: { id_products: id },
+      // raw: true, // nếu cần plain object
+    });
+
+    // 3. Thông số kỹ thuật
+    const specs = await ProductSpec.findAll({
+      where: { id_products: id },
+      // raw: true,
+    });
+
+    // 4. Lấy attribute kèm giá trị thuộc sản phẩm chính xác
+    // Lấy ProductAttribute (liên kết sản phẩm với Attribute)
+    // rồi join sang AttributeValue qua ProductAttributeValue lọc theo id_product
+    const productAttributes = await ProductAttribute.findAll({
+      where: { id_product: id },
+      include: [
+        {
+          model: Attribute,
+          as: 'attribute',
+          include: [
+            {
+              model: AttributeValue,
+              as: 'values',
+              required: false,
+              include: [
+                {
+                  model: ProductAttributeValue,
+                  as: 'productAttributeValues',
+                  where: { id_product: id }, // Chỉ lấy giá trị thuộc sản phẩm này
+                  required: true,  // bắt buộc join, để lọc đúng
+                },
+                {
+                  model: ProductImg,
+                  as: 'images',
+                }
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    // Chuyển đổi dữ liệu sang dạng trả về client
+    const attributes = productAttributes.map(pa => ({
+      attribute_id: pa.id_attribute,
+      attribute_name: pa.attribute?.attribute_name,
+      type: pa.attribute?.type || 'text',
+      values: pa.attribute?.values?.map(v => ({
+        value_id: v.id_value,
+        value: v.value,
+        extra_price: v.extra_price,
+        quantity: v.quantity,
+        status: v.status,
+        is_main: v.is_main,
+        color_code: v.color_code || null,
+        images: v.images || [],
+      })) || [],
+    }));
+
+    // 5. Lấy SKU + option combo + ảnh SKU nếu có
+    const variantsRaw = await ProductVariant.findAll({
+      where: { id_products: id },
+      include: [
+        {
+          model: VariantValue,
+          as: 'variantValues',
+          include: [
+            {
+              model: AttributeValue,
+              as: 'attributeValue',
+              include: [
+                {
+                  model: Attribute,
+                  as: 'attribute',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: ProductImg,
+          as: 'images', // ảnh SKU nếu có
+        },
+      ],
+    });
+
+    const skus = variantsRaw.map(variant => ({
+      variant_id: variant.id_product_variant,
+      sku_code: variant.sku_code,
+      quantity: variant.quantity,
+      extra_price: variant.extra_price,
+      status: variant.status,
+      images: variant.images || [],
+      option_combo: variant.variantValues.map(v => ({
+        attribute: v.attributeValue?.attribute?.attribute_name,
+        value: v.attributeValue?.value,
+      })),
+    }));
+
+    return res.json({
+      product,
+      images,
+      specs,
+      attributes,
+      skus,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm theo ID:", error);
+    return res.status(500).json({
+      message: "Lỗi khi lấy sản phẩm",
+      error: error.message || error,
+    });
   }
 };
 

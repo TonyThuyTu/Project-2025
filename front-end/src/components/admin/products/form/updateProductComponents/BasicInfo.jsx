@@ -21,6 +21,7 @@ export default function BasicInfo({ productName, setProductName, marketPrice, se
           id="marketPrice"
           placeholder="Nhập giá thị trường"
           value={marketPrice}
+          min = {0}
           onChange={e => setMarketPrice(e.target.value)}
         />
       </div>

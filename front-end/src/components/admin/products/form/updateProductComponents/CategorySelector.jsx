@@ -10,6 +10,14 @@ export default function CategorySelector({ selectedParent, setSelectedParent, se
       .then(res => {
         if (Array.isArray(res.data)) {
           setCategories(res.data);
+
+          // Nếu có selectedChild mà chưa có selectedParent thì tự tìm parent_id
+          if (selectedChild && !selectedParent) {
+            const child = res.data.find(cat => cat.category_id === selectedChild);
+            if (child?.parent_id) {
+              setSelectedParent(child.parent_id);
+            }
+          }
         } else {
           console.error("API danh mục trả về dữ liệu không hợp lệ");
         }

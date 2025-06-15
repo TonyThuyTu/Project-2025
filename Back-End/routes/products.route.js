@@ -19,6 +19,9 @@ router.put(
   productController.updateProduct
 );
 
+//get product by id
+router.get('/:id', productController.getProductsById);
+
 //get all products
 router.get('/', productController.getAllProducts);
 

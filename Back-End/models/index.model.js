@@ -16,6 +16,7 @@ const AttributeValue = require('./AttributeValue')(sequelize, DataTypes);
 const ProductAttribute = require('./productAttribute')(sequelize, DataTypes);
 const ProductVariant = require('./productVariant')(sequelize, DataTypes);
 const VariantValue = require('./variantValue')(sequelize, DataTypes);
+const ProductAttributeValue = require('./ProductAttributeValue') (sequelize, DataTypes);
 // Khởi tạo object db
 const db = {
   sequelize,
@@ -36,6 +37,7 @@ const db = {
   ProductAttribute,
   ProductVariant,
   VariantValue,
+  ProductAttributeValue,
 };
 
 /* =========================
@@ -51,6 +53,8 @@ db.Category.hasMany(db.Category, {
   foreignKey: 'parent_id',
   as: 'children',
 });
+
+
 
 // Danh mục - Sản phẩm
 db.Category.hasMany(db.Product, {
@@ -110,9 +114,9 @@ db.ProductAttribute.belongsTo(db.Product, {
   as: 'product',
 });
 
-db.Attribute.hasMany(db.ProductAttribute, {
+db.Attribute.hasMany(db.AttributeValue, {
   foreignKey: 'id_attribute',
-  as: 'productAttributes',
+  as: 'values',  // "values" đúng tên bạn dùng trong include
 });
 db.ProductAttribute.belongsTo(db.Attribute, {
   foreignKey: 'id_attribute',
@@ -128,9 +132,9 @@ db.VariantValue.belongsTo(db.ProductVariant, {
   as: 'variant',
 });
 
-db.AttributeValue.hasMany(db.VariantValue, {
-  foreignKey: 'id_value',
-  as: 'usedInVariants',
+db.AttributeValue.belongsTo(db.Attribute, {
+  foreignKey: 'id_attribute',
+  as: 'attribute',
 });
 db.VariantValue.belongsTo(db.AttributeValue, {
   foreignKey: 'id_value',
@@ -155,6 +159,30 @@ db.AttributeValue.hasMany(db.ProductImg, {
 db.ProductImg.belongsTo(db.AttributeValue, {
   foreignKey: 'id_value',
   as: 'value',
+});
+
+// ProductAttribute → AttributeValue
+
+db.Attribute.hasMany(db.ProductAttribute, {
+  foreignKey: 'id_attribute',
+  as: 'productAttributes',
+});
+
+db.ProductAttributeValue.belongsTo(db.Product, { 
+  foreignKey: 'id_product', 
+  as: 'product' });
+db.ProductAttributeValue.belongsTo(db.AttributeValue, { 
+  foreignKey: 'id_value', 
+  as: 'attributeValue' });
+
+db.Product.hasMany(db.ProductAttributeValue, {
+  foreignKey: 'id_product',
+  as: 'productAttributeValues',
+});
+
+db.AttributeValue.hasMany(db.ProductAttributeValue, {
+  foreignKey: 'id_value',
+  as: 'productAttributeValues',
 });
 
 module.exports = db;
