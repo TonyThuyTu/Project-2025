@@ -1,26 +1,36 @@
 "use client";
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import AddProductModal from './form/addProduct'; // Đảm bảo đúng đường dẫn
+import { useState, useEffect } from "react";
+import axios from "axios";
+import AddProductModal from "./form/addProduct";
+import EditProductModal from "./form/updateProduct"; // đường dẫn tương ứng
 
-// Khởi tạo dữ liệu mẫu ban đầu cho sản phẩm
 const initialProducts = [];
 
 export default function ProductList() {
   const [products, setProducts] = useState(initialProducts);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  //thêm sản phẩm
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/products");
+      setProducts(res.data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách sản phẩm:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddProduct = async (newProductData) => {
     try {
       const formData = new FormData();
-
-      // Giả sử newProductData gồm các trường như name, price, images, specs...
       Object.keys(newProductData).forEach((key) => {
         if (key === "images") {
           newProductData.images.forEach((img) => {
@@ -30,32 +40,15 @@ export default function ProductList() {
           formData.append(key, newProductData[key]);
         }
       });
-
       await axios.post("http://localhost:5000/api/products", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
-      fetchProducts(); // gọi lại để load danh sách mới
+      fetchProducts();
     } catch (error) {
       console.error("Lỗi khi thêm sản phẩm:", error);
     }
   };
 
-  //tải danh sách sản phẩm
-  const fetchProducts = async () => {
-    try {
-      const res = await axios.get("http://localhost:5000/api/products");
-      console.log("Dữ liệu trả về:", res.data); // ← Kiểm tra field chính xác là gì
-      setProducts(res.data);
-    } catch (error) {
-      console.error("Lỗi khi tải danh sách sản phẩm:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  //ghim sản phẩm
   const togglePrimary = async (productId, currentPrimary) => {
     try {
       await axios.patch(`http://localhost:5000/api/products/${productId}/toggle-primary`, {
@@ -67,7 +60,6 @@ export default function ProductList() {
     }
   };
 
-  //trạng thái khi thêm
   const getStatusText = (status) => {
     switch (Number(status)) {
       case 1:
@@ -81,6 +73,17 @@ export default function ProductList() {
     }
   };
 
+  // Mở modal sửa và set sản phẩm chọn
+  const handleEditClick = (product) => {
+    setSelectedProduct(product);
+    setShowEditModal(true);
+  };
+
+  // Xử lý sau khi update thành công
+  const handleUpdateProduct = () => {
+    fetchProducts();
+    setShowEditModal(false);
+  };
 
   return (
     <div className="container p-3">
@@ -119,8 +122,8 @@ export default function ProductList() {
                     style={{ objectFit: "cover" }}
                   />
                 </td>
-                <td>{product.market_price.toLocaleString('vi-VN')} ₫</td>
-                <td>{product.sale_price.toLocaleString('vi-VN')} ₫</td>
+                <td>{product.market_price.toLocaleString("vi-VN")} ₫</td>
+                <td>{product.sale_price.toLocaleString("vi-VN")} ₫</td>
                 <td>
                   {product.products_primary === 2 ? (
                     <span className="badge bg-success">Đã ghim</span>
@@ -132,22 +135,15 @@ export default function ProductList() {
                 <td>
                   <button
                     className="btn btn-info btn-sm me-2"
-                    onClick={() => {
-                      // Mở modal xem / sửa sản phẩm
-                      console.log("Xem sản phẩm", product.products_id);
-                    }}
+                    onClick={() => handleEditClick(product)}
                   >
                     Xem
                   </button>
                   <button
                     className={`btn btn-sm ${
-                      product.products_primary === 2
-                        ? "btn-warning"
-                        : "btn-success"
+                      product.products_primary === 2 ? "btn-warning" : "btn-success"
                     }`}
-                    onClick={() =>
-                      togglePrimary(product.products_id, product.products_primary)
-                    }
+                    onClick={() => togglePrimary(product.products_id, product.products_primary)}
                   >
                     {product.products_primary === 2 ? "Bỏ ghim" : "Ghim"}
                   </button>
@@ -157,8 +153,23 @@ export default function ProductList() {
           </tbody>
         </table>
       )}
+
       {/* Modal thêm */}
-      <AddProductModal show={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddProduct} />
+      <AddProductModal
+        show={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddProduct}
+      />
+
+      {/* Modal sửa */}
+      {selectedProduct && (
+        <EditProductModal
+          show={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          productData={selectedProduct}
+          onUpdate={handleUpdateProduct}
+        />
+      )}
     </div>
   );
 }

@@ -241,173 +241,138 @@ async function saveVariants(variantsParsed, newProduct, uploadedImages, attribut
 //update products
 exports.updateProduct = async (req, res) => {
   const t = await db.sequelize.transaction();
-
   try {
-    const productId = req.params.id;
-
     const {
+      id_products,
       products_name,
       category_id,
       products_market_price,
       products_sale_price,
       products_description,
-      products_status,
-      products_primary,
       specs,
+      main_image_index,
       attributes,
       variants,
-      main_image_index,
     } = req.body;
 
-    const product = await Product.findByPk(productId);
+    if (!id_products) return res.status(400).json({ message: "ID sản phẩm là bắt buộc" });
+    if (!products_name?.trim()) return res.status(400).json({ message: "Tên sản phẩm là bắt buộc" });
+    if (!category_id || isNaN(parseInt(category_id))) return res.status(400).json({ message: "Danh mục không hợp lệ" });
+
+    const marketPrice = parseFloat(products_market_price) || 0;
+    const salePrice = parseFloat(products_sale_price) || 0;
+    if (marketPrice < 0 || salePrice < 0) return res.status(400).json({ message: "Giá không được âm" });
+
+    const specsParsed = parseJSONSafe(specs, []);
+    const attributesParsed = parseJSONSafe(attributes, []);
+    const variantsParsed = parseJSONSafe(variants, []);
+
+    // Tìm sản phẩm cần update
+    const product = await Product.findByPk(id_products, { transaction: t });
     if (!product) {
-      return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+      await t.rollback();
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
 
+    // Cập nhật bảng products
     await product.update({
-      products_name,
-      category_id,
-      products_market_price,
-      products_sale_price,
-      products_description,
-      products_primary,
-      products_status,
+      products_name: products_name.trim(),
+      category_id: parseInt(category_id),
+      products_market_price: marketPrice,
+      products_sale_price: salePrice,
+      products_description: products_description || '',
     }, { transaction: t });
 
-    // Specs
-    if (specs) {
-      const parsedSpecs = typeof specs === 'string' ? JSON.parse(specs) : specs;
-      await ProductSpec.destroy({ where: { id_products: productId }, transaction: t });
+    // Xử lý ảnh
+    const uploadedImages = req.files?.images || [];
+    const mainImgIndex = parseInt(main_image_index);
+    const isValidMainImgIndex = !isNaN(mainImgIndex) && mainImgIndex >= 0 && mainImgIndex < uploadedImages.length;
 
-      for (const { key, value } of parsedSpecs) {
-        if (key && value) {
-          await ProductSpec.create({
-            id_products: productId,
-            spec_name: key,
-            spec_value: value,
-          }, { transaction: t });
-        }
+    // Xóa hết ảnh hiện tại nếu muốn hoặc có thể nâng cấp xử lý ảnh theo yêu cầu bạn
+    await ProductImg.destroy({ where: { id_products: id_products }, transaction: t });
+
+    if (uploadedImages.length > 0) {
+      const imageData = uploadedImages.map((file, idx) => ({
+        id_products,
+        Img_url: `/uploads/${file.filename}`,
+        is_main: isValidMainImgIndex && idx === mainImgIndex,
+      }));
+      await ProductImg.bulkCreate(imageData, { transaction: t });
+    }
+
+    // Xóa specs cũ rồi thêm mới
+    await ProductSpec.destroy({ where: { id_products }, transaction: t });
+    for (const spec of specsParsed) {
+      if (spec.name?.trim() && spec.value?.trim()) {
+        await ProductSpec.create({
+          id_products,
+          spec_name: spec.name.trim(),
+          spec_value: spec.value.trim(),
+        }, { transaction: t });
       }
     }
 
-    // Xoá attributes và variants cũ
-    await VariantValue.destroy({
-      where: {
-        id_variant: {
-          [Op.in]: Sequelize.literal(`(SELECT id_variant FROM product_variants WHERE id_products = ${productId})`)
-        }
-      },
-      transaction: t
-    });
-    await ProductVariant.destroy({ where: { id_products: productId }, transaction: t });
-    await ProductAttribute.destroy({ where: { id_product: productId }, transaction: t });
+    // Xóa attribute + attribute_value liên quan rồi tạo mới (hoặc bạn có thể cập nhật phức tạp hơn)
+    await ProductAttribute.destroy({ where: { id_product: id_products }, transaction: t });
+    // Cũng xóa variant_value + variant + thêm mới ở phần dưới
 
-    // Xử lý attributes
-    let parsedAttributes = typeof attributes === 'string' ? JSON.parse(attributes) : attributes;
-    let attributeValueMap = {};
+    const attributeValueMap = {};
+    for (const attr of attributesParsed) {
+      if (!attr.name || !Array.isArray(attr.values)) continue;
 
-    for (const attr of parsedAttributes) {
-      const [attribute] = await Attribute.findOrCreate({ where: { name: attr.name }, defaults: { name: attr.name } });
-      await ProductAttribute.create({ id_product: productId, id_attribute: attribute.id_attribute }, { transaction: t });
+      const [attribute] = await Attribute.findOrCreate({
+        where: { name: attr.name.trim() },
+        defaults: { name: attr.name.trim() },
+        transaction: t,
+      });
 
-      for (const value of attr.values) {
-        const [attrValue] = await AttributeValue.findOrCreate({
-          where: { id_attribute: attribute.id_attribute, value },
-          defaults: { id_attribute: attribute.id_attribute, value },
+      await ProductAttribute.create({
+        id_product: id_products,
+        id_attribute: attribute.id_attribute,
+      }, { transaction: t });
+
+      attributeValueMap[attr.name.trim()] = {};
+
+      for (const val of attr.values) {
+        const label = typeof val === 'string' ? val : val?.label;
+        if (!label?.trim()) continue;
+
+        const [attributeValue] = await AttributeValue.findOrCreate({
+          where: {
+            id_attribute: attribute.id_attribute,
+            value: label.trim(),
+          },
+          defaults: {
+            id_attribute: attribute.id_attribute,
+            value: label.trim(),
+          },
+          transaction: t,
         });
 
-        if (!attributeValueMap[attr.name]) attributeValueMap[attr.name] = {};
-        attributeValueMap[attr.name][value] = attrValue.id_value;
+        attributeValueMap[attr.name.trim()][label.trim()] = attributeValue.id_value;
       }
     }
 
-    // Variants
-    if (variants) {
-      const parsedVariants = typeof variants === 'string' ? JSON.parse(variants) : variants;
-
-      for (const variant of parsedVariants) {
-        const newVariant = await ProductVariant.create({
-          id_products: productId,
-          sku: variant.sku,
-          price: variant.price,
-          quantity: variant.quantity,
-          status: variant.quantity > 0,
-        }, { transaction: t });
-
-        for (const [name, val] of Object.entries(variant.values)) {
-          const id_value = attributeValueMap[name]?.[val];
-          if (!id_value) throw new Error(`Không tìm thấy id_value cho ${name} - ${val}`);
-
-          await VariantValue.create({
-            id_variant: newVariant.id_variant,
-            id_value,
-          }, { transaction: t });
-        }
-      }
+    // Xóa variants cũ + variant_values cũ
+    const oldVariants = await ProductVariant.findAll({ where: { id_products: id_products }, transaction: t });
+    for (const oldVariant of oldVariants) {
+      await VariantValue.destroy({ where: { id_variant: oldVariant.id_variant }, transaction: t });
     }
+    await ProductVariant.destroy({ where: { id_products: id_products }, transaction: t });
 
-    // Xoá ảnh cũ (nếu cần)
-    await ProductImg.destroy({ where: { id_products: productId }, transaction: t });
-
-    // Xử lý ảnh gửi lên
-    if (req.files && req.files.images) {
-      const variantImagesMap = {};
-      for (const file of req.files.images) {
-        const [attributeName, valueWithExt] = file.originalname.split('__');
-        const valueName = valueWithExt?.split('.')[0];
-
-        if (!attributeName || !valueName) continue;
-
-        if (!variantImagesMap[attributeName]) variantImagesMap[attributeName] = {};
-        if (!variantImagesMap[attributeName][valueName]) variantImagesMap[attributeName][valueName] = [];
-        variantImagesMap[attributeName][valueName].push(file);
-      }
-
-      for (const attrName in variantImagesMap) {
-        for (const valName in variantImagesMap[attrName]) {
-          const files = variantImagesMap[attrName][valName];
-
-          const attr = await Attribute.findOne({ where: { name: attrName } });
-          const attrVal = await AttributeValue.findOne({
-            where: {
-              id_attribute: attr?.id_attribute,
-              value: valName,
-            },
-          });
-
-          if (!attrVal) continue;
-
-          const variantValue = await VariantValue.findOne({
-            where: { id_value: attrVal.id_value },
-          });
-
-          if (!variantValue) continue;
-
-          for (let i = 0; i < files.length; i++) {
-            const is_main = main_image_index
-              ? JSON.parse(main_image_index)?.[attrName]?.[valName] === i
-              : false;
-
-            await ProductImg.create({
-              id_products: productId,
-              id_variant_value: variantValue.id_variant_value,
-              image_url: `/uploads/${files[i].filename}`,
-              is_main,
-            }, { transaction: t });
-          }
-        }
-      }
-    }
+    // Lưu variants mới
+    await saveVariants(variantsParsed, product, uploadedImages, attributeValueMap, t);
 
     await t.commit();
-    return res.json({ message: 'Cập nhật sản phẩm thành công' });
+    res.status(200).json({ message: "Cập nhật sản phẩm thành công", product });
 
-  } catch (error) {
+  } catch (err) {
+    console.error("❌ Lỗi cập nhật sản phẩm:", err);
     await t.rollback();
-    console.error('Lỗi cập nhật sản phẩm:', error);
-    return res.status(500).json({ message: 'Cập nhật sản phẩm thất bại', error: error.message });
+    res.status(500).json({ message: "Lỗi khi cập nhật sản phẩm", error: err.message });
   }
 };
+
 
 //get all products 
 exports.getAllProducts = async (req, res) => {
