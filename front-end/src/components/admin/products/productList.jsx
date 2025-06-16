@@ -2,11 +2,16 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import AddProductModal from "./form/addProduct";
-import EditProductModal from "./form/updateProduct"; // đường dẫn tương ứng
+import EditProductModal from "./form/updateProduct";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const initialProducts = [];
 
 export default function ProductList() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id"); // Lấy id từ query string ?id=44
+
   const [products, setProducts] = useState(initialProducts);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -17,12 +22,30 @@ export default function ProductList() {
     fetchProducts();
   }, []);
 
-  if (selectedProduct) {
-    console.log('Data passed to modal:', selectedProduct);
-  }
+  useEffect(() => {
+    if (id) {
+      (async () => {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/products/${id}`);
+          setSelectedProduct(res.data);
+          setShowEditModal(true);
+        } catch (error) {
+          console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
+          setSelectedProduct(null);
+          setShowEditModal(false);
+          router.push("/admin/products"); // Nếu id sai => quay lại danh sách
+        }
+      })();
+    } else {
+      setSelectedProduct(null);
+      setShowEditModal(false);
+    }
+  }, [id, router]);
+
   const fetchProducts = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/products");
+      console.log("Data products từ BE:", res.data);
       setProducts(res.data);
     } catch (error) {
       console.error("Lỗi khi tải danh sách sản phẩm:", error);
@@ -66,32 +89,31 @@ export default function ProductList() {
   const getStatusText = (status) => {
     switch (Number(status)) {
       case 1:
-        return "Đang chờ duyệt";
+        return <span style={{ color: "#f39c12" }}>Đang chờ duyệt</span>; // vàng
       case 2:
-        return "Đang hiển thị";
+        return <span style={{ color: "#27ae60" }}>Đang hiển thị</span>; // xanh lá
       case 3:
-        return "Đã ẩn";
+        return <span style={{ color: "#e74c3c" }}>Đã ẩn</span>;         // đỏ
       default:
-        return "Không xác định";
+        return <span style={{ color: "#7f8c8d" }}>Không xác định</span>; // xám
     }
   };
 
-  // Mở modal sửa và set sản phẩm chọn
-  const handleEditClick = async (product) => {
-    try {
-      const res = await axios.get(`http://localhost:5000/api/products/${product.products_id}`);
-      setSelectedProduct(res.data); // Đây là data chi tiết, có category rồi
-      setShowEditModal(true);
-    } catch (error) {
-      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
-    }
+  // Bấm xem sẽ chuyển URL sang ?id=... để mở modal
+  const handleEditClick = (product) => {
+    router.push(`/admin/products?id=${product.products_id}`);
   };
 
+  // Đóng modal sửa sẽ quay về danh sách (bỏ ?id)
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    router.push("/admin/products");
+  };
 
-  // Xử lý sau khi update thành công
+  // Sau khi update thành công
   const handleUpdateProduct = () => {
     fetchProducts();
-    setShowEditModal(false);
+    handleCloseEditModal();
   };
 
   return (
@@ -119,46 +141,54 @@ export default function ProductList() {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
-              <tr key={product.products_id}>
-                <td>{product.products_name}</td>
-                <td>
-                  <img
-                    src={`http://localhost:5000/api/products/uploads/${product.Img_url}`}
-                    alt=""
-                    width="80"
-                    height="80"
-                    style={{ objectFit: "cover" }}
-                  />
-                </td>
-                <td>{product.market_price.toLocaleString("vi-VN")} ₫</td>
-                <td>{product.sale_price.toLocaleString("vi-VN")} ₫</td>
-                <td>
-                  {product.products_primary === 2 ? (
-                    <span className="badge bg-success">Đã ghim</span>
-                  ) : (
-                    <span className="badge bg-secondary">Chưa ghim</span>
-                  )}
-                </td>
-                <td>{getStatusText(product.products_status)}</td>
-                <td>
-                  <button
-                    className="btn btn-info btn-sm me-2"
-                    onClick={() => handleEditClick(product)}
-                  >
-                    Xem
-                  </button>
-                  <button
-                    className={`btn btn-sm ${
-                      product.products_primary === 2 ? "btn-warning" : "btn-success"
-                    }`}
-                    onClick={() => togglePrimary(product.products_id, product.products_primary)}
-                  >
-                    {product.products_primary === 2 ? "Bỏ ghim" : "Ghim"}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {products.map((product) => {
+              
+
+              return (
+                <tr key={product.products_id}>
+                  <td>{product.products_name}</td>
+                  <td>
+                    <img
+                      src={
+                        product.main_image_url
+                          ? `http://localhost:5000${product.main_image_url}`
+                          : "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
+                      }
+                      alt="ảnh sản phẩm"
+                      width="80"
+                      height="80"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </td>
+                  <td>{product.market_price.toLocaleString("vi-VN")} ₫</td>
+                  <td>{product.sale_price.toLocaleString("vi-VN")} ₫</td>
+                  <td>
+                    {product.products_primary === 2 ? (
+                      <span className="badge bg-success">Đã ghim</span>
+                    ) : (
+                      <span className="badge bg-secondary">Chưa ghim</span>
+                    )}
+                  </td>
+                  <td>{getStatusText(product.products_status)}</td>
+                  <td>
+                    <button
+                      className="btn btn-info btn-sm me-2"
+                      onClick={() => handleEditClick(product)}
+                    >
+                      Xem
+                    </button>
+                    <button
+                      className={`btn btn-sm ${
+                        product.products_primary === 2 ? "btn-warning" : "btn-success"
+                      }`}
+                      onClick={() => togglePrimary(product.products_id, product.products_primary)}
+                    >
+                      {product.products_primary === 2 ? "Bỏ ghim" : "Ghim"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -172,10 +202,9 @@ export default function ProductList() {
 
       {/* Modal sửa */}
       {selectedProduct && (
-        
         <EditProductModal
           show={showEditModal}
-          onClose={() => setShowEditModal(false)}
+          onClose={handleCloseEditModal}
           productData={selectedProduct}
           onUpdate={handleUpdateProduct}
         />

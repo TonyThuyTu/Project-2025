@@ -7,7 +7,7 @@ const validateJsonMiddleware = require('../middlewares/validateJson');
 //add product
 router.post(
   '/',
-  upload.fields([{ name: 'images', maxCount: 20 }]),
+  upload.fields([{ name: 'images', maxCount: 30 }]),
   validateJsonMiddleware(['specs', 'attributes', 'variants']), // ⬅️ Thêm dòng này để parse JSON
   productController.createProducts
 );
@@ -15,7 +15,7 @@ router.post(
 //update product
 router.put(
   '/:id',
-  upload.fields([{ name: 'images', maxCount: 20 }]),
+  upload.fields([{ name: 'images', maxCount: 30 }]),
   productController.updateProduct
 );
 

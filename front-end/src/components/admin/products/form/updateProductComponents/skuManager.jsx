@@ -5,90 +5,53 @@ function isHexColor(value) {
   return /^#([0-9A-F]{3}){1,2}$/i.test(value);
 }
 
-function getOptionCombinations(optionValues) {
-  if (optionValues.length === 0) return [];
-  return optionValues.reduce((acc, curr) => {
-    const result = [];
-    acc.forEach((a) => {
-      curr.forEach((c) => {
-        result.push([...a, c]);
-      });
-    });
-    return result;
-  }, [[]]);
-}
-
-function isSameSkuList(listA, listB) {
-  if (listA.length !== listB.length) return false;
-  for (let i = 0; i < listA.length; i++) {
-    if (JSON.stringify(listA[i]) !== JSON.stringify(listB[i])) {
-      return false;
-    }
-  }
-  return true;
-}
-
 export default function SkuManager({ options = [], skuList = [], setSkuList }) {
   
   useEffect(() => {
-    if (options.length >= 2) {
-      const valuesList = options.map((opt) =>
-        opt.values.map((v) => ({
-          label: v.label,
-          value: v.value || v.label,
-          optionName: opt.name,
-        }))
-      );
-
-      const combinations = getOptionCombinations(valuesList);
-      console.log("👉 Tổng số tổ hợp combinations:", combinations.length);
-      console.log("📦 Tổ hợp hợp lệ từ options:", combinations);
-      console.log("📥 skuList từ BE:", skuList);
-
-      // Tạo map tổ hợp hợp lệ để so sánh nhanh
-      const validComboSet = new Set(
-        combinations.map((combo) =>
-          JSON.stringify(combo.map((c) => c.value))
-        )
-      );
-
-      // Lọc lại các SKU hợp lệ từ BE
-      const filteredSkus = skuList.filter((sku) => {
-        if (!Array.isArray(sku.combo)) return false;
-        const comboKey = JSON.stringify(sku.combo.map((c) => c.value));
-        return validComboSet.has(comboKey);
-      });
-
-      // Thêm các SKU combo còn thiếu
-      const completeSkus = [...filteredSkus];
-      combinations.forEach((combo) => {
-        const comboKey = JSON.stringify(combo.map((c) => c.value));
-        const exists = completeSkus.some((sku) => {
-          if (!Array.isArray(sku.combo)) return false;
-          return JSON.stringify(sku.combo.map((c) => c.value)) === comboKey;
-        });
-
-        if (!exists) {
-          console.warn("⚠️ Thiếu combo, thêm mới SKU:", combo);
-          completeSkus.push({
-            combo,
-            price: 0,
-            quantity: 0,
-            status: 2,
-          });
-        }
-      });
-
-      console.log("✅ SKU hợp lệ cuối cùng:", completeSkus);
-      setSkuList(completeSkus);
-    } else {
-      if (skuList.length > 0) {
-        console.log("🧹 Reset SKU vì options < 2.");
+    if (options.length < 2) {
+      if (skuList.length !== 0) {
         setSkuList([]);
       }
+      return;
     }
-  }, [options]);
 
+    // Xây dựng tập hợp combo hợp lệ (giữ nguyên code của bạn)
+    const valuesList = options.map(opt =>
+      opt.values.map(v => ({
+        label: v.label,
+        value: v.value || v.label,
+        optionName: opt.name,
+      }))
+    );
+
+    const validComboSet = new Set(
+      valuesList.length > 0
+        ? valuesList.reduce((acc, curr) => {
+            if (acc.length === 0) return curr.map(v => [v]);
+            const result = [];
+            acc.forEach(a => {
+              curr.forEach(c => {
+                result.push([...a, c]);
+              });
+            });
+            return result;
+          }, []).map(combo => JSON.stringify(combo.map(c => c.value)))
+        : []
+    );
+
+    const filteredSkus = skuList.filter(sku => {
+      if (!Array.isArray(sku.combo)) return false;
+      const comboKey = JSON.stringify(sku.combo.map(c => c.value));
+      return validComboSet.has(comboKey);
+    });
+
+    // So sánh sâu skuList và filteredSkus trước khi set
+    const oldStr = JSON.stringify(skuList);
+    const newStr = JSON.stringify(filteredSkus);
+    if (oldStr !== newStr) {
+      setSkuList(filteredSkus);
+    }
+  }, [options, skuList, setSkuList]);
 
   const handleChange = (index, field, value) => {
     const updated = [...skuList];
@@ -114,7 +77,7 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
           </tr>
         </thead>
         <tbody>
-          {Array.isArray(skuList) && skuList.length > 0 ? (
+          {skuList.length > 0 ? (
             skuList.map((skuItem, index) => (
               <tr key={index}>
                 {(Array.isArray(skuItem.combo) ? skuItem.combo : []).map((c, i) => (
@@ -140,7 +103,7 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
                 <td>
                   <Form.Control
                     type="number"
-                    value={skuItem.price ?? ''}
+                    value={skuItem.price ?? ""}
                     onChange={(e) =>
                       handleChange(index, "price", parseInt(e.target.value) || 0)
                     }

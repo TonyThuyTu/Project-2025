@@ -23,9 +23,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT },
 
     products_status: { 
-      type: DataTypes.BOOLEAN,
-
-       defaultValue: false },
+      type: DataTypes.TINYINT, // hoặc INTEGER
+      allowNull: false,
+       defaultValue: 1,
+      },
     products_primary: { 
       type: DataTypes.BOOLEAN,
 

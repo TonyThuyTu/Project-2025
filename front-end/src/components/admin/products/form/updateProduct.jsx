@@ -1,5 +1,6 @@
 import { Modal, Button, Form, Card } from "react-bootstrap";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { nanoid } from 'nanoid';
 import BasicInfo from "./updateProductComponents/BasicInfo";
 import CategorySelector from "./updateProductComponents/CategorySelector";
 import DescriptionEditor from "./updateProductComponents/DescriptionEditor";
@@ -21,9 +22,9 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
   const [images, setImages] = useState([]);
   const [specs, setSpecs] = useState([]);
   const [status, setStatus] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formValid, setFormValid] = useState(false);
-
+  const hasLoadedImages = useRef(false);
   function getOptionCombinations(arr) {
     if (!arr.length) return [];
     if (arr.length === 1) return arr[0].map(v => [v]);
@@ -39,7 +40,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
   }
   useEffect(() => {
     if (!productData) return;
-
+    if (hasLoadedImages.current) return;
     const product = productData.product || productData;
 
     setProductName(product.products_name || "");
@@ -68,7 +69,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     // Chuẩn hóa options
     const normalizedAttributes = (productData.attributes || []).map((attr) => ({
       attribute_id: attr.attribute_id,
-      name: attr.attribute_name || `Option ${attr.attribute_id}`,
+      name: attr.name || `Option ${attr.attribute_id}`,
       type: attr.type || "text",
       values: (attr.values || []).map((val) => ({
         value_id: val.value_id,
@@ -129,14 +130,18 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         quantity: sku?.quantity || 0,
         status: sku?.status || 2,
         images: sku?.images || [],
+        images: sku?.images || [],   // Thêm trường images đầy đủ
+        sku_id: sku?.sku_id,         // Nếu bạn có id SKU, giữ lại để dễ xử lý
+        sku_code: sku?.sku_code || '', // Nếu có mã SKU
       };
     });
 
     setSkuList(newSkuList);
 
     const imageList = (productData.images || []).map((img) => ({
+      id: img.id_product_img || nanoid(), 
       file: null,
-      isMain: img.is_main || false,
+      isMain: img.is_main === 1 || img.is_main === true,
       optionKey: img.option_key || "",
       optionValue: img.option_value || "",
       previewUrl: img.Img_url?.startsWith("/uploads")
@@ -145,6 +150,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       fromServer: true,
     }));
     setImages(imageList);
+    hasLoadedImages.current = true; // Đánh dấu đã load
   }, [productData]);
 
   useEffect(() => {
@@ -156,48 +162,55 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       salePrice && !isNaN(salePrice) && Number(salePrice) >= 0 &&
       images.length > 0;
 
-    setFormValid(!!valid);
+    // setFormValid(!!valid);
+    console.log("Images state updated:", images);
   }, [productName, selectedParent, selectedChild, marketPrice, salePrice, images]);
 
   const handleUpdate = async () => {
-    if (!formValid) {
-      alert('Vui lòng điền đầy đủ và chính xác thông tin.');
-      return;
-    }
-
     try {
-      setIsSubmitting(true);
       const formData = new FormData();
 
-      // Ưu tiên gửi danh mục con nếu có, nếu không thì danh mục cha
+      // Lấy ID danh mục (ưu tiên danh mục con)
       const categoryId = selectedChild || selectedParent;
-      if (!categoryId) {
-        alert('Vui lòng chọn danh mục');
-        setIsSubmitting(false);
-        return;
-      }
 
-      formData.append('products_id', productData.product?.id_products || productData.products_id);
+      // Lấy ID sản phẩm
+      const productId = productData.product?.id_products || productData.products_id;
+
+      
+      formData.append('products_id', productId);
       formData.append('products_name', productName);
-      formData.append('category_id', categoryId);
+      formData.append('products_market_price', Number(marketPrice).toFixed(2));
+      formData.append('products_sale_price', Number(salePrice).toFixed(2));
       formData.append('products_description', description);
-      formData.append('products_market_price', marketPrice);
-      formData.append('products_sale_price', salePrice);
+
+      formData.append('category_id', selectedChild || selectedParent);
       formData.append('specs', JSON.stringify(specs));
       formData.append('attributes', JSON.stringify(options));
       formData.append('variants', JSON.stringify(skuList));
       formData.append('products_status', status);
 
-      images.forEach(img => {
+      // Gửi ảnh mới thêm (ảnh từ client, không phải từ server)
+      images.forEach((img, index) => {
         if (!img.fromServer && img.file) {
+          // Ảnh mới: gửi file ảnh
           formData.append('images', img.file);
-          formData.append('isMainFlags', img.isMain);
+          formData.append('isMainFlags', img.isMain ? 'true' : 'false');
           formData.append('imageOptionKeys', img.optionKey || '');
           formData.append('imageOptionValues', img.optionValue || '');
+        } else if (img.fromServer) {
+          // Ảnh cũ: gửi metadata để backend giữ lại
+          formData.append('existingImages[]', JSON.stringify({
+            id: img.id || null,   // nếu có id ảnh (nên có)
+            url: img.url || img.previewUrl,
+            isMain: img.isMain,
+            optionKey: img.optionKey || '',
+            optionValue: img.optionValue || '',
+          }));
         }
       });
 
-      await axios.put('http://localhost:5000/api/products', formData, {
+      // Gọi API PUT
+      await axios.put(`http://localhost:5000/api/products/${productId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -207,10 +220,9 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     } catch (error) {
       console.error('Lỗi cập nhật sản phẩm:', error);
       alert(`Lỗi: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
 
   return (
     <Modal show={show} onHide={onClose} size="xl" centered scrollable>
@@ -258,9 +270,9 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Đóng</Button>
-        <Button variant="primary" onClick={handleUpdate} disabled={!formValid || isSubmitting}>
-          {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
+        <Button variant="secondary" onClick={onClose}>Đóng</Button>
+        <Button variant="primary" onClick={handleUpdate}>
+          Cập nhật
         </Button>
       </Modal.Footer>
     </Modal>
