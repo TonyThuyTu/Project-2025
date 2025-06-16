@@ -17,6 +17,9 @@ export default function ProductList() {
     fetchProducts();
   }, []);
 
+  if (selectedProduct) {
+    console.log('Data passed to modal:', selectedProduct);
+  }
   const fetchProducts = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/products");
@@ -74,10 +77,16 @@ export default function ProductList() {
   };
 
   // Mở modal sửa và set sản phẩm chọn
-  const handleEditClick = (product) => {
-    setSelectedProduct(product);
-    setShowEditModal(true);
+  const handleEditClick = async (product) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/products/${product.products_id}`);
+      setSelectedProduct(res.data); // Đây là data chi tiết, có category rồi
+      setShowEditModal(true);
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+    }
   };
+
 
   // Xử lý sau khi update thành công
   const handleUpdateProduct = () => {
@@ -163,6 +172,7 @@ export default function ProductList() {
 
       {/* Modal sửa */}
       {selectedProduct && (
+        
         <EditProductModal
           show={showEditModal}
           onClose={() => setShowEditModal(false)}

@@ -5,9 +5,7 @@ export default function ImgUploaded({ images, setImages }) {
 
   const handleUpload = useCallback((e) => {
     const files = e.target.files;
-    if (!files || files.length === 0) {
-      return;
-    }
+    if (!files || files.length === 0) return;
 
     const newImages = [];
     let loadedCount = 0;
@@ -22,7 +20,6 @@ export default function ImgUploaded({ images, setImages }) {
           id: nanoid(),
           file,
           url: reader.result,
-          // Nếu chưa có ảnh ghim, ảnh đầu tiên được ghim, còn lại không
           isMain: hasMain ? 2 : (idx === 0 ? 1 : 2),
         });
 
@@ -30,7 +27,7 @@ export default function ImgUploaded({ images, setImages }) {
         if (loadedCount === files.length) {
           const updatedImages = [...images, ...newImages];
           setImages(updatedImages);
-          e.target.value = null; // reset input để có thể upload lại cùng file nếu muốn
+          e.target.value = null;
         }
       };
       reader.onerror = () => {
@@ -43,7 +40,6 @@ export default function ImgUploaded({ images, setImages }) {
 
   const handleRemove = (id) => {
     const filtered = images.filter(img => img.id !== id);
-    // Nếu ảnh ghim bị xóa, tự động ghim ảnh đầu tiên còn lại (nếu có)
     if (!filtered.some(img => img.isMain === 1) && filtered.length > 0) {
       filtered[0].isMain = 1;
     }
@@ -70,9 +66,9 @@ export default function ImgUploaded({ images, setImages }) {
       />
 
       <div className="d-flex flex-wrap gap-2">
-        {images.map(img => (
+        {images.map((img, index) => (
           <div
-            key={img.id}
+            key={img.id || index} // ✅ key duy nhất từ nanoid
             style={{
               position: "relative",
               width: 120,
@@ -94,22 +90,22 @@ export default function ImgUploaded({ images, setImages }) {
             <button
               type="button"
               onClick={(e) => {
-                e.stopPropagation(); // tránh kích hoạt setMain khi bấm xóa
+                e.stopPropagation();
                 handleRemove(img.id);
               }}
               style={{
                 position: "absolute",
                 top: 4,
                 right: 4,
-                backgroundColor: "rgba(0,0,0,0.5)",
+                backgroundColor: "rgba(0,0,0,0.6)",
                 border: "none",
                 borderRadius: "50%",
                 color: "white",
                 width: 24,
                 height: 24,
                 cursor: "pointer",
-                lineHeight: 1,
                 fontSize: 18,
+                lineHeight: "18px",
               }}
               title="Xóa ảnh"
             >

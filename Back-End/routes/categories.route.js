@@ -5,18 +5,18 @@ const upload = require('../helper/upload');
 
 router.get('/', categoryController.getCategories); // Lấy tất cả
 
-router.get('/:id', categoryController.getCategoryById); // Lấy theo ID
-
 router.get('/parent/:parentId', categoryController.getChildrenByParentId); // Lấy theo parent_id
+
+router.get('/:id', categoryController.getCategoryById); // Lấy theo ID
 
 router.post('/', upload.single('image'), categoryController.createCategory); // Thêm mới
 
-router.put('/:id', upload.single('image'), categoryController.updateCategory); //sử danh mục
+router.put('/:id', upload.single('image'), categoryController.updateCategory); // Sửa danh mục
 
 router.delete('/:id', categoryController.deleteCategory); // Xóa
 
-router.patch('/:id/is_primary', categoryController.togglePrimary); //ghim danh mục lên trangh chủ
+router.patch('/:id/is_primary', categoryController.togglePrimary); // Ghim danh mục
 
-router.patch('/:id/is_active', categoryController.toggleActive); //ẩn hiện danh mục
+router.patch('/:id/is_active', categoryController.toggleActive); // Ẩn/hiện danh mục
 
 module.exports = router;

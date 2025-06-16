@@ -40,6 +40,8 @@ const db = {
   ProductAttributeValue,
 };
 
+
+
 /* =========================
    Thiết lập Associations
 ========================= */
@@ -53,8 +55,6 @@ db.Category.hasMany(db.Category, {
   foreignKey: 'parent_id',
   as: 'children',
 });
-
-
 
 // Danh mục - Sản phẩm
 db.Category.hasMany(db.Product, {

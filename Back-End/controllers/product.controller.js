@@ -6,9 +6,16 @@ const { parseJSONSafe } = require('../helper/parseJson');
 const generateSKU = require('../helper/generateSKU');
 
 const {
-  Product, ProductImg, ProductSpec, ProductAttribute,
-  ProductVariant, VariantValue, AttributeValue, Attribute,
-  ProductAttributeValue
+  Product, 
+  ProductImg, 
+  ProductSpec, 
+  ProductAttribute,
+  ProductVariant, 
+  VariantValue, 
+  AttributeValue, 
+  Attribute,
+  ProductAttributeValue, 
+  Category
   
 } = db;
 
@@ -383,27 +390,39 @@ exports.getProductsById = async (req, res) => {
     // 1. Thông tin sản phẩm chính
     const product = await Product.findOne({
       where: { id_products: id },
+      include: [
+        {
+          model: Category,
+          as: 'category',
+          attributes: ['category_id', 'name', 'parent_id'],
+          include: [
+            {
+              model: Category,
+              as: 'parent',
+              attributes: ['category_id', 'name'],
+            },
+          ],
+        },
+      ],
     });
 
     if (!product) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
+    console.log('Product with category:', JSON.stringify(product.toJSON(), null, 2)); // Debug
+
     // 2. Ảnh sản phẩm
     const images = await ProductImg.findAll({
       where: { id_products: id },
-      // raw: true, // nếu cần plain object
     });
 
     // 3. Thông số kỹ thuật
     const specs = await ProductSpec.findAll({
       where: { id_products: id },
-      // raw: true,
     });
 
     // 4. Lấy attribute kèm giá trị thuộc sản phẩm chính xác
-    // Lấy ProductAttribute (liên kết sản phẩm với Attribute)
-    // rồi join sang AttributeValue qua ProductAttributeValue lọc theo id_product
     const productAttributes = await ProductAttribute.findAll({
       where: { id_product: id },
       include: [
@@ -419,13 +438,13 @@ exports.getProductsById = async (req, res) => {
                 {
                   model: ProductAttributeValue,
                   as: 'productAttributeValues',
-                  where: { id_product: id }, // Chỉ lấy giá trị thuộc sản phẩm này
-                  required: true,  // bắt buộc join, để lọc đúng
+                  where: { id_product: id },
+                  required: true,
                 },
                 {
                   model: ProductImg,
                   as: 'images',
-                }
+                },
               ],
             },
           ],
@@ -433,7 +452,6 @@ exports.getProductsById = async (req, res) => {
       ],
     });
 
-    // Chuyển đổi dữ liệu sang dạng trả về client
     const attributes = productAttributes.map(pa => ({
       attribute_id: pa.id_attribute,
       attribute_name: pa.attribute?.attribute_name,
@@ -472,7 +490,7 @@ exports.getProductsById = async (req, res) => {
         },
         {
           model: ProductImg,
-          as: 'images', // ảnh SKU nếu có
+          as: 'images',
         },
       ],
     });
@@ -481,7 +499,7 @@ exports.getProductsById = async (req, res) => {
       variant_id: variant.id_product_variant,
       sku_code: variant.sku_code,
       quantity: variant.quantity,
-      extra_price: variant.extra_price,
+      price: variant.price,
       status: variant.status,
       images: variant.images || [],
       option_combo: variant.variantValues.map(v => ({
@@ -490,13 +508,26 @@ exports.getProductsById = async (req, res) => {
       })),
     }));
 
-    return res.json({
-      product,
+    // Format response để khớp với frontend
+    const response = {
+      product: {
+        id_products: product.id_products,
+        products_name: product.products_name,
+        products_market_price: product.products_market_price,
+        products_sale_price: product.products_sale_price,
+        products_description: product.products_description,
+        products_status: product.products_status,
+        products_primary: product.products_primary,
+      },
+      category: product.category || null,
       images,
       specs,
       attributes,
       skus,
-    });
+    };
+
+    console.log('Final response:', JSON.stringify(response, null, 2)); // Debug
+    return res.json(response);
   } catch (error) {
     console.error("Lỗi khi lấy sản phẩm theo ID:", error);
     return res.status(500).json({

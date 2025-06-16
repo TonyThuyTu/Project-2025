@@ -16,11 +16,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     is_active: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false, // false: hiện
+      defaultValue: false,
     },
     is_primary: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false, // false: không hiển thị trang chủ
+      defaultValue: false,
     },
     parent_id: {
       type: DataTypes.INTEGER,
@@ -34,6 +34,8 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'categories',
     timestamps: false,
   });
+
+  
 
   return Category;
 };

@@ -46,7 +46,7 @@ export default function CategorySelector({ selectedParent, setSelectedParent, se
 
         <Col md={6}>
           <Form.Group controlId="childCategory" className="mb-3">
-            <Form.Label>Danh mục con</Form.Label>
+            <Form.Label>Thêm Danh mục con</Form.Label>
             <Form.Select
               value={selectedChild}
               onChange={e => setSelectedChild(Number(e.target.value))}

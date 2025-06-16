@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, Table } from 'react-bootstrap';
 import { Trash } from 'react-bootstrap-icons';
 
 export default function OptionsManager({ options, setOptions }) {
   const [newOptionName, setNewOptionName] = useState('');
   const [newOptionType, setNewOptionType] = useState('text');
+
+  // Cleanup URL object khi component unmount
+  useEffect(() => {
+    return () => {
+      options.forEach(option => {
+        option.values.forEach(value => {
+          (value.images || []).forEach(img => {
+            if (img.url && img.file) {
+              URL.revokeObjectURL(img.url);
+            }
+          });
+        });
+      });
+    };
+  }, [options]);
 
   const addOption = () => {
     if (!newOptionName.trim()) return;
@@ -48,8 +63,15 @@ export default function OptionsManager({ options, setOptions }) {
       url: URL.createObjectURL(file),
       isMain: 2,
     }));
+
     const updated = [...options];
     updated[i].values[j].images = [...(updated[i].values[j].images || []), ...images];
+
+    // Nếu chưa có ảnh đại diện, tự chọn ảnh đầu tiên làm main
+    if (!updated[i].values[j].images.some(img => img.isMain === 1) && images.length > 0) {
+      updated[i].values[j].images[0].isMain = 1;
+    }
+
     setOptions(updated);
   };
 
@@ -62,7 +84,18 @@ export default function OptionsManager({ options, setOptions }) {
 
   const handleRemoveValueImage = (i, j, k) => {
     const updated = [...options];
+    // Revoke URL trước khi xóa ảnh để tránh rò rỉ bộ nhớ
+    const img = updated[i].values[j].images[k];
+    if (img.url && img.file) {
+      URL.revokeObjectURL(img.url);
+    }
     updated[i].values[j].images.splice(k, 1);
+
+    // Nếu ảnh đại diện bị xóa, set lại ảnh đầu tiên làm main nếu còn ảnh
+    if (!updated[i].values[j].images.some(img => img.isMain === 1) && updated[i].values[j].images.length > 0) {
+      updated[i].values[j].images[0].isMain = 1;
+    }
+
     setOptions(updated);
   };
 
@@ -164,7 +197,7 @@ export default function OptionsManager({ options, setOptions }) {
                   </td>
                   <td>
                     <Form.Select
-                      value={val.status}
+                      value={val.status ?? 2}
                       onChange={(e) => updateValue(i, j, 'status', +e.target.value)}
                     >
                       <option value={2}>Hiển thị</option>

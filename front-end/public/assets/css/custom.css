@@ -103,3 +103,10 @@ input.form-control:focus {
   border-left: 5px solid #198754; /* màu xanh bootstrap */
   background-color: #e9f7ef;
 }
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem auto;
+}

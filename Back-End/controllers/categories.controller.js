@@ -4,13 +4,34 @@ const { Category } = require('../models/index.model');
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.findAll({
-      order: [['parent_id', 'ASC'], ['category_id', 'ASC']]
+      where: { parent_id: null }, // Bỏ is_active tạm thời
+      attributes: ['category_id', 'name', 'img', 'is_active', 'is_primary', 'parent_id'],
+      include: [
+        {
+          model: Category,
+          as: 'children',
+          attributes: ['category_id', 'name', 'img', 'is_active', 'is_primary', 'parent_id'],
+          required: false, // Bao gồm cả danh mục cha không có con
+          include: [
+            {
+              model: Category,
+              as: 'children',
+              attributes: ['category_id', 'name', 'img', 'is_active', 'is_primary', 'parent_id'],
+              required: false,
+            },
+          ],
+        },
+      ],
+      order: [['category_id', 'ASC'], [{ model: Category, as: 'children' }, 'category_id', 'ASC']],
     });
+
     res.json(categories);
   } catch (err) {
+    console.error('Lỗi khi lấy danh mục:', err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Lấy danh mục theo ID
 exports.getCategoryById = async (req, res) => {
