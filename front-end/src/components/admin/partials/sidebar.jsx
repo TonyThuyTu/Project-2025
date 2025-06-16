@@ -7,6 +7,7 @@ const links = [
   { href: "/admin/banner", label: "Quảng cáo" },
   { href: "/admin/categories", label: "Danh mục" },
   { href: "/admin/products", label: "Sản phẩm" },
+  { href: "/admin/reviews", label: "Bình luận" },
   // { href: "/admin/categories", label: "Danh mục" },
   // { href: "/admin/products", label: "Sản phẩm" },
   // { href: "/admin/orders", label: "Đơn hàng" },

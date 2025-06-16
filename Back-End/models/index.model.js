@@ -17,6 +17,7 @@ const ProductAttribute = require('./productAttribute')(sequelize, DataTypes);
 const ProductVariant = require('./productVariant')(sequelize, DataTypes);
 const VariantValue = require('./variantValue')(sequelize, DataTypes);
 const ProductAttributeValue = require('./ProductAttributeValue') (sequelize, DataTypes);
+const ProductReview = require('./comments') (sequelize, DataTypes);
 // Khởi tạo object db
 const db = {
   sequelize,
@@ -38,6 +39,7 @@ const db = {
   ProductVariant,
   VariantValue,
   ProductAttributeValue,
+  ProductReview,
 };
 
 
@@ -183,6 +185,26 @@ db.Product.hasMany(db.ProductAttributeValue, {
 db.AttributeValue.hasMany(db.ProductAttributeValue, {
   foreignKey: 'id_value',
   as: 'productAttributeValues',
+});
+
+// comments
+db.Product.hasMany(db.ProductReview, {
+  foreignKey: "id_products",
+  as: "reviews"
+});
+db.ProductReview.belongsTo(db.Product, {
+  foreignKey: "id_products",
+  as: 'product'
+});
+
+db.Customer.hasMany(db.ProductReview, {
+  foreignKey: "id_customer",
+  as: "reviews"
+});
+
+db.ProductReview.belongsTo(db.Customer, {
+  foreignKey: "id_customer",
+  as: "customer"
 });
 
 module.exports = db;
