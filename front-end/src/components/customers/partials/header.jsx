@@ -1,9 +1,19 @@
 'use client';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const HeaderClient = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [parentCategories, setParentCategories] = useState([]);
+
+  useEffect(() => {
+    axios.get("http://localhost:5000/api/categories/parent")
+      .then((res) => {
+        setParentCategories(res.data);
+      })
+      .catch((err) => console.error("Lỗi load danh mục", err));
+  }, []);
 
   useEffect(() => {
     const checkLogin = () => {
@@ -71,12 +81,24 @@ const HeaderClient = () => {
                   <Link href="/aboutUs" className="nav-link">Giới Thiệu</Link>
                 </li>
                 <li className="nav-item dropdown">
-                  <a className="nav-link dropdown-toggle" href="#" id="productDropdown" role="button" data-bs-toggle="dropdown">Sản Phẩm</a>
+                  <a
+                    className="nav-link dropdown-toggle"
+                    href="#"
+                    id="productDropdown"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    Sản phẩm
+                  </a>
                   <ul className="dropdown-menu" aria-labelledby="productDropdown">
-                    <li><a className="dropdown-item" href="#">iPhone</a></li>
-                    <li><a className="dropdown-item" href="#">iPad</a></li>
-                    <li><a className="dropdown-item" href="#">MacBook</a></li>
-                    <li><a className="dropdown-item" href="#">Phụ kiện</a></li>
+                    {parentCategories.map((cat) => (
+                      <li key={cat.category_id}>
+                        <a className="dropdown-item" href={`/danh-muc/${cat.category_id}`}>
+                          {cat.name}
+                        </a>
+                      </li>
+                    ))}
                   </ul>
                 </li>
                 <li className="nav-item">

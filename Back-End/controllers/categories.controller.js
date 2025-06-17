@@ -157,3 +157,18 @@ exports.deleteCategory = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+//for guest
+exports.getParentCategories = async (req, res) => {
+  try {
+    const categories = await Category.findAll({
+      where: { is_active: 0, parent_id: null },
+      order: [['name', 'ASC']],
+    });
+    res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
