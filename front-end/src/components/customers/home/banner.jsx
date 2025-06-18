@@ -1,63 +1,66 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import axios from "axios";
 
 export default function Banner() {
+  const [banners, setBanners] = useState([]);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/banner");
+        setBanners(res.data);
+      } catch (error) {
+        console.error("Lỗi khi tải banner:", error);
+      }
+    };
+
+    fetchBanners();
+  }, []);
+
+  if (banners.length === 0) {
+    return <div className="text-center py-5">Đang tải banner...</div>;
+  }
+
   return (
     <div className="bannerback">
-      <div id="carouselExample" className="carousel slide" data-bs-ride="carousel">
-        {/* Chấm nhỏ điều hướng ảnh */}
+      <div
+        id="carouselExample"
+        className="carousel slide"
+        data-bs-ride="carousel"
+      >
+        {/* Indicators */}
         <div className="carousel-indicators">
-          <button
-            type="button"
-            data-bs-target="#carouselExample"
-            data-bs-slide-to="0"
-            className="active"
-            aria-current="true"
-            aria-label="Slide 1"
-          ></button>
-          <button
-            type="button"
-            data-bs-target="#carouselExample"
-            data-bs-slide-to="1"
-            aria-label="Slide 2"
-          ></button>
-          <button
-            type="button"
-            data-bs-target="#carouselExample"
-            data-bs-slide-to="2"
-            aria-label="Slide 3"
-          ></button>
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              data-bs-target="#carouselExample"
+              data-bs-slide-to={index}
+              className={index === 0 ? "active" : ""}
+              aria-label={`Slide ${index + 1}`}
+            ></button>
+          ))}
         </div>
 
         {/* Slide ảnh */}
         <div className="carousel-inner text-center">
-          <div className="carousel-item active">
-            <Image
-              src="/assets/image/thumb iPhone 16 - 2.png"
-              className="banner-img"
-              alt="Banner 1"
-              width={1200}
-              height={600}
-            />
-          </div>
-          <div className="carousel-item">
-            <Image
-              src="/assets/image/Apple-iPhone-16-Pro-Max-Bakal-Ri.png"
-              className="banner-img"
-              alt="Banner 2"
-              width={1200}
-              height={600}
-            />
-          </div>
-          <div className="carousel-item">
-            <Image
-              src="/assets/image/thumb iPhone 16 - 2.png"
-              className="banner-img"
-              alt="Banner 3"
-              width={1200}
-              height={600}
-            />
-          </div>
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id_banner}
+              className={`carousel-item ${index === 0 ? "active" : ""}`}
+            >
+              <Image
+                src={`http://localhost:5000/uploads/${banner.banner_img}`}
+                className="banner-img"
+                alt={`Banner ${banner.id_banner}`}
+                width={1200}
+                height={600}
+              />
+            </div>
+          ))}
         </div>
 
         {/* Nút điều hướng */}

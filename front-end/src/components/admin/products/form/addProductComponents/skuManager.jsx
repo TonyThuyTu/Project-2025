@@ -53,6 +53,7 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
           price: existingSku ? existingSku.price : 0,
           quantity: existingSku ? existingSku.quantity : 0,
           status: existingSku ? existingSku.status : 2,
+           main_image_index: existingSku?.main_image_index ?? null, // ✅ thêm dòng này
           // Không cần field `sku`
         };
       });
@@ -84,7 +85,7 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
             {options.map((opt, idx) => (
               <th key={idx}>{opt.name}</th>
             ))}
-            <th>Giá cộng thêm</th>
+            <th>Giá chung</th>
             <th>Số lượng</th>
             <th>Trạng thái</th>
             {/* <th>SKU</th> Nếu muốn ẩn hẳn luôn cột SKU */}
@@ -116,7 +117,8 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
               ))}
               <td>
                 <Form.Control
-                  type="number"
+                  type="text"
+                  min={0}
                   value={skuItem.price}
                   onChange={(e) =>
                     handleChange(index, "price", parseInt(e.target.value) || 0)
@@ -125,7 +127,8 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
               </td>
               <td>
                 <Form.Control
-                  type="number"
+                  type="text"
+                  min={0}
                   value={skuItem.quantity}
                   onChange={(e) =>
                     handleChange(index, "quantity", parseInt(e.target.value) || 0)

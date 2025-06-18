@@ -21,7 +21,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
   const [images, setImages] = useState([]); // [{ file, isMain, optionKey?, optionValue? }]
   const [specs, setSpecs] = useState([{ name: '', value: '' }]);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formValid, setFormValid] = useState(false);
 
   // Validate form inputs
@@ -37,59 +37,54 @@ export default function AddProductModal({ show, onClose, onAdd }) {
     return !!valid;
   };
 
-  // Auto-check valid form on every relevant change
-  useEffect(() => {
-    validateForm();
-  }, [productName, selectedParent, selectedChild, marketPrice, salePrice, images]);
-
   const handleAdd = async () => {
-    if (!validateForm()) {
-      alert('Vui lòng điền đầy đủ và chính xác thông tin.');
-      return;
-    }
-
     try {
-      setIsSubmitting(true);
       const formData = new FormData();
-
       const categoryId = selectedChild || selectedParent;
 
-      const fields = [
-        ['products_name', productName],
-        ['category_id', categoryId],
-        ['products_description', description],
-        ['products_market_price', marketPrice],
-        ['products_sale_price', salePrice],
-        ['specs', JSON.stringify(specs)],
-        ['attributes', JSON.stringify(options)],
-        ['variants', JSON.stringify(skuList)],
-      ];
+      // 🟢 Thêm thông tin cơ bản
+      formData.append('products_name', productName);
+      formData.append('category_id', categoryId);
+      formData.append('products_description', description);
+      formData.append('products_market_price', marketPrice.replace(/\./g, ''));
+      formData.append('products_sale_price', salePrice.replace(/\./g, ''));
 
-      fields.forEach(([key, value]) => formData.append(key, value));
+      formData.append('specs', JSON.stringify(specs));
+      formData.append('attributes', JSON.stringify(options));
+      formData.append('variants', JSON.stringify(skuList));
 
+      // 🟢 Ảnh CHUNG (ảnh không gắn với option)
       images.forEach(img => {
-        formData.append('images', img.file);
-        formData.append('isMainFlags', img.isMain);
-        formData.append('imageOptionKeys', img.optionKey || '');
-        formData.append('imageOptionValues', img.optionValue || '');
+        formData.append('commonImages', img.file);
+        formData.append('commonImageIsMain', img.isMain ? 'true' : 'false');
       });
-      console.log('Dữ liệu SKU gửi lên:', skuList);
-      
+
+      // 🟢 Ảnh theo OPTION
+      options.forEach(option => {
+        option.values.forEach(value => {
+          (value.images || []).forEach(img => {
+            formData.append('optionImages', img.file);
+            formData.append('optionImageIsMain', img.isMain === 1 ? 'true' : 'false');
+            formData.append('optionImageValues', value.label); // dùng label để backend map với id_value
+          });
+        });
+      });
+
+      console.log('📤 Dữ liệu SKU gửi lên:', skuList);
+
       const res = await axios.post('http://localhost:5000/api/products', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      alert('Thêm sản phẩm thành công');
+      alert('✅ Thêm sản phẩm thành công');
       onAdd?.();
       onClose();
-
     } catch (error) {
-      console.error('Lỗi thêm sản phẩm:', error);
+      console.error('❌ Lỗi thêm sản phẩm:', error);
       alert(`Lỗi: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
 
   return (
     <Modal show={show} onHide={onClose} size="xl" centered scrollable>
@@ -111,18 +106,18 @@ export default function AddProductModal({ show, onClose, onAdd }) {
           </Card>
 
           <Card className="mb-3 p-3">
-            <DescriptionEditor 
-              description={description} 
-              setDescription={setDescription} 
-            />
-          </Card>
-
-          <Card className="mb-3 p-3">
             <CategorySelector
               selectedParent={selectedParent}
               setSelectedParent={setSelectedParent}
               selectedChild={selectedChild}
               setSelectedChild={setSelectedChild}
+            />
+          </Card>
+
+          <Card className="mb-3 p-3">
+            <DescriptionEditor 
+              description={description} 
+              setDescription={setDescription} 
             />
           </Card>
 
@@ -140,6 +135,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
                 options={options}
                 skuList={skuList}
                 setSkuList={setSkuList}
+                images={images} 
               />
             </Card>
           )}
@@ -151,15 +147,15 @@ export default function AddProductModal({ show, onClose, onAdd }) {
       </Modal.Body>
 
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <Button variant="secondary" onClick={onClose} >
           Đóng
         </Button>
         <Button
           variant="primary"
           onClick={handleAdd}
-          disabled={!formValid || isSubmitting}
+          
         >
-          {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
+          Lưu sản phẩm
         </Button>
       </Modal.Footer>
     </Modal>

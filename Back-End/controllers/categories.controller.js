@@ -1,4 +1,4 @@
-const { Category } = require('../models/index.model');
+const { Category, Product, ProductImg } = require('../models/index.model');
 
 // Lấy tất cả danh mục
 exports.getCategories = async (req, res) => {
@@ -172,3 +172,67 @@ exports.getParentCategories = async (req, res) => {
   }
 };
 
+// controllers/category.controller.js
+exports.getCategoryDetail = async (req, res) => {
+  const { name } = req.params;
+
+  try {
+    // 1. Lấy thông tin danh mục cha
+    const parentCategory = await Category.findOne({
+      where: { name, parent_id: null },
+      attributes: ['category_id', 'name', 'img'],
+    });
+
+    if (!parentCategory) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const parentId = parentCategory.category_id;
+
+    // 2. Lấy danh mục con
+    const children = await Category.findAll({
+      where: { parent_id: parentId },
+      attributes: ['category_id', 'name', 'img'],
+    });
+
+    const childIds = children.map(child => child.category_id);
+    const allCategoryIds = [parentId, ...childIds];
+
+    // 3. Lấy sản phẩm theo cả cha và con
+    const products = await Product.findAll({
+      where: {
+        category_id: allCategoryIds,
+        products_status: 2,
+      },
+      attributes: [
+        'id_products',
+        'products_name',
+        'products_market_price',
+        'products_sale_price',
+        'category_id'
+      ],
+      include: [
+        {
+          model: ProductImg,
+          as: 'images',
+          required: false,
+          attributes: ['Img_url', 'is_main'],
+          where: { is_main: true },
+        },
+      ],
+    });
+
+    // 4. Trả về dữ liệu tổng hợp
+    res.json({
+      category_id: parentId,
+      name: parentCategory.name,
+      img: parentCategory.img,
+      children,
+      products, // bao gồm sản phẩm của cả cha và con
+    });
+
+  } catch (err) {
+    console.error("Lỗi khi lấy chi tiết danh mục:", err);
+    res.status(500).json({ error: err.message });
+  }
+};

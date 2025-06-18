@@ -7,10 +7,14 @@ const validateJsonMiddleware = require('../middlewares/validateJson');
 //add product
 router.post(
   '/',
-  upload.fields([{ name: 'images', maxCount: 30 }]),
-  validateJsonMiddleware(['specs', 'attributes', 'variants']), // ⬅️ Thêm dòng này để parse JSON
+  upload.fields([
+    { name: 'commonImages', maxCount: 30 },
+    { name: 'optionImages', maxCount: 30 }
+  ]),
+  validateJsonMiddleware(['specs', 'attributes', 'variants']),
   productController.createProducts
 );
+  
 
 //update product
 router.put(
@@ -30,6 +34,9 @@ router.patch('/:id/toggle-primary', productController.togglePrimary);
 
 //delete product for tester
 router.delete('/:id', productController.deleteProduct);
+
+//get product by id
+router.get('/same-products/:id/same', productController.getSameProducts);
 
 // Thêm sản phẩm
 // router.post('/', upload.fields([

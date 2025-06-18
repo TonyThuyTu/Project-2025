@@ -1,4 +1,29 @@
-export default function BasicInfo({ productName, setProductName, marketPrice, setMarketPrice, salePrice, setSalePrice }) {
+
+export default function BasicInfo({
+  productName,
+  setProductName,
+  marketPrice,
+  setMarketPrice,
+  salePrice,
+  setSalePrice,
+}) {
+  const formatCurrency = (value) => {
+    const number = value.replace(/\D/g, ""); // chỉ giữ số
+    return number.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // thêm dấu chấm
+  };
+
+  // Xử lý khi người dùng gõ giá thị trường
+  const handleMarketPriceChange = (e) => {
+    const raw = e.target.value.replace(/\./g, "");
+    setMarketPrice(formatCurrency(raw));
+  };
+
+  // Xử lý khi người dùng gõ giá bán
+  const handleSalePriceChange = (e) => {
+    const raw = e.target.value.replace(/\./g, "");
+    setSalePrice(formatCurrency(raw));
+  };
+
   return (
     <>
       <div className="mb-3">
@@ -16,24 +41,24 @@ export default function BasicInfo({ productName, setProductName, marketPrice, se
       <div className="mb-3">
         <label htmlFor="marketPrice" className="form-label">Giá thị trường</label>
         <input
-          type="number"
+          type="text"
           className="form-control"
           id="marketPrice"
           placeholder="Nhập giá thị trường"
           value={marketPrice}
-          onChange={e => setMarketPrice(e.target.value)}
+          onChange={handleMarketPriceChange}
         />
       </div>
 
       <div className="mb-3">
         <label htmlFor="salePrice" className="form-label">Giá bán</label>
         <input
-          type="number"
+          type="text"
           className="form-control"
           id="salePrice"
           placeholder="Nhập giá bán"
           value={salePrice}
-          onChange={e => setSalePrice(e.target.value)}
+          onChange={handleSalePriceChange}
         />
       </div>
     </>

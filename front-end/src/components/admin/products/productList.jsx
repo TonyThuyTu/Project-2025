@@ -54,25 +54,8 @@ export default function ProductList() {
     }
   };
 
-  const handleAddProduct = async (newProductData) => {
-    try {
-      const formData = new FormData();
-      Object.keys(newProductData).forEach((key) => {
-        if (key === "images") {
-          newProductData.images.forEach((img) => {
-            formData.append("images", img);
-          });
-        } else {
-          formData.append(key, newProductData[key]);
-        }
-      });
-      await axios.post("http://localhost:5000/api/products", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+  const handleAddProduct = () => {
       fetchProducts();
-    } catch (error) {
-      console.error("Lỗi khi thêm sản phẩm:", error);
-    }
   };
 
   const togglePrimary = async (productId, currentPrimary) => {

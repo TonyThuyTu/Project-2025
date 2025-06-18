@@ -152,6 +152,7 @@ export default function OptionsManager({ options, setOptions }) {
                     <Form.Control
                       type="number"
                       value={val.extraPrice}
+                      min={0}
                       onChange={(e) => updateValue(i, j, 'extraPrice', +e.target.value)}
                     />
                   </td>

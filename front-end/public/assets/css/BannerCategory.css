@@ -1,0 +1,33 @@
+.banner {
+  position: relative;
+  margin: 20px auto;
+  max-width: 1290px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.banner-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.text-overlay {
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  color: white;
+  font-size: 32px;
+  font-weight: bold;
+  text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+}
+
+.sub-text {
+  position: absolute;
+  top: 35%;
+  left: 10%;
+  color: white;
+  font-size: 18px;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+}

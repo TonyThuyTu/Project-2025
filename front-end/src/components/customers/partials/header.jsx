@@ -1,18 +1,18 @@
-'use client';
+"use client";
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
 const HeaderClient = () => {
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [parentCategories, setParentCategories] = useState([]);
 
   useEffect(() => {
     axios.get("http://localhost:5000/api/categories/parent")
-      .then((res) => {
-        setParentCategories(res.data);
-      })
-      .catch((err) => console.error("Lỗi load danh mục", err));
+      .then(res => setParentCategories(res.data))
+      .catch(err => console.error("Lỗi load danh mục", err));
   }, []);
 
   useEffect(() => {
@@ -20,22 +20,15 @@ const HeaderClient = () => {
       const token = localStorage.getItem('token');
       setIsLoggedIn(!!token);
     };
-
     checkLogin();
-
-    // Lắng nghe event storage để cập nhật trạng thái đăng nhập khi localStorage thay đổi (tab khác)
     window.addEventListener('storage', checkLogin);
-
-    return () => {
-      window.removeEventListener('storage', checkLogin);
-    };
+    return () => window.removeEventListener('storage', checkLogin);
   }, []);
 
-  //đăng xuất
   const handleLogout = () => {
     localStorage.removeItem('token');
     setIsLoggedIn(false);
-    window.location.href = '/'; // Chuyển về trang chủ sau khi đăng xuất
+    router.push('/');
   };
 
   return (
@@ -92,11 +85,11 @@ const HeaderClient = () => {
                     Sản phẩm
                   </a>
                   <ul className="dropdown-menu" aria-labelledby="productDropdown">
-                    {parentCategories.map((cat) => (
+                    {parentCategories.map(cat => (
                       <li key={cat.category_id}>
-                        <a className="dropdown-item" href={`/danh-muc/${cat.category_id}`}>
+                        <Link href={`/products/${cat.name}`} className="dropdown-item">
                           {cat.name}
-                        </a>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -141,22 +134,16 @@ const HeaderClient = () => {
                   {!isLoggedIn ? (
                     <>
                       <li>
-                        <Link href="/login" className="dropdown-item">
-                          Đăng nhập
-                        </Link>
+                        <Link href="/login" className="dropdown-item">Đăng nhập</Link>
                       </li>
                       <li>
-                        <Link href="/register" className="dropdown-item">
-                          Đăng ký
-                        </Link>
+                        <Link href="/register" className="dropdown-item">Đăng ký</Link>
                       </li>
                     </>
                   ) : (
                     <>
                       <li>
-                        <Link href="/profile" className="dropdown-item">
-                          Tài khoản
-                        </Link>
+                        <Link href="/profile" className="dropdown-item">Tài khoản</Link>
                       </li>
                       <li>
                         <a onClick={handleLogout} className="dropdown-item" style={{ cursor: 'pointer' }}>
