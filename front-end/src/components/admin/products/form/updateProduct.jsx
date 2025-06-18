@@ -231,12 +231,11 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       </Modal.Header>
       <Modal.Body>
         <Form>
+
           <Card className="mb-3 p-3">
             <BasicInfo {...{ productName, setProductName, marketPrice, setMarketPrice, salePrice, setSalePrice }} />
           </Card>
-          <Card className="mb-3 p-3">
-            <DescriptionEditor {...{ description, setDescription }} />
-          </Card>
+
           <Card className="mb-3 p-3">
             <CategorySelector
               selectedParent={selectedParent}
@@ -245,20 +244,29 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
               setSelectedChild={setSelectedChild}
             />
           </Card>
+
+          <Card className="mb-3 p-3">
+            <DescriptionEditor {...{ description, setDescription }} />
+          </Card>
+
           <Card className="mb-3 p-3">
             <SpecEditor {...{ specs, setSpecs }} />
           </Card>
+
           <Card className="mb-3 p-3">
             <OptionsManager {...{ options, setOptions }} />
           </Card>
+
           {options.length >= 2 && (
             <Card className="mb-3 p-3">
               <SkuManager {...{ options, skuList, setSkuList }} />
             </Card>
           )}
+
           <Card className="mb-3 p-3">
             <ImgUploaded {...{ images, setImages }} />
           </Card>
+
           <div className="mt-3">
             <label className="form-label">Trạng thái sản phẩm</label>
             <select className="form-select" value={status} onChange={(e) => setStatus(Number(e.target.value))}>

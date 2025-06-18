@@ -236,3 +236,38 @@ exports.getCategoryDetail = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.getHomepageData = async (req, res) => {
+  try {
+    const categories = await Category.findAll({
+      where: { is_primary: 1 }, // lấy danh mục được ghim
+      include: [
+        {
+          model: Product,
+          as: 'products',
+          required: false,  // cho phép danh mục không có sản phẩm vẫn lấy
+          where: { products_primary: true }, // chỉ lấy sản phẩm được ghim
+          include: [
+            {
+              model: ProductImg,
+              as: 'images',
+              required: false,  // cho phép sản phẩm không có ảnh vẫn lấy
+              where: { is_main: true }, // chỉ lấy ảnh đại diện
+            },
+          ],
+        },
+      ],
+    });
+
+    console.log('Homepage categories:', JSON.stringify(categories, null, 2));
+
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    res.json(categories);
+  } catch (err) {
+    console.error("Lỗi lấy homepage data:", err);
+    res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};

@@ -19,8 +19,10 @@ const {
   Category, 
 } = db;
 
-// controller/product.controller.js
-// controllers/product.controller.js
+//lấy danh sách danh mục và sản phẩm được ghim
+
+
+//lấy sản phẩm tưng tự
 exports.getSameProducts = async (req, res) => {
   try {
     const id = req.params.id;
@@ -100,7 +102,7 @@ exports.createProducts = async (req, res) => {
       products_sale_price: salePrice,
       products_description: products_description || '',
       products_status: 1,
-      products_primary: false,
+      products_primary: 1,
     }, { transaction: t });
 
     // ===== Attributes & Values =====
@@ -571,7 +573,10 @@ exports.updateProduct = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const product = await Product.findByPk(id);
-    if (!product) return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    if (!product) {
+      await t.rollback();
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    }
 
     const {
       products_name,
@@ -582,10 +587,10 @@ exports.updateProduct = async (req, res) => {
       category_id,
       specs,
       main_image_index,
-      existingImages
+      existingImages,
     } = req.body;
 
-    // ✅ Cập nhật thông tin cơ bản
+    // Cập nhật thông tin cơ bản
     if (products_name !== undefined) product.products_name = products_name;
     if (products_market_price !== undefined) product.products_market_price = products_market_price;
     if (products_sale_price !== undefined) product.products_sale_price = products_sale_price;
@@ -596,17 +601,17 @@ exports.updateProduct = async (req, res) => {
       product.category_id = parseInt(category_id);
     }
 
-    // ✅ Cập nhật thông số kỹ thuật (specs)
+    // Cập nhật specs
     if (specs) {
       const specsParsed = JSON.parse(specs);
-      const oldSpecs = await ProductSpec.findAll({ where: { id_products: id } });
+      const oldSpecs = await ProductSpec.findAll({ where: { id_products: id }, transaction: t });
       const oldSpecsMap = new Map();
       oldSpecs.forEach(s => oldSpecsMap.set(s.id_spec, s));
       const newSpecIds = specsParsed.filter(s => s.id_spec).map(s => Number(s.id_spec));
 
       for (const oldSpec of oldSpecs) {
         if (!newSpecIds.includes(oldSpec.id_spec)) {
-          await oldSpec.destroy();
+          await oldSpec.destroy({ transaction: t });
         }
       }
 
@@ -615,62 +620,116 @@ exports.updateProduct = async (req, res) => {
           const specToUpdate = oldSpecsMap.get(Number(spec.id_spec));
           specToUpdate.spec_name = spec.name || specToUpdate.spec_name;
           specToUpdate.spec_value = spec.value || specToUpdate.spec_value;
-          await specToUpdate.save();
+          await specToUpdate.save({ transaction: t });
         } else {
-          await ProductSpec.create({
-            id_products: id,
-            spec_name: spec.name,
-            spec_value: spec.value,
-          });
+          await ProductSpec.create(
+            {
+              id_products: id,
+              spec_name: spec.name,
+              spec_value: spec.value,
+            },
+            { transaction: t }
+          );
         }
       }
     }
 
-    // ✅ Cập nhật ảnh chung
+    // Xử lý ảnh chung
     const files = req.files?.images || [];
-    const existingImagesParsed = existingImages
-      ? Array.isArray(existingImages)
-        ? existingImages
-        : JSON.parse(existingImages)
-      : [];
 
-    const oldImages = await ProductImg.findAll({
-      where: { id_products: id, id_variant: null, id_value: null },
-    });
-
-    // Xóa ảnh không còn
-    for (const img of oldImages) {
-      if (!existingImagesParsed.includes(img.Img_url)) {
-        await img.destroy();
-        const imgPath = path.join(__dirname, "../..", img.Img_url);
-        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+    // Parse existingImages kỹ
+    let existingImagesParsed = [];
+    if (existingImages) {
+      if (typeof existingImages === "string") {
+        try {
+          // Có thể là mảng JSON string hoặc 1 object JSON string
+          existingImagesParsed = JSON.parse(existingImages);
+          if (!Array.isArray(existingImagesParsed)) existingImagesParsed = [existingImagesParsed];
+        } catch (e) {
+          // fallback nếu là mảng chuỗi JSON
+          if (Array.isArray(existingImages)) {
+            existingImagesParsed = existingImages.map(imgStr => {
+              try {
+                return JSON.parse(imgStr);
+              } catch {
+                return null;
+              }
+            }).filter(x => x);
+          }
+        }
+      } else if (Array.isArray(existingImages)) {
+        existingImagesParsed = existingImages.map(imgStr => {
+          if (typeof imgStr === "string") {
+            try {
+              return JSON.parse(imgStr);
+            } catch {
+              return null;
+            }
+          }
+          return imgStr;
+        }).filter(x => x);
       }
     }
 
-    // Thêm ảnh mới
+    // Lấy list id ảnh giữ lại
+    const keepImageIds = existingImagesParsed.map(img => img.id).filter(Boolean);
+
+    // Lấy ảnh cũ
+    const oldImages = await ProductImg.findAll({
+      where: { id_products: id, id_variant: null, id_value: null },
+      transaction: t,
+    });
+
+    // Xóa ảnh không nằm trong keepImageIds
+    for (const img of oldImages) {
+      if (!keepImageIds.includes(img.id_product_img)) {
+        // Xóa file vật lý
+        const imgPath = path.join(__dirname, "../..", img.Img_url);
+        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+
+        await img.destroy({ transaction: t });
+      }
+    }
+
+    // Thêm ảnh mới (file upload)
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const filename = path.basename(file.path);
       const dbPath = "/uploads/" + filename;
 
-      await ProductImg.create({
-        id_products: id,
-        Img_url: dbPath,
-        is_main: (existingImagesParsed.length + i) === parseInt(main_image_index) ? true : false,
-      });
+      await ProductImg.create(
+        {
+          id_products: id,
+          Img_url: dbPath,
+          is_main: false, // ban đầu false, set chính sau
+          id_variant: null,
+          id_value: null,
+        },
+        { transaction: t }
+      );
     }
 
-    // Cập nhật lại is_main
+    // Cập nhật lại is_main cho tất cả ảnh chung
+    // Lấy lại ảnh sau khi thêm xóa
     const allImages = await ProductImg.findAll({
       where: { id_products: id, id_variant: null, id_value: null },
+      order: [["id_product_img", "ASC"]],
+      transaction: t,
     });
 
+    // Nếu main_image_index vượt quá, mặc định là 0
+    const mainIndex = main_image_index != null && !isNaN(main_image_index) && main_image_index < allImages.length
+      ? parseInt(main_image_index)
+      : 0;
+
     for (let i = 0; i < allImages.length; i++) {
-      await allImages[i].update({ is_main: i === parseInt(main_image_index) });
+      await allImages[i].update({ is_main: i === mainIndex }, { transaction: t });
     }
 
+    // Lưu product
     await product.save({ transaction: t });
     await t.commit();
+
     return res.json({ message: "Cập nhật sản phẩm thành công", product });
   } catch (error) {
     await t.rollback();
@@ -678,6 +737,7 @@ exports.updateProduct = async (req, res) => {
     return res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
 
 //getProductByid
 exports.getProductsById = async (req, res) => {
@@ -861,7 +921,7 @@ exports.getAllProducts = async (req, res) => {
           // limit: 1,
         },
       ],
-      
+      order: [["id_products", "DESC"]],
     });
 
     const formatted = products.map((p) => ({
@@ -869,7 +929,7 @@ exports.getAllProducts = async (req, res) => {
       products_name: p.products_name,
       market_price: parseFloat(p.products_market_price),
       sale_price: parseFloat(p.products_sale_price),
-      products_primary: p.products_primary,
+      products_primary: Number(p.products_primary),
       products_status: p.products_status,
       main_image_url: p.images?.[0]?.Img_url || null,
     }));

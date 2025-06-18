@@ -5,6 +5,8 @@ const upload = require('../helper/upload');
 
 router.get('/', categoryController.getCategories); // Lấy tất cả
 
+router.get('/home', categoryController.getHomepageData); // lấy danh sach danh mục và snr phẩm được ghim
+
 router.get('/parent', categoryController.getParentCategories); //lấy danh mục cha cho trang khách
 
 router.get('/category-product/:name', categoryController.getCategoryDetail);

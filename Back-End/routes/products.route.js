@@ -38,6 +38,8 @@ router.delete('/:id', productController.deleteProduct);
 //get product by id
 router.get('/same-products/:id/same', productController.getSameProducts);
 
+// router.get('/test', productController.getHomepageData);
+
 // Thêm sản phẩm
 // router.post('/', upload.fields([
 //   { name: 'product_images', maxCount: 10 },

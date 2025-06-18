@@ -1,4 +1,20 @@
-export default function BasicInfo({ productName, setProductName, marketPrice, setMarketPrice, salePrice, setSalePrice }) {
+function formatNumber(value) {
+  if (!value) return "";
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function unformatNumber(value) {
+  return value.replace(/\./g, "");
+}
+
+export default function BasicInfo({
+  productName,
+  setProductName,
+  marketPrice,
+  setMarketPrice,
+  salePrice,
+  setSalePrice,
+}) {
   return (
     <>
       <div className="mb-3">
@@ -9,32 +25,41 @@ export default function BasicInfo({ productName, setProductName, marketPrice, se
           id="productName"
           placeholder="Nhập tên sản phẩm"
           value={productName}
-          onChange={e => setProductName(e.target.value)}
+          onChange={(e) => setProductName(e.target.value)}
         />
       </div>
 
       <div className="mb-3">
         <label htmlFor="marketPrice" className="form-label">Giá thị trường</label>
         <input
-          type="number"
+          type="text"
           className="form-control"
           id="marketPrice"
           placeholder="Nhập giá thị trường"
-          value={marketPrice}
-          min = {0}
-          onChange={e => setMarketPrice(e.target.value)}
+          value={formatNumber(marketPrice)}
+          onChange={(e) => {
+            const raw = unformatNumber(e.target.value);
+            if (!isNaN(raw)) {
+              setMarketPrice(raw);
+            }
+          }}
         />
       </div>
 
       <div className="mb-3">
         <label htmlFor="salePrice" className="form-label">Giá bán</label>
         <input
-          type="number"
+          type="text"
           className="form-control"
           id="salePrice"
           placeholder="Nhập giá bán"
-          value={salePrice}
-          onChange={e => setSalePrice(e.target.value)}
+          value={formatNumber(salePrice)}
+          onChange={(e) => {
+            const raw = unformatNumber(e.target.value);
+            if (!isNaN(raw)) {
+              setSalePrice(raw);
+            }
+          }}
         />
       </div>
     </>

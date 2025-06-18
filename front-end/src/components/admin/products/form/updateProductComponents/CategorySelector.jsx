@@ -51,24 +51,29 @@ export default function CategorySelector({
     fetchChildren();
   }, [selectedParent]);
 
-  // Nếu có selectedChild nhưng chưa có selectedParent (trường hợp edit modal)
+  // Nếu mở modal edit mà có selectedChild nhưng chưa có selectedParent
   useEffect(() => {
-    const fetchParentByChild = async () => {
+    const fetchParentAndChildren = async () => {
       if (selectedChild && !selectedParent) {
         try {
           const res = await axios.get(`http://localhost:5000/api/categories/${selectedChild}`);
           const childCat = res.data;
-          if (childCat?.parent_id) {
-            setSelectedParent(childCat.parent_id);
+
+          if (childCat?.parent_id && childCat.parent_id !== selectedParent) {
+            const parentId = childCat.parent_id;
+            setSelectedParent(parentId);
+
+            const childRes = await axios.get(`http://localhost:5000/api/categories/parent/${parentId}`);
+            setChildCategories(childRes.data || []);
           }
         } catch (err) {
           console.error("Lỗi lấy danh mục cha theo con:", err);
         }
       }
     };
-    fetchParentByChild();
-  }, [selectedChild, selectedParent]);
-
+    fetchParentAndChildren();
+  }, [selectedChild]);
+  
   return (
     <>
       <h5 className="mb-3">Chọn danh mục</h5>
@@ -81,7 +86,7 @@ export default function CategorySelector({
               onChange={(e) => {
                 const parentId = e.target.value ? parseInt(e.target.value) : null;
                 setSelectedParent(parentId);
-                setSelectedChild(null); // reset danh mục con
+                setSelectedChild(null); // reset danh mục con khi đổi cha
               }}
               disabled={loadingParents}
             >
