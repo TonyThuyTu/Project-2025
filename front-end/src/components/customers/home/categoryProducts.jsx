@@ -41,7 +41,7 @@ export default function CategoryProduct() {
                     className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4"
                   >
                     <div className="card h-100 shadow-sm border-0 rounded-4">
-                      <a href={`/product/${product.id_products}`}>
+                      <a href={`//productDetail/${product.slug || product.id_products}`}>
                         <Image
                           src={imageUrl}
                           className="card-img-top p-3 rounded-4"
@@ -54,7 +54,7 @@ export default function CategoryProduct() {
                       <div className="card-body text-center">
                         <h6 className="card-title mb-2">
                           <a
-                            href={`/product/${product.id_products}`}
+                            href={`/productDetail/${product.slug || product.id_products}`}
                             className="text-decoration-none text-dark fw-bold"
                           >
                             {product.products_name}
@@ -71,7 +71,7 @@ export default function CategoryProduct() {
                         </div>
 
                         <a
-                          href={`/product/${product.id_products}`}
+                          href={`/productDetail/${product.slug || product.id_products}`}
                           className="btn btn-outline-dark btn-sm rounded-pill px-3"
                         >
                           Xem chi tiết

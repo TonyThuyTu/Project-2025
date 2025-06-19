@@ -915,7 +915,7 @@ exports.getAllProducts = async (req, res) => {
         {
           model: ProductImg,
           as: "images",
-          where: { is_main: true },
+          where: { is_main: true, id_value: null, id_variant: null },
           required: false,  // nếu sản phẩm chưa có ảnh đại diện vẫn lấy được
           attributes: ["Img_url", "is_main"],
           // limit: 1,

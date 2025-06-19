@@ -3,21 +3,29 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import BasicInfo from "./productDeatailInfo";
 import ProductImg from "./productDeailImg";
-import RelatedProducts from "./productDetailSameProduct";
+import ProductDetailDescription from "./productDetailDescription";
 
 export default function ProductDeatail({ product, productId }) {
   const [productData, setProductData] = useState(product || null);
-  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [imagesForColor, setImagesForColor] = useState([]);
   const params = useParams();
 
-  // Fetch sản phẩm chi tiết nếu không truyền từ props
+  const baseURL = "http://localhost:5000";
+
   useEffect(() => {
     async function fetchProduct() {
       try {
         if (!product && params?.id) {
           const res = await fetch(`http://localhost:5000/api/products/${params.id}`);
           const data = await res.json();
-          setProductData(data.product);
+
+          setProductData({
+            ...data.product,
+            attributes: data.attributes,
+            skus: data.skus,
+            product_imgs: data.images,
+          });
         }
       } catch (error) {
         console.error("Lỗi khi fetch sản phẩm:", error);
@@ -26,37 +34,73 @@ export default function ProductDeatail({ product, productId }) {
     fetchProduct();
   }, [params?.id, product]);
 
-  // Fetch sản phẩm cùng loại
   useEffect(() => {
-    if (productData?.id_products && productData?.category?.category_id) {
-      fetch(`http://localhost:5000/api/products/same-products/${productData.id_products}/same`)
-        .then((res) => res.json())
-        .then((data) => setRelatedProducts(data))
-        .catch((err) => console.error("Lỗi khi fetch sản phẩm cùng loại:", err));
-    } else {
-      console.log("❌ Không có category để tìm sản phẩm cùng loại.");
-      setRelatedProducts([]);
+    if (!selectedColor || !productData?.attributes) {
+      setImagesForColor([]);
+      return;
     }
-  }, [productData]);
+
+    const colorAttr = productData.attributes.find(
+      (attr) => attr.name.toLowerCase() === "màu"
+    );
+    if (!colorAttr) {
+      setImagesForColor([]);
+      return;
+    }
+
+    const colorValue = colorAttr.values.find((v) => v.value === selectedColor);
+    if (!colorValue || !colorValue.images || colorValue.images.length === 0) {
+      setImagesForColor([]);
+      return;
+    }
+
+    const sortedImages = colorValue.images.map(img =>
+      img.Img_url?.startsWith("http") ? img.Img_url : baseURL + img.Img_url
+    );
+    const mainImg = colorValue.images.find(img => img.is_main)?.Img_url;
+    const sorted = mainImg
+      ? [baseURL + mainImg, ...sortedImages.filter(i => i !== baseURL + mainImg)]
+      : sortedImages;
+
+    setImagesForColor(sorted);
+  }, [selectedColor, productData]);
 
   if (!productData) return <div>Đang tải dữ liệu sản phẩm...</div>;
+
+  const allImages = (productData.product_imgs || []).map(img => {
+    const url = img.Img_url || img.image_path || img;
+    return url.startsWith("http") ? url : baseURL + url;
+  });
+
+  const mainImage =
+    imagesForColor.length > 0
+      ? imagesForColor[0]
+      : allImages.find(img => img.includes("/uploads/")) || allImages[0] || null;
 
   return (
     <section className="bg-light">
       <div className="container pb-5">
-        <div className="row">
+        <div className="row ">
           <ProductImg
-            images={productData.product_imgs || []}
-            mainImage={
-              productData.product_imgs?.find((img) => img.is_main === 1)?.image_path || ""
-            }
+            images={imagesForColor.length > 0 ? imagesForColor : allImages}
+            mainImage={mainImage}
+            attributes={productData.attributes || []}
+            selectedColor={selectedColor}
           />
           <BasicInfo
             name={productData.products_name}
             price={productData.products_sale_price}
             originalPrice={productData.products_market_price}
+            attributes={productData.attributes || []}
+            variants={productData.skus || []}
+            onColorChange={setSelectedColor}
           />
-          <RelatedProducts products={relatedProducts || []} />
+          <ProductDetailDescription 
+          
+          products_description = {productData.products_description}
+          specs={productData.specs}
+
+          />
         </div>
       </div>
     </section>

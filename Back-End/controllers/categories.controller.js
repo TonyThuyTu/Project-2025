@@ -252,7 +252,7 @@ exports.getHomepageData = async (req, res) => {
               model: ProductImg,
               as: 'images',
               required: false,  // cho phép sản phẩm không có ảnh vẫn lấy
-              where: { is_main: true }, // chỉ lấy ảnh đại diện
+              where: { is_main: true , id_variant: null, id_value: null}, // chỉ lấy ảnh đại diện
             },
           ],
         },
