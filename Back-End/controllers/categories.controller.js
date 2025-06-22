@@ -47,12 +47,20 @@ exports.getCategoryById = async (req, res) => {
 // Lấy danh mục con theo parent_id
 exports.getChildrenByParentId = async (req, res) => {
   try {
-    const children = await Category.findAll({ where: { parent_id: req.params.parentId } });
+    const parentId = parseInt(req.params.parentId); // ✅ ép kiểu về số
+    const children = await Category.findAll({
+      where: { parent_id: parentId },
+    });
+
+    console.log("✅ Children of parent_id =", parentId, ":", children.length);
+
     res.json(children);
   } catch (err) {
+    console.error("❌ Lỗi khi lấy danh mục con:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Thêm danh mục
 exports.createCategory = async (req, res) => {

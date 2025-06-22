@@ -68,7 +68,7 @@ const HeaderClient = () => {
             <div className="flex-fill">
               <ul className="nav navbar-nav d-flex justify-content-between mx-lg-auto">
                 <li className="nav-item">
-                  <Link href="/" className="nav-link">Home</Link>
+                  <Link href="/" className="nav-link">Trang Chủ</Link>
                 </li>
                 <li className="nav-item">
                   <Link href="/aboutUs" className="nav-link">Giới Thiệu</Link>

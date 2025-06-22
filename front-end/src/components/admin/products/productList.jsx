@@ -36,26 +36,29 @@ export default function ProductList() {
 
   // Load sản phẩm và các modal khi có id
   useEffect(() => {
-    fetchProducts();
-
-    if (id) {
-      (async () => {
-        try {
-          const res = await axios.get(`http://localhost:5000/api/products/${id}`);
-          setSelectedProduct(res.data);
-          setShowEditModal(true);
-        } catch (error) {
-          console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
-          setSelectedProduct(null);
-          setShowEditModal(false);
-          router.push("/admin/products");
-        }
-      })();
-    } else {
+    if (!id) {
       setSelectedProduct(null);
       setShowEditModal(false);
+      return;
     }
-  }, [id, router]);
+
+    const fetchProduct = async () => {
+      setSelectedProduct(null); // clear cũ
+      setShowEditModal(false);  // đóng modal để đợi data mới
+
+      try {
+        const res = await axios.get(`http://localhost:5000/api/products/${id}`);
+        setSelectedProduct(res.data);
+        setShowEditModal(true); // mở lại khi có dữ liệu
+      } catch (error) {
+        console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
+        router.push("/admin/products");
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
 
   // Khi chọn danh mục cha => cập nhật danh mục con tương ứng
   useEffect(() => {
@@ -117,6 +120,11 @@ export default function ProductList() {
       setLoading(false);
     }
   };
+
+  // Gọi danh sách sản phẩm lần đầu
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   const fetchCategories = async () => {
     try {

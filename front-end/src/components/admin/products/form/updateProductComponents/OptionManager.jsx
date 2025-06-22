@@ -77,8 +77,8 @@ export default function OptionsManager({ options, setOptions }) {
 
   const handleToggleMainValueImage = (i, j, k) => {
     const updated = [...options];
-    updated[i].values[j].images.forEach(img => img.isMain = 2);
-    updated[i].values[j].images[k].isMain = 1;
+    updated[i].values[j].images.forEach(img => img.isMain = false);
+    updated[i].values[j].images[k].isMain = true;
     setOptions(updated);
   };
 
@@ -169,11 +169,16 @@ export default function OptionsManager({ options, setOptions }) {
                 <tr key={j}>
                   <td>
                     {option.type === 'color' ? (
-                      <Form.Control
-                        type="color"
-                        value={val.label || '#000000'}
-                        onChange={(e) => updateValue(i, j, 'label', e.target.value)}
-                      />
+                      <div className="d-flex align-items-center gap-2">
+                        <Form.Control
+                          type="color"
+                          value={val.label || '#000000'}
+                          onChange={(e) => updateValue(i, j, 'label', e.target.value)}
+                          title={val.label}
+                          style={{ width: 50, height: 50 }}
+                        />
+                        <span>{val.label}</span>
+                      </div>
                     ) : (
                       <Form.Control
                         value={val.label}
@@ -227,18 +232,18 @@ export default function OptionsManager({ options, setOptions }) {
                               width: '100%',
                               height: '70px',
                               objectFit: 'cover',
-                              border: img.isMain === 1 ? '2px solid #198754' : '1px solid #ccc',
+                              border: img.isMain ? '2px solid #198754' : '1px solid #ccc',
                               borderRadius: '6px',
                             }}
                           />
                           <Button
                             size="sm"
-                            variant={img.isMain === 1 ? 'success' : 'outline-secondary'}
+                            variant={img.isMain ? 'success' : 'outline-secondary'}
                             className="mt-1 w-100 p-1"
                             style={{ fontSize: '0.7rem' }}
                             onClick={() => handleToggleMainValueImage(i, j, k)}
                           >
-                            {img.isMain === 1 ? 'Đại diện' : 'Ghim'}
+                            {img.isMain ? 'Đại diện' : 'Ghim'}
                           </Button>
                           <Button
                             size="sm"

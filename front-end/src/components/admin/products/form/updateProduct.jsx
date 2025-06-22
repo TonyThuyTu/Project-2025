@@ -70,7 +70,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     const normalizedAttributes = (productData.attributes || []).map((attr) => ({
       attribute_id: attr.attribute_id,
       name: attr.name || `Option ${attr.attribute_id}`,
-      type: attr.type || "text",
+      type: /màu|color/i.test(attr.name) ? 'color' : 'text',  // ✅ Thêm dòng này để phân biệt kiểu màu
       values: (attr.values || []).map((val) => ({
         value_id: val.value_id,
         label: val.value || "",
@@ -83,7 +83,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
           url: img.Img_url?.startsWith("/uploads")
             ? `http://localhost:5000${img.Img_url}`
             : img.Img_url,
-          isMain: img.is_main || 2,
+          isMain: img.is_main === true,
           fromServer: true,
         })),
       })),
@@ -242,7 +242,10 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
               setSelectedParent={setSelectedParent}
               selectedChild={selectedChild}
               setSelectedChild={setSelectedChild}
+              initialParent={productData?.category?.parent?.category_id}
+              initialChild={productData?.category?.category_id}
             />
+
           </Card>
 
           <Card className="mb-3 p-3">

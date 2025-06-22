@@ -771,7 +771,12 @@ exports.getProductsById = async (req, res) => {
 
     // 2. Ảnh sản phẩm
     const images = await ProductImg.findAll({
-      where: { id_products: id },
+      where: { 
+        id_products: id,
+        id_value: null,
+        id_variant: null,
+        is_main: true 
+      },
     });
 
     // 3. Thông số kỹ thuật

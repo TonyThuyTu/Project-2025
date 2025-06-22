@@ -1,79 +1,94 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Form, Row, Col, Spinner } from 'react-bootstrap';
+import { Form, Row, Col, Spinner } from "react-bootstrap";
 
 export default function CategorySelector({
   selectedParent,
   setSelectedParent,
   selectedChild,
   setSelectedChild,
+  initialParent,
+  initialChild,
 }) {
   const [parentCategories, setParentCategories] = useState([]);
   const [childCategories, setChildCategories] = useState([]);
   const [loadingParents, setLoadingParents] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(false);
 
-  // Load danh mục cha
+  // Load danh mục cha khi mount
   useEffect(() => {
-    const fetchParents = async () => {
+    async function fetchParents() {
+      setLoadingParents(true);
       try {
-        setLoadingParents(true);
         const res = await axios.get("http://localhost:5000/api/categories");
         const parents = res.data.filter(c => c.parent_id === null);
         setParentCategories(parents);
-      } catch (err) {
-        console.error("Lỗi load danh mục cha:", err);
+      } catch (error) {
+        console.error("❌ Lỗi load danh mục cha:", error);
       } finally {
         setLoadingParents(false);
       }
-    };
+    }
     fetchParents();
   }, []);
 
+  useEffect(() => {
+    if (initialChild && !selectedChild) {
+      setSelectedChild(initialChild);
+      console.log("✅ Gán selectedChild trực tiếp từ initial:", initialChild);
+    }
+  }, [initialChild, selectedChild]);
+
+  // Set selectedParent từ initialParent (chỉ 1 lần hoặc khi initialParent thay đổi)
+  useEffect(() => {
+    if (initialParent && initialParent !== selectedParent) {
+      setSelectedParent(initialParent);
+      console.log("⏳ Gán selectedParent từ initial:", initialParent);
+    }
+  }, [initialParent]);
+
   // Load danh mục con khi selectedParent thay đổi
   useEffect(() => {
-    const fetchChildren = async () => {
+    async function fetchChildren() {
       if (!selectedParent) {
         setChildCategories([]);
         setSelectedChild(null);
         return;
       }
+
+      setLoadingChildren(true);
       try {
-        setLoadingChildren(true);
         const res = await axios.get(`http://localhost:5000/api/categories/parent/${selectedParent}`);
         setChildCategories(res.data || []);
-      } catch (err) {
-        console.error("Lỗi load danh mục con:", err);
+      } catch (error) {
+        console.error("❌ Lỗi load danh mục con:", error);
       } finally {
         setLoadingChildren(false);
       }
-    };
+    }
     fetchChildren();
   }, [selectedParent]);
 
-  // Nếu mở modal edit mà có selectedChild nhưng chưa có selectedParent
+  // Set selectedChild từ initialChild (chỉ khi initialChild thay đổi và hợp lệ)
   useEffect(() => {
-    const fetchParentAndChildren = async () => {
-      if (selectedChild && !selectedParent) {
-        try {
-          const res = await axios.get(`http://localhost:5000/api/categories/${selectedChild}`);
-          const childCat = res.data;
+    if (
+      initialChild &&
+      initialChild !== selectedChild &&
+      childCategories.some(cat => cat.category_id === initialChild)
+    ) {
+      setSelectedChild(initialChild);
+      console.log("⏳ Gán selectedChild từ initial:", initialChild);
+    }
+  }, [initialChild, childCategories]);
 
-          if (childCat?.parent_id && childCat.parent_id !== selectedParent) {
-            const parentId = childCat.parent_id;
-            setSelectedParent(parentId);
+  // Đồng bộ selectedChild với childCategories (reset nếu không hợp lệ)
+  useEffect(() => {
+    if (selectedChild && !childCategories.some(cat => cat.category_id === selectedChild)) {
+      setSelectedChild(null);
+      console.log("⚠️ selectedChild không còn hợp lệ, reset về null");
+    }
+  }, [childCategories, selectedChild]);
 
-            const childRes = await axios.get(`http://localhost:5000/api/categories/parent/${parentId}`);
-            setChildCategories(childRes.data || []);
-          }
-        } catch (err) {
-          console.error("Lỗi lấy danh mục cha theo con:", err);
-        }
-      }
-    };
-    fetchParentAndChildren();
-  }, [selectedChild]);
-  
   return (
     <>
       <h5 className="mb-3">Chọn danh mục</h5>
@@ -84,15 +99,17 @@ export default function CategorySelector({
             <Form.Select
               value={selectedParent || ""}
               onChange={(e) => {
-                const parentId = e.target.value ? parseInt(e.target.value) : null;
+                const val = e.target.value;
+                const parentId = val ? parseInt(val) : null;
                 setSelectedParent(parentId);
-                setSelectedChild(null); // reset danh mục con khi đổi cha
+                setSelectedChild(null);
+                console.log("🟢 Chọn danh mục cha:", parentId);
               }}
               disabled={loadingParents}
             >
               <option value="">-- Chọn danh mục cha --</option>
               {parentCategories.map(cat => (
-                <option key={`parent-${cat.category_id}`} value={cat.category_id}>
+                <option key={cat.category_id} value={cat.category_id}>
                   {cat.name}
                 </option>
               ))}
@@ -106,14 +123,16 @@ export default function CategorySelector({
             <Form.Select
               value={selectedChild || ""}
               onChange={(e) => {
-                const childId = e.target.value ? parseInt(e.target.value) : null;
+                const val = e.target.value;
+                const childId = val ? parseInt(val) : null;
                 setSelectedChild(childId);
+                console.log("🟢 Chọn danh mục con:", childId);
               }}
               disabled={!selectedParent || loadingChildren}
             >
               <option value="">-- Chọn danh mục con --</option>
               {childCategories.map(cat => (
-                <option key={`child-${cat.category_id}`} value={cat.category_id}>
+                <option key={cat.category_id} value={cat.category_id}>
                   {cat.name}
                 </option>
               ))}
