@@ -259,7 +259,7 @@ exports.getHomepageData = async (req, res) => {
       ],
     });
 
-    console.log('Homepage categories:', JSON.stringify(categories, null, 2));
+    // console.log('Homepage categories:', JSON.stringify(categories, null, 2));
 
     if (!categories || categories.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });

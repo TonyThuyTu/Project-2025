@@ -767,7 +767,7 @@ exports.getProductsById = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    console.log('Product with category:', JSON.stringify(product.toJSON(), null, 2)); // Debug
+    // console.log('Product with category:', JSON.stringify(product.toJSON(), null, 2)); // Debug
 
     // 2. Ảnh sản phẩm
     const images = await ProductImg.findAll({
@@ -811,7 +811,7 @@ exports.getProductsById = async (req, res) => {
         },
       ],
     });
-    console.log('ProductAttribute sample:', JSON.stringify(productAttributes, null, 2));
+    // console.log('ProductAttribute sample:', JSON.stringify(productAttributes, null, 2));
     const attributes = productAttributes
     .filter(pa => pa.attribute && Array.isArray(pa.attribute.values))
     .map(pa => {
@@ -896,7 +896,7 @@ exports.getProductsById = async (req, res) => {
       skus,
     };
 
-    console.log('Final response:', JSON.stringify(response, null, 2)); // Debug
+    // console.log('Final response:', JSON.stringify(response, null, 2)); // Debug
     return res.json(response);
   } catch (error) {
     console.error("Lỗi khi lấy sản phẩm theo ID:", error);

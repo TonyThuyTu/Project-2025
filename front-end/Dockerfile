@@ -1,20 +1,20 @@
 # Base image
 FROM node:18
 
-# Set working directory
+# Làm việc trong thư mục container
 WORKDIR /app
 
-# Copy only package files first (for caching)
+# Copy package.json và lock file để cache install
 COPY package*.json ./
 
-# Install dependencies
+# Cài đặt dependencies
 RUN npm install
 
-# Copy rest of the source code
+# Copy toàn bộ source code (bao gồm /src/app)
 COPY . .
 
-# Expose dev port
+# Mở port dev
 EXPOSE 3000
 
-# Start dev server with hot reload
+# Chạy Next.js ở dev mode
 CMD ["npm", "run", "dev"]
