@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, Table } from 'react-bootstrap';
+import CurrencyInput from 'react-currency-input-field';
 import { Trash } from 'react-bootstrap-icons';
 
 export default function OptionsManager({ options, setOptions }) {
@@ -35,10 +36,12 @@ export default function OptionsManager({ options, setOptions }) {
   const addValue = (i) => {
     const updated = [...options];
     updated[i].values.push({
-      label: '',
+      id_value: null,
+      // idProductAttrVal: null,
+      value: '',
       extraPrice: 0,
       quantity: 0,
-      status: 2,
+      status: '',
       images: [],
     });
     setOptions(updated);
@@ -58,46 +61,79 @@ export default function OptionsManager({ options, setOptions }) {
 
   const handleUploadValueImage = (e, i, j) => {
     const files = Array.from(e.target.files);
-    const images = files.map(file => ({
+
+    const newImages = files.map(file => ({
       file,
       url: URL.createObjectURL(file),
-      isMain: 2,
+      isMain: false,
+      fromServer: false,
     }));
 
-    const updated = [...options];
-    updated[i].values[j].images = [...(updated[i].values[j].images || []), ...images];
+      setOptions(prevOptions => {
+      const updated = [...prevOptions];
 
-    // Nếu chưa có ảnh đại diện, tự chọn ảnh đầu tiên làm main
-    if (!updated[i].values[j].images.some(img => img.isMain === 1) && images.length > 0) {
-      updated[i].values[j].images[0].isMain = 1;
-    }
+      const option = { ...updated[i] };
+      const value = { ...option.values[j] };
 
-    setOptions(updated);
+      const existingImages = Array.isArray(value.images) ? [...value.images] : [];
+      const mergedImages = [...existingImages, ...newImages];
+
+      // Nếu chưa có ảnh đại diện thì chọn ảnh đầu tiên làm main
+      if (!mergedImages.some(img => img.isMain === true) && mergedImages.length > 0) {
+        mergedImages[0].isMain = true;
+      }
+
+      value.images = mergedImages;
+      option.values = [...option.values];
+      option.values[j] = value;
+      updated[i] = option;
+
+      return updated;
+    });
   };
+
+  //   const updated = [...options];
+  //   const targetImages = updated[i].values[j].images || [];
+
+  //   const mergedImages = [...targetImages, ...newImages];
+
+  //   // Nếu chưa có ảnh đại diện => chọn ảnh đầu tiên làm main
+  //   if (!mergedImages.some(img => img.isMain === true) && mergedImages.length > 0) {
+  //     mergedImages[0].isMain = true;
+  //   }
+
+  //   updated[i].values[j].images = mergedImages;
+  //   setOptions(updated);
+  // };
 
   const handleToggleMainValueImage = (i, j, k) => {
     const updated = [...options];
-    updated[i].values[j].images.forEach(img => img.isMain = false);
-    updated[i].values[j].images[k].isMain = true;
+    updated[i].values[j].images = updated[i].values[j].images.map((img, idx) => ({
+      ...img,
+      isMain: idx === k,
+    }));
     setOptions(updated);
   };
 
   const handleRemoveValueImage = (i, j, k) => {
     const updated = [...options];
-    // Revoke URL trước khi xóa ảnh để tránh rò rỉ bộ nhớ
-    const img = updated[i].values[j].images[k];
-    if (img.url && img.file) {
-      URL.revokeObjectURL(img.url);
-    }
-    updated[i].values[j].images.splice(k, 1);
+    const valueImages = updated[i].values[j].images;
 
-    // Nếu ảnh đại diện bị xóa, set lại ảnh đầu tiên làm main nếu còn ảnh
-    if (!updated[i].values[j].images.some(img => img.isMain === 1) && updated[i].values[j].images.length > 0) {
-      updated[i].values[j].images[0].isMain = 1;
+    const removed = valueImages[k];
+    if (removed?.url && removed?.file) {
+      URL.revokeObjectURL(removed.url);
     }
 
+    valueImages.splice(k, 1);
+
+    if (!valueImages.some(img => img.isMain === true) && valueImages.length > 0) {
+      valueImages[0].isMain = true;
+    }
+
+    console.log('Còn lại ảnh option:', valueImages);
     setOptions(updated);
-  };
+  }; 
+
 
   const removeOption = (i) => {
     const updated = [...options];
@@ -157,8 +193,8 @@ export default function OptionsManager({ options, setOptions }) {
             <thead>
               <tr>
                 <th>Giá trị</th>
-                <th>+Giá</th>
-                <th>SL</th>
+                <th>Giá bán</th>
+                <th>Số lượng</th>
                 <th>Trạng thái</th>
                 <th>Ảnh</th>
                 <th>Xoá</th>
@@ -172,41 +208,46 @@ export default function OptionsManager({ options, setOptions }) {
                       <div className="d-flex align-items-center gap-2">
                         <Form.Control
                           type="color"
-                          value={val.label || '#000000'}
-                          onChange={(e) => updateValue(i, j, 'label', e.target.value)}
+                          value={val.value || '#000000'}
+                          onChange={(e) => updateValue(i, j, 'value', e.target.value)}
                           title={val.label}
                           style={{ width: 50, height: 50 }}
                         />
-                        <span>{val.label}</span>
+                        <span>{val.value}</span>
                       </div>
                     ) : (
                       <Form.Control
-                        value={val.label}
-                        onChange={(e) => updateValue(i, j, 'label', e.target.value)}
+                        value={val.value}
+                        onChange={(e) => updateValue(i, j, 'value', e.target.value)}
                       />
                     )}
                   </td>
                   <td>
-                    <Form.Control
-                      type="number"
+                    <CurrencyInput
+                      intlConfig={{ locale: 'vi-VN', currency: 'VND' }}
+                      allowNegativeValue={false}
+                      decimalsLimit={0}
                       value={val.extraPrice}
-                      onChange={(e) => updateValue(i, j, 'extraPrice', +e.target.value)}
+                      onValueChange={value =>
+                        updateValue(i, j, 'extraPrice', value ?? 0)
+                      }
                     />
                   </td>
                   <td>
                     <Form.Control
                       type="number"
+                      min={0}
                       value={val.quantity}
-                      onChange={(e) => updateValue(i, j, 'quantity', +e.target.value)}
+                       onChange={(e) => updateValue(i, j, 'quantity', Number(e.target.value))} // Ép kiểu số
                     />
                   </td>
                   <td>
                     <Form.Select
-                      value={val.status ?? 2}
-                      onChange={(e) => updateValue(i, j, 'status', +e.target.value)}
+                      value={val.status ? 1 : 0}
+                      onChange={(e) => updateValue(i, j, 'status', Number(e.target.value))} // Ép kiểu số
                     >
-                      <option value={2}>Hiển thị</option>
-                      <option value={1}>Ẩn</option>
+                      <option value={1}>Hiển thị</option>
+                      <option value={0}>Ẩn</option>
                     </Form.Select>
                   </td>
                   <td style={{ minWidth: 240 }}>
@@ -216,15 +257,9 @@ export default function OptionsManager({ options, setOptions }) {
                       accept="image/*"
                       onChange={(e) => handleUploadValueImage(e, i, j)}
                     />
-                    <div
-                      className="d-flex flex-wrap gap-2 mt-2"
-                      style={{ maxWidth: '100%' }}
-                    >
+                    <div className="d-flex flex-wrap gap-2 mt-2">
                       {val.images?.map((img, k) => (
-                        <div
-                          key={k}
-                          style={{ width: '70px', textAlign: 'center' }}
-                        >
+                        <div key={k} style={{ width: '70px', textAlign: 'center' }}>
                           <img
                             src={img.url}
                             className="img-thumbnail"

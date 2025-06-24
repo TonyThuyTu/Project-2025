@@ -230,7 +230,6 @@ exports.createProducts = async (req, res) => {
   }
 };
 
-
 // Hàm xử lý biến thể, thêm log chi tiết
 async function saveVariants(variantsParsed, newProduct, uploadedImages, attributeValueMap, transaction) {
   console.log("🔔 saveVariants bắt đầu với", variantsParsed.length, "variants");
@@ -571,6 +570,7 @@ async function saveVariants(variantsParsed, newProduct, uploadedImages, attribut
 exports.updateProduct = async (req, res) => {
   const id = req.params.id;
   const t = await sequelize.transaction();
+
   try {
     const product = await Product.findByPk(id);
     if (!product) {
@@ -586,138 +586,242 @@ exports.updateProduct = async (req, res) => {
       products_description,
       category_id,
       specs,
+      optionImages,
+      optionFileMeta,
       main_image_index,
       existingImages,
     } = req.body;
 
-    // Cập nhật thông tin cơ bản
+    // === 1. Cập nhật thông tin cơ bản ===
     if (products_name !== undefined) product.products_name = products_name;
     if (products_market_price !== undefined) product.products_market_price = products_market_price;
     if (products_sale_price !== undefined) product.products_sale_price = products_sale_price;
     if (products_status !== undefined) product.products_status = products_status;
     if (products_description !== undefined) product.products_description = products_description;
-
-    if (category_id !== undefined && category_id !== "null" && category_id !== null) {
+    if (category_id && category_id !== "null") {
       product.category_id = parseInt(category_id);
     }
 
-    // Cập nhật specs
+    // === 2. Cập nhật thông số kỹ thuật (specs) ===
     if (specs) {
       const specsParsed = JSON.parse(specs);
       const oldSpecs = await ProductSpec.findAll({ where: { id_products: id }, transaction: t });
-      const oldSpecsMap = new Map();
-      oldSpecs.forEach(s => oldSpecsMap.set(s.id_spec, s));
-      const newSpecIds = specsParsed.filter(s => s.id_spec).map(s => Number(s.id_spec));
+      const oldMap = new Map(oldSpecs.map(s => [s.id_spec, s]));
+      const newIds = specsParsed.filter(s => s.id_spec).map(s => Number(s.id_spec));
 
+      // Xoá spec cũ không còn
       for (const oldSpec of oldSpecs) {
-        if (!newSpecIds.includes(oldSpec.id_spec)) {
+        if (!newIds.includes(oldSpec.id_spec)) {
           await oldSpec.destroy({ transaction: t });
         }
       }
 
+      // Cập nhật hoặc thêm mới
       for (const spec of specsParsed) {
-        if (spec.id_spec && oldSpecsMap.has(Number(spec.id_spec))) {
-          const specToUpdate = oldSpecsMap.get(Number(spec.id_spec));
-          specToUpdate.spec_name = spec.name || specToUpdate.spec_name;
-          specToUpdate.spec_value = spec.value || specToUpdate.spec_value;
-          await specToUpdate.save({ transaction: t });
+        if (spec.id_spec && oldMap.has(Number(spec.id_spec))) {
+          const s = oldMap.get(Number(spec.id_spec));
+          s.spec_name = spec.name;
+          s.spec_value = spec.value;
+          await s.save({ transaction: t });
         } else {
-          await ProductSpec.create(
-            {
-              id_products: id,
-              spec_name: spec.name,
-              spec_value: spec.value,
-            },
-            { transaction: t }
-          );
+          await ProductSpec.create({
+            id_products: id,
+            spec_name: spec.name,
+            spec_value: spec.value,
+          }, { transaction: t });
         }
       }
     }
 
-    // Xử lý ảnh chung
-    const files = req.files?.images || [];
+    // === 3. Ảnh OPTION (optionImages và optionFiles) ===
 
-    // Parse existingImages kỹ
+    // Parse ảnh option cũ
+    let parsedOptionImages = [];
+    if (optionImages) {
+      try {
+        parsedOptionImages = typeof optionImages === "string" ? JSON.parse(optionImages) : optionImages;
+      } catch (e) {
+        console.error("Lỗi parse optionImages:", e);
+      }
+    }
+
+    const keepOptionImgIds = parsedOptionImages.map(img => img.id_product_img).filter(Boolean);
+
+    const oldOptionImgs = await ProductImg.findAll({
+      where: { id_products: id, id_value: { [Op.ne]: null } },
+      transaction: t,
+    });
+
+    // Xoá ảnh option cũ không dùng nữa
+    for (const img of oldOptionImgs) {
+      if (!keepOptionImgIds.includes(img.id_product_img)) {
+        const imgPath = path.join(__dirname, "../..", img.Img_url);
+        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+        await img.destroy({ transaction: t });
+      }
+    }
+
+    // Upsert ảnh option cũ
+    for (const img of parsedOptionImages) {
+      if (!img.Img_url || !img.id_value) continue;
+      await ProductImg.upsert({
+        id_product_img: img.id_product_img || undefined,
+        id_products: id,
+        id_value: img.id_value,
+        Img_url: img.Img_url,
+        is_main: !!img.is_main,
+        id_variant: null,
+      }, { transaction: t });
+    }
+
+    // Xử lý ảnh mới từ FE (optionFiles)
+    const optionFiles = req.files?.optionFiles || [];
+    let optionFileMetas = [];
+
+    try {
+      if (typeof optionFileMeta === "string") {
+        optionFileMetas = JSON.parse(optionFileMeta);
+      } else if (Array.isArray(optionFileMeta)) {
+        optionFileMetas = optionFileMeta.map(m => (typeof m === "string" ? JSON.parse(m) : m));
+      }
+    } catch (e) {
+      console.error("Lỗi parse optionFileMeta:", e);
+    }
+
+    for (let i = 0; i < optionFiles.length; i++) {
+      const file = optionFiles[i];
+      const meta = optionFileMetas[i] || {};
+      if (!meta.id_value) continue;
+
+      const filename = path.basename(file.path);
+      const dbPath = "/uploads/" + filename;
+
+      await ProductImg.create({
+        id_products: id,
+        id_value: meta.id_value,
+        Img_url: dbPath,
+        is_main: !!meta.is_main,
+        id_variant: null,
+      }, { transaction: t });
+    }
+
+    // === xử lý thông tin chung của option
+    // === xử lý thông tin chung của option
+  try {
+    const attributes = typeof req.body.attributes === "string"
+      ? JSON.parse(req.body.attributes)
+      : req.body.attributes;
+
+    console.log("📌 attributes received:", attributes);
+
+    for (const attr of attributes) {
+      for (const val of attr.values || []) {
+        const idVal = val.value_id || val.id_value || val.idVal;
+        if (!idVal) continue;
+
+        const exists = await AttributeValue.findOne({
+          where: { id_value: Number(idVal) },
+          transaction: t,
+        });
+        if (!exists) {
+          console.warn(`⚠️ Không tìm thấy attribute_value với id_value = ${idVal}`);
+          continue;
+        }
+
+        const extraPrice = val.extra_price ?? val.extraPrice ?? 0;
+        const quantity = val.quantity ?? 0;
+        const statusInput = val.status;
+
+        const parsedExtraPrice = parseFloat(extraPrice);
+        const parsedQuantity = parseInt(quantity, 10);
+        const parsedStatus = [1, '1', true].includes(statusInput);
+
+        if (
+          isNaN(parsedExtraPrice) ||
+          isNaN(parsedQuantity) ||
+          typeof parsedStatus !== 'boolean'
+        ) {
+          console.warn(`⚠️ Dữ liệu không hợp lệ cho id_value = ${idVal}`, { extraPrice, quantity, statusInput });
+          continue;
+        }
+
+        console.log("🔁 Chuẩn bị save:", {
+          id_value: idVal,
+          value: val.value,
+          extra_price: parsedExtraPrice,
+          quantity: parsedQuantity,
+          status: parsedStatus,
+        });
+
+        // Gán trường mới dù giá trị giống hay không
+        exists.value = val.value?.toString() || '';
+        exists.extra_price = parsedExtraPrice;
+        exists.quantity = parsedQuantity;
+        exists.status = parsedStatus;
+
+        // Lưu dữ liệu xuống DB
+        await exists.save({ transaction: t });
+        console.log(`✅ Đã save id_value=${idVal}`);
+      }
+    }
+  } catch (err) {
+    await t.rollback();
+    console.error("❌ Error updating attributes:", err);
+    return res.status(500).json({ message: "Lỗi khi cập nhật attributes", error: err.message });
+  }
+
+    // === 4. Ảnh CHUNG (images) ===
+
+    // Parse existingImages
     let existingImagesParsed = [];
-    if (existingImages) {
+    try {
       if (typeof existingImages === "string") {
-        try {
-          // Có thể là mảng JSON string hoặc 1 object JSON string
-          existingImagesParsed = JSON.parse(existingImages);
-          if (!Array.isArray(existingImagesParsed)) existingImagesParsed = [existingImagesParsed];
-        } catch (e) {
-          // fallback nếu là mảng chuỗi JSON
-          if (Array.isArray(existingImages)) {
-            existingImagesParsed = existingImages.map(imgStr => {
-              try {
-                return JSON.parse(imgStr);
-              } catch {
-                return null;
-              }
-            }).filter(x => x);
-          }
-        }
+        const parsed = JSON.parse(existingImages);
+        existingImagesParsed = Array.isArray(parsed) ? parsed : [parsed];
       } else if (Array.isArray(existingImages)) {
-        existingImagesParsed = existingImages.map(imgStr => {
-          if (typeof imgStr === "string") {
-            try {
-              return JSON.parse(imgStr);
-            } catch {
-              return null;
-            }
-          }
-          return imgStr;
-        }).filter(x => x);
+        existingImagesParsed = existingImages.map(e =>
+          typeof e === "string" ? JSON.parse(e) : e
+        );
       }
+    } catch (e) {
+      console.error("Lỗi parse existingImages:", e);
     }
 
-    // Lấy list id ảnh giữ lại
     const keepImageIds = existingImagesParsed.map(img => img.id).filter(Boolean);
-
-    // Lấy ảnh cũ
     const oldImages = await ProductImg.findAll({
       where: { id_products: id, id_variant: null, id_value: null },
       transaction: t,
     });
 
-    // Xóa ảnh không nằm trong keepImageIds
     for (const img of oldImages) {
       if (!keepImageIds.includes(img.id_product_img)) {
-        // Xóa file vật lý
         const imgPath = path.join(__dirname, "../..", img.Img_url);
         if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-
         await img.destroy({ transaction: t });
       }
     }
 
-    // Thêm ảnh mới (file upload)
+    // Thêm ảnh mới (images)
+    const files = req.files?.images || [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const filename = path.basename(file.path);
-      const dbPath = "/uploads/" + filename;
-
-      await ProductImg.create(
-        {
-          id_products: id,
-          Img_url: dbPath,
-          is_main: false, // ban đầu false, set chính sau
-          id_variant: null,
-          id_value: null,
-        },
-        { transaction: t }
-      );
+      const dbPath = "/uploads/" + path.basename(file.path);
+      await ProductImg.create({
+        id_products: id,
+        Img_url: dbPath,
+        is_main: false,
+        id_variant: null,
+        id_value: null,
+      }, { transaction: t });
     }
 
-    // Cập nhật lại is_main cho tất cả ảnh chung
-    // Lấy lại ảnh sau khi thêm xóa
+    // Đặt lại ảnh đại diện
     const allImages = await ProductImg.findAll({
       where: { id_products: id, id_variant: null, id_value: null },
       order: [["id_product_img", "ASC"]],
       transaction: t,
     });
 
-    // Nếu main_image_index vượt quá, mặc định là 0
     const mainIndex = main_image_index != null && !isNaN(main_image_index) && main_image_index < allImages.length
       ? parseInt(main_image_index)
       : 0;
@@ -726,7 +830,7 @@ exports.updateProduct = async (req, res) => {
       await allImages[i].update({ is_main: i === mainIndex }, { transaction: t });
     }
 
-    // Lưu product
+    // === 5. Lưu lại product ===
     await product.save({ transaction: t });
     await t.commit();
 
@@ -829,15 +933,13 @@ exports.getProductsById = async (req, res) => {
         name: pa.attribute.name,
         type: pa.attribute.type,
         values: filteredValues.map(v => ({
-          value_id: v.id_value,
+          id_value: v.id_value,
           value: v.value,
-          extra_price: v.extra_price || 0,
-          quantity: v.quantity || 0,
-          status: v.status || 1,
-          is_main: v.is_main || 0,
-          color_code: v.color_code || null,
+          extra_price: v.extra_price,
+          quantity: v.quantity,
+          status: v.status,
           images: v.images || [],
-        })),
+        }))
       };
     });
 

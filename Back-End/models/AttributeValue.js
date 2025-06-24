@@ -15,7 +15,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     quantity: DataTypes.INTEGER,
     extra_price: DataTypes.DECIMAL(10, 2),
-    status: DataTypes.BOOLEAN,
+    status: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: 1,
+    }
   }, {
     tableName: "attribute_values",
     timestamps: false,

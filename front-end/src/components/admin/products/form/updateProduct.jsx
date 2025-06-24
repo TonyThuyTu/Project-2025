@@ -72,14 +72,15 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       name: attr.name || `Option ${attr.attribute_id}`,
       type: /màu|color/i.test(attr.name) ? 'color' : 'text',  // ✅ Thêm dòng này để phân biệt kiểu màu
       values: (attr.values || []).map((val) => ({
-        value_id: val.value_id,
-        label: val.value || "",
+        value_id: val.value_id || val.id_value || null,
         value: val.value || "",
         extraPrice: val.extra_price || 0,
         quantity: val.quantity || 0,
         status: val.status ?? 2,
         color_code: val.color_code || "",
         images: (val.images || []).map((img) => ({
+          id_product_img: img.id_product_img,
+          id_value: val.value_id, // 💡 thêm dòng này
           url: img.Img_url?.startsWith("/uploads")
             ? `http://localhost:5000${img.Img_url}`
             : img.Img_url,
@@ -129,7 +130,6 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         price: sku?.price || 0,
         quantity: sku?.quantity || 0,
         status: sku?.status || 2,
-        images: sku?.images || [],
         images: sku?.images || [],   // Thêm trường images đầy đủ
         sku_id: sku?.sku_id,         // Nếu bạn có id SKU, giữ lại để dễ xử lý
         sku_code: sku?.sku_code || '', // Nếu có mã SKU
@@ -176,7 +176,49 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       // Lấy ID sản phẩm
       const productId = productData.product?.id_products || productData.products_id;
 
-      
+      const optionImages = [];
+      let optionFileIndex = 0;
+
+      options.forEach(attr => {
+        attr.values.forEach(val => {
+          if (Array.isArray(val.images)) {
+            val.images.forEach((img) => {
+              if (img.fromServer) {
+                optionImages.push({
+                  id_product_img: img.id_product_img,
+                  id_products: val.product_id || null,
+                  id_value: val.value_id,
+                  Img_url: img.url || img.previewUrl || '',
+                  is_main: img.isMain,
+                });
+              } else if (img.file) {
+                formData.append('optionFiles', img.file);
+                formData.append('optionFileMeta[]', JSON.stringify({
+                  id_value: val.value_id,
+                  is_main: img.isMain === true,
+                  index: optionFileIndex++,
+                }));
+              }
+            });
+          }
+        });
+      });
+
+      const fixedOptions = options.map(opt => ({
+        ...opt,
+        values: opt.values
+          .filter(val => val.value_id || val.id_value) // ⚠️ chỉ lấy value đã có id
+          .map(val => ({
+            value_id: val.value_id || val.id_value,
+            value: val.value || val.label || "",
+            extra_price: val.extraPrice !== undefined ? Number(val.extraPrice) : 0,
+            quantity: val.quantity !== undefined ? Number(val.quantity) : 0,
+            status: val.status !== undefined ? Number(val.status) : 1,
+          }))
+      }));
+      console.log("🧪 fixedOptions gửi lên:", JSON.stringify(fixedOptions, null, 2));
+
+      formData.append('attributes', JSON.stringify(fixedOptions));
       formData.append('products_id', productId);
       formData.append('products_name', productName);
       formData.append('products_market_price', Number(marketPrice).toFixed(2));
@@ -185,8 +227,9 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
       formData.append('category_id', selectedChild || selectedParent);
       formData.append('specs', JSON.stringify(specs));
-      formData.append('attributes', JSON.stringify(options));
+      // formData.append('attributes', JSON.stringify(options));
       formData.append('variants', JSON.stringify(skuList));
+      formData.append("optionImages", JSON.stringify(optionImages));
       formData.append('products_status', status);
 
       // Gửi ảnh mới thêm (ảnh từ client, không phải từ server)
@@ -208,7 +251,8 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
           }));
         }
       });
-
+      // console.log("Gửi attributes:", fixedOptions);
+      // console.log("Options gửi lên:", options);
       // Gọi API PUT
       await axios.put(`http://localhost:5000/api/products/${productId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -222,7 +266,6 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       alert(`Lỗi: ${error.response?.data?.message || error.message}`);
     }
   };
-
 
   return (
     <Modal show={show} onHide={onClose} size="xl" centered scrollable>

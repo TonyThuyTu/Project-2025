@@ -19,7 +19,10 @@ router.post(
 //update product
 router.put(
   '/:id',
-  upload.fields([{ name: 'images', maxCount: 30 }]),
+  upload.fields([
+    { name: 'images', maxCount: 10 },
+    { name: 'optionFiles', maxCount: 30}
+  ]),
   productController.updateProduct
 );
 
