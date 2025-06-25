@@ -1,23 +1,44 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
+const voucher = require('./voucher');
 
 // Import các model
 const Contact = require('./contact')(sequelize, DataTypes);
+
 const Banner = require('./banner')(sequelize, DataTypes);
+
 const Category = require('./categories')(sequelize, DataTypes);
+
 const Customer = require('./customers')(sequelize, DataTypes);
+
 const Product = require('./products')(sequelize, DataTypes);
+
 const Employee = require('./employees')(sequelize, DataTypes);
+
 const Address = require('./userAddress')(sequelize, DataTypes);
+
 const ProductImg = require('./productImage')(sequelize, DataTypes);
+
 const ProductSpec = require('./productSpec')(sequelize, DataTypes);
+
 const Attribute = require('./Attribute')(sequelize, DataTypes);
+
 const AttributeValue = require('./AttributeValue')(sequelize, DataTypes);
+
 const ProductAttribute = require('./productAttribute')(sequelize, DataTypes);
+
 const ProductVariant = require('./productVariant')(sequelize, DataTypes);
+
 const VariantValue = require('./variantValue')(sequelize, DataTypes);
+
 const ProductAttributeValue = require('./ProductAttributeValue') (sequelize, DataTypes);
+
 const ProductReview = require('./comments') (sequelize, DataTypes);
+
+const Voucher = require('./voucher') (sequelize, DataTypes);
+
+const VoucherProduct = require('./voucherProduct') (sequelize, DataTypes);
+
 // Khởi tạo object db
 const db = {
   sequelize,
@@ -40,9 +61,9 @@ const db = {
   VariantValue,
   ProductAttributeValue,
   ProductReview,
+  Voucher,
+  VoucherProduct,
 };
-
-
 
 /* =========================
    Thiết lập Associations
@@ -205,6 +226,21 @@ db.Customer.hasMany(db.ProductReview, {
 db.ProductReview.belongsTo(db.Customer, {
   foreignKey: "id_customer",
   as: "customer"
+});
+
+//voucher
+db.Voucher.belongsToMany(db.Product, {
+  through: db.VoucherProduct,
+  foreignKey: 'id_voucher',
+  otherKey: 'id_product',
+  as: 'products'
+});
+
+db.Product.belongsToMany(db.Voucher, {
+  through: db.VoucherProduct,
+  foreignKey: 'id_product',
+  otherKey: 'id_voucher',
+  as: 'vouchers'
 });
 
 module.exports = db;
