@@ -636,6 +636,147 @@ exports.updateProduct = async (req, res) => {
     // === 3. Ảnh OPTION (optionImages và optionFiles) ===
 
     // Parse ảnh option cũ
+    // === 1. Xử lý attribute_values và gán product_attribute_values ===
+    try {
+      const attributes = typeof req.body.attributes === "string"
+        ? JSON.parse(req.body.attributes)
+        : req.body.attributes;
+
+      // Map dùng cho việc lưu ảnh option mới
+      req.tempIdMap = {};
+
+      // 1. Lấy danh sách id_value hiện tại của sản phẩm
+      const currentAttributeValues = await db.AttributeValue.findAll({
+        include: [{
+          model: db.ProductAttributeValue,
+          as: 'productAttributeValues',
+          where: { id_product: id }
+        }],
+        transaction: t,
+      });
+
+      const currentIds = currentAttributeValues.map(av => av.id_value);
+
+      // 2. Lấy danh sách id_value được gửi từ frontend
+      const newIds = [];
+      attributes.forEach(attr => {
+        (attr.values || []).forEach(val => {
+          const idVal = val.value_id || val.id_value || val.idVal;
+          if (idVal) newIds.push(Number(idVal));
+        });
+      });
+
+      // 3. Tìm và xoá các giá trị không còn nữa
+      for (const oldId of currentIds) {
+        if (!newIds.includes(oldId)) {
+          console.log(`🗑️ Bắt đầu xoá option không còn id_value=${oldId}`);
+
+          // Xoá ảnh liên kết
+          await db.ProductImg.destroy({
+            where: { id_value: oldId },
+            transaction: t,
+          });
+
+          // Xoá khỏi bảng trung gian
+          await db.ProductAttributeValue.destroy({
+            where: {
+              id_product: id,
+              id_value: oldId,
+            },
+            transaction: t,
+          });
+
+          // Cuối cùng xoá attribute_value
+          await db.AttributeValue.destroy({
+            where: { id_value: oldId },
+            transaction: t,
+          });
+
+          console.log(`🗑️ Đã xoá option id_value=${oldId}`);
+        }
+      }
+
+      // 4. Cập nhật hoặc thêm mới các giá trị được gửi từ frontend
+      for (const attr of attributes) {
+        const attributeId = attr.attribute_id;
+
+        for (const val of attr.values || []) {
+          const idVal = val.value_id || val.id_value || val.idVal;
+          const tempId = val.tempId;
+
+          const extraPrice = val.extra_price ?? val.extraPrice ?? 0;
+          const quantity = val.quantity ?? 0;
+          const statusInput = val.status;
+
+          const parsedExtraPrice = parseFloat(extraPrice);
+          const parsedQuantity = parseInt(quantity, 10);
+          const parsedStatus = [1, '1', true].includes(statusInput);
+
+          if (
+            isNaN(parsedExtraPrice) ||
+            isNaN(parsedQuantity) ||
+            typeof parsedStatus !== 'boolean'
+          ) {
+            console.warn(`⚠️ Dữ liệu không hợp lệ`, { val });
+            continue;
+          }
+
+          // Nếu có id_value -> cập nhật
+          if (idVal) {
+            const exists = await db.AttributeValue.findOne({
+              where: { id_value: Number(idVal) },
+              transaction: t,
+            });
+
+            if (exists) {
+              exists.value = val.value?.toString() || '';
+              exists.extra_price = parsedExtraPrice;
+              exists.quantity = parsedQuantity;
+              exists.status = parsedStatus;
+              await exists.save({ transaction: t });
+
+              console.log(`✅ Đã cập nhật id_value=${idVal}`);
+              continue;
+            }
+          }
+
+          // Nếu chưa có -> tạo mới
+          const newVal = await db.AttributeValue.create({
+            id_attribute: attributeId,
+            value: val.value?.toString() || '',
+            extra_price: parsedExtraPrice,
+            quantity: parsedQuantity,
+            status: parsedStatus,
+          }, { transaction: t });
+
+          if (tempId) {
+            req.tempIdMap[tempId] = newVal.id_value;
+            console.log('📌 Mapping tempId → id_value:', tempId, '→', newVal.id_value);
+          }
+
+          // Gắn vào bảng trung gian
+          await db.ProductAttributeValue.create({
+            id_product: id,
+            id_value: newVal.id_value,
+            id_attribute: attributeId,
+          }, { transaction: t });
+
+          console.log('🔗 Gắn vào bảng product_attribute_values:', {
+            id_product: id,
+            id_value: newVal.id_value,
+            id_attribute: attributeId,
+          });
+        }
+      }
+    } catch (err) {
+      await t.rollback();
+      console.error("❌ Error updating attributes:", err);
+      return res.status(500).json({
+        message: "Lỗi khi cập nhật attributes",
+        error: err.message,
+      });
+    }
+    // === 2. Xử lý ảnh OPTION (optionImages và optionFiles) ===
     let parsedOptionImages = [];
     if (optionImages) {
       try {
@@ -652,7 +793,7 @@ exports.updateProduct = async (req, res) => {
       transaction: t,
     });
 
-    // Xoá ảnh option cũ không dùng nữa
+    // Xoá ảnh option cũ không còn dùng
     for (const img of oldOptionImgs) {
       if (!keepOptionImgIds.includes(img.id_product_img)) {
         const imgPath = path.join(__dirname, "../..", img.Img_url);
@@ -661,7 +802,7 @@ exports.updateProduct = async (req, res) => {
       }
     }
 
-    // Upsert ảnh option cũ
+    // Upsert lại các ảnh cũ
     for (const img of parsedOptionImages) {
       if (!img.Img_url || !img.id_value) continue;
       await ProductImg.upsert({
@@ -674,7 +815,7 @@ exports.updateProduct = async (req, res) => {
       }, { transaction: t });
     }
 
-    // Xử lý ảnh mới từ FE (optionFiles)
+    // Xử lý ảnh mới (optionFiles)
     const optionFiles = req.files?.optionFiles || [];
     let optionFileMetas = [];
 
@@ -691,84 +832,31 @@ exports.updateProduct = async (req, res) => {
     for (let i = 0; i < optionFiles.length; i++) {
       const file = optionFiles[i];
       const meta = optionFileMetas[i] || {};
-      if (!meta.id_value) continue;
+      let idValue = meta.id_value;
+
+      if (!idValue && meta.tempId && req.tempIdMap?.[meta.tempId]) {
+        idValue = req.tempIdMap[meta.tempId];
+        console.log('📌 Mapping tempId → id_value:', meta.tempId, '=>', idValue);
+      }
+
+      if (!idValue) {
+        console.warn(`⚠️ Không có id_value cho ảnh option index=${i}`);
+        continue;
+      }
 
       const filename = path.basename(file.path);
       const dbPath = "/uploads/" + filename;
 
       await ProductImg.create({
         id_products: id,
-        id_value: meta.id_value,
+        id_value: idValue,
         Img_url: dbPath,
         is_main: !!meta.is_main,
         id_variant: null,
       }, { transaction: t });
+
+      console.log('🖼️ Đã lưu ảnh option mới:', dbPath);
     }
-
-    // === xử lý thông tin chung của option
-    // === xử lý thông tin chung của option
-  try {
-    const attributes = typeof req.body.attributes === "string"
-      ? JSON.parse(req.body.attributes)
-      : req.body.attributes;
-
-    console.log("📌 attributes received:", attributes);
-
-    for (const attr of attributes) {
-      for (const val of attr.values || []) {
-        const idVal = val.value_id || val.id_value || val.idVal;
-        if (!idVal) continue;
-
-        const exists = await AttributeValue.findOne({
-          where: { id_value: Number(idVal) },
-          transaction: t,
-        });
-        if (!exists) {
-          console.warn(`⚠️ Không tìm thấy attribute_value với id_value = ${idVal}`);
-          continue;
-        }
-
-        const extraPrice = val.extra_price ?? val.extraPrice ?? 0;
-        const quantity = val.quantity ?? 0;
-        const statusInput = val.status;
-
-        const parsedExtraPrice = parseFloat(extraPrice);
-        const parsedQuantity = parseInt(quantity, 10);
-        const parsedStatus = [1, '1', true].includes(statusInput);
-
-        if (
-          isNaN(parsedExtraPrice) ||
-          isNaN(parsedQuantity) ||
-          typeof parsedStatus !== 'boolean'
-        ) {
-          console.warn(`⚠️ Dữ liệu không hợp lệ cho id_value = ${idVal}`, { extraPrice, quantity, statusInput });
-          continue;
-        }
-
-        console.log("🔁 Chuẩn bị save:", {
-          id_value: idVal,
-          value: val.value,
-          extra_price: parsedExtraPrice,
-          quantity: parsedQuantity,
-          status: parsedStatus,
-        });
-
-        // Gán trường mới dù giá trị giống hay không
-        exists.value = val.value?.toString() || '';
-        exists.extra_price = parsedExtraPrice;
-        exists.quantity = parsedQuantity;
-        exists.status = parsedStatus;
-
-        // Lưu dữ liệu xuống DB
-        await exists.save({ transaction: t });
-        console.log(`✅ Đã save id_value=${idVal}`);
-      }
-    }
-  } catch (err) {
-    await t.rollback();
-    console.error("❌ Error updating attributes:", err);
-    return res.status(500).json({ message: "Lỗi khi cập nhật attributes", error: err.message });
-  }
 
     // === 4. Ảnh CHUNG (images) ===
 

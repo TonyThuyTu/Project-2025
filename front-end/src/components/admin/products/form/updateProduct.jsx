@@ -181,6 +181,14 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
       options.forEach(attr => {
         attr.values.forEach(val => {
+          if (!val.id_value && !val.value_id && !val.tempId) {
+            val.tempId = nanoid(); // <- bạn nhớ import nanoid ở đầu file
+          }
+        });
+      });
+
+      options.forEach(attr => {
+        attr.values.forEach(val => {
           if (Array.isArray(val.images)) {
             val.images.forEach((img) => {
               if (img.fromServer) {
@@ -194,7 +202,8 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
               } else if (img.file) {
                 formData.append('optionFiles', img.file);
                 formData.append('optionFileMeta[]', JSON.stringify({
-                  id_value: val.value_id,
+                  id_value: val.value_id || val.id_value || null,  // nếu có
+                  tempId: val.tempId || null,                      // nếu mới tạo
                   is_main: img.isMain === true,
                   index: optionFileIndex++,
                 }));
@@ -207,13 +216,14 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       const fixedOptions = options.map(opt => ({
         ...opt,
         values: opt.values
-          .filter(val => val.value_id || val.id_value) // ⚠️ chỉ lấy value đã có id
+          .filter(val => val.value?.toString().trim() !== '') // giữ cả mới và cũ, miễn có value
           .map(val => ({
             value_id: val.value_id || val.id_value,
             value: val.value || val.label || "",
             extra_price: val.extraPrice !== undefined ? Number(val.extraPrice) : 0,
             quantity: val.quantity !== undefined ? Number(val.quantity) : 0,
             status: val.status !== undefined ? Number(val.status) : 1,
+            tempId: val.tempId || null  // ✅ thêm dòng này
           }))
       }));
       console.log("🧪 fixedOptions gửi lên:", JSON.stringify(fixedOptions, null, 2));
