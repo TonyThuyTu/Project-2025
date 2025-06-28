@@ -5,9 +5,17 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
+    name: {
+      type: DataTypes.STRING(225),
+      allowNull: false
+    },
     code: {
       type: DataTypes.STRING(50),
       unique: true,
+      allowNull: false
+    },
+    description: {
+      type: DataTypes.TEXT,
       allowNull: false
     },
     discount_type: {
@@ -42,13 +50,18 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
+    create_date: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
+    },
     status: {
-      type: DataTypes.TINYINT, // 1: chờ duyệt, 2: hiển thị, 3: ẩn
-      defaultValue: 1
+      type: DataTypes.TINYINT,
+      defaultValue: 1 // 1: chờ duyệt
     }
   }, {
     tableName: 'vouchers',
-    timestamps: false
+    timestamps: false // vì bạn dùng create_date custom, không dùng createdAt
   });
 
   return Voucher;

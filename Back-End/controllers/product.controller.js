@@ -1105,15 +1105,32 @@ exports.getProductsById = async (req, res) => {
 //get all products 
 exports.getAllProducts = async (req, res) => {
   try {
+    const whereClause = {};
+
+    if (req.query.category_id) {
+      whereClause.category_id = parseInt(req.query.category_id);
+    } else if (req.query.parent_id) {
+      const parentId = parseInt(req.query.parent_id);
+
+      const childCategories = await Category.findAll({
+        where: { parent_id: parentId },
+        attributes: ['category_id'],
+      });
+
+      const childIds = childCategories.map((c) => c.category_id);
+
+      whereClause.category_id = childIds.length > 0 ? childIds : parentId;
+    }
+
     const products = await Product.findAll({
+      where: whereClause,
       include: [
         {
           model: ProductImg,
           as: "images",
           where: { is_main: true, id_value: null, id_variant: null },
-          required: false,  // nếu sản phẩm chưa có ảnh đại diện vẫn lấy được
+          required: false,
           attributes: ["Img_url", "is_main"],
-          // limit: 1,
         },
       ],
       order: [["id_products", "DESC"]],
@@ -1127,6 +1144,7 @@ exports.getAllProducts = async (req, res) => {
       products_primary: Number(p.products_primary),
       products_status: p.products_status,
       main_image_url: p.images?.[0]?.Img_url || null,
+      category_id: p.category_id,
     }));
 
     res.json(formatted);
