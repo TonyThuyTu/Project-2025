@@ -1112,14 +1112,8 @@ exports.getAllProducts = async (req, res) => {
     } else if (req.query.parent_id) {
       const parentId = parseInt(req.query.parent_id);
 
-      const childCategories = await Category.findAll({
-        where: { parent_id: parentId },
-        attributes: ['category_id'],
-      });
-
-      const childIds = childCategories.map((c) => c.category_id);
-
-      whereClause.category_id = childIds.length > 0 ? childIds : parentId;
+      const allIds = await getAllChildCategoryIds(parentId);
+      whereClause.category_id = { [Op.in]: allIds };
     }
 
     const products = await Product.findAll({
@@ -1153,6 +1147,7 @@ exports.getAllProducts = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 //primary products
 exports.togglePrimary = async (req, res) => {

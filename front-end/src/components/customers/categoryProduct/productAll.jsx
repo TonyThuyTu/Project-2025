@@ -12,7 +12,7 @@ export default function ProductGrid({ products = [] }) {
   };
 
   const getImageUrl = (img) => {
-    if (!img) return "https://shopdunk.com/images/thumbs/0029111_xanh-mong-ket_550.jpeg";
+    if (!img) return "https://thumbs.dreamstime.com/b/no-image-available-icon-flat-vector-no-image-available-icon-flat-vector-illustration-132482953.jpg";
     if (img.startsWith("http")) return img;
     if (img.startsWith("/uploads/")) {
       return `http://localhost:5000${img}`;

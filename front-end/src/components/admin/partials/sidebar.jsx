@@ -13,7 +13,7 @@ const links = [
   // { href: "/admin/products", label: "Sản phẩm" },
   // { href: "/admin/orders", label: "Đơn hàng" },
   { href: "/admin/customers", label: "Khách hàng" },
-  { href: "/admin/employee", label: "Nhân viên" },
+  { href: "/admin/employee", label: "Người dùng" },
   { href: "/admin/contact", label: "Liên hệ" },
   // { href: "/admin/voucher", label: "Voucher" },
   // { href: "/admin/returns", label: "Đổi trả hàng" },

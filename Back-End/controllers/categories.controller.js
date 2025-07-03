@@ -225,7 +225,7 @@ exports.getCategoryDetail = async (req, res) => {
           as: 'images',
           required: false,
           attributes: ['Img_url', 'is_main'],
-          where: { is_main: true },
+          where: { is_main: true, id_value: null, id_variant: null  },
         },
       ],
     });

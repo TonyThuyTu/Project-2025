@@ -6,14 +6,13 @@ import UserDetailForm from "@/components/customers/accounts/UserDetailForm";
 
 export default function UserDetailPage() {
   const [idCustomer, setIdCustomer] = useState(null);
-  
 
   useEffect(() => {
-    const token = localStorage.getItem("token"); // hoặc cookie tùy bạn lưu ở đâu
+    const token = localStorage.getItem("token");
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setIdCustomer(decoded.id_customer || decoded.id || decoded.userId); // tùy payload token của bạn có key gì
+        setIdCustomer(decoded.id_customer || decoded.id || decoded.userId);
       } catch (error) {
         console.error("Lỗi decode token:", error);
       }
