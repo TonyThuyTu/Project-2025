@@ -18,7 +18,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
         </Col>
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Mã code</Form.Label>
+            <Form.Label>Mã Voucher</Form.Label>
             <Form.Control
               type="text"
               name="code"
@@ -64,7 +64,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
         </Col>
         <Col md={4}>
           <Form.Group className="mb-3">
-            <Form.Label>Đơn hàng tối thiểu</Form.Label>
+            <Form.Label>Đơn hàng giá tối thiểu</Form.Label>
             <Form.Control
               type="text"
               name="min_order_value"
@@ -79,7 +79,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
       <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Số lượt mỗi người</Form.Label>
+            <Form.Label>Số lượt dùng mỗi người</Form.Label>
             <Form.Control
               type="number"
               name="user_limit"
@@ -91,7 +91,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
         </Col>
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Tổng lượt sử dụng</Form.Label>
+            <Form.Label>Tổng số Vocuher</Form.Label>
             <Form.Control
               type="number"
               name="usage_limit"

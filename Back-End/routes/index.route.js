@@ -10,6 +10,7 @@ const bannerRoute = require('./banner.route');
 const EmployeeRoute = require('./employee.route');
 const UserAddress = require('./userAddress.route');
 const ReviewsRoute = require('./review.route');
+const VoucherRoute = require('./voucher.route');
 
 // Dùng route con
 router.use('/categories', categoryRoute); // => /api/categories
@@ -27,5 +28,7 @@ router.use('/employees', EmployeeRoute); //=> api/employees
 router.use('/address', UserAddress); //=> api/address
 
 router.use('/reviews', ReviewsRoute); //=> api/reviwes
+
+router.use('/voucher', VoucherRoute); //=>api/vouchers
 
 module.exports = router;

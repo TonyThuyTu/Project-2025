@@ -1,30 +1,52 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { Table, Button, Badge, Modal } from 'react-bootstrap';
-import AddVoucherModal from './form/addVoucher';
+import React, { useEffect, useState } from "react";
+import { Table, Button, Badge } from "react-bootstrap";
+import axios from "axios";
+import AddVoucherModal from "./form/addVoucher";
 
 export default function VoucherList() {
   const [voucherList, setVoucherList] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // Gọi API để lấy danh sách voucher
   useEffect(() => {
-    const data = [
-      {
-        id: 1,
-        name: 'Giảm 10%',
-        code: 'SALE10',
-        createdAt: '2025-06-01',
-        startDate: '2025-06-05',
-        endDate: '2025-06-30',
-        discountType: 'percent',
-        discountValue: 10,
-      },
-    ];
-    setVoucherList(data);
+    const fetchVouchers = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/voucher");
+        setVoucherList(res.data.vouchers || []);
+      } catch (err) {
+        console.error("Lỗi khi lấy danh sách voucher:", err);
+      }
+    };
+
+    fetchVouchers();
   }, []);
 
+  // Format ngày dạng yyyy-mm-dd
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("vi-VN");
+  };
+
+  // Format giảm giá: % hoặc số tiền
   const formatDiscount = (type, value) => {
-    return type === 'percent' ? `${value}%` : `${value.toLocaleString()}đ`;
+    return type === "percent"
+      ? `${value}%`
+      : `${Number(value).toLocaleString("vi-VN")}đ`;
+  };
+
+  // Format trạng thái từ status (1: chờ duyệt, 2: hoạt động, 3: ẩn...)
+  const formatStatus = (status) => {
+    switch (status) {
+      case 1:
+        return <Badge bg="warning">Chờ duyệt</Badge>;
+      case 2:
+        return <Badge bg="success">Hoạt động</Badge>;
+      case 3:
+        return <Badge bg="secondary">Đã ẩn</Badge>;
+      default:
+        return <Badge bg="dark">Không xác định</Badge>;
+    }
   };
 
   return (
@@ -41,28 +63,32 @@ export default function VoucherList() {
           <tr>
             <th>#</th>
             <th>Tên mã</th>
-            <th>Mã code</th>
+            <th>Mã giảm giá</th>
             <th>Ngày tạo</th>
             <th>Ngày bắt đầu</th>
             <th>Ngày kết thúc</th>
             <th>Giảm</th>
+            <th>Trạng thái</th>
             <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
           {voucherList.map((voucher, index) => (
-            <tr key={voucher.id}>
+            <tr key={voucher.id_voucher}>
               <td>{index + 1}</td>
               <td>{voucher.name}</td>
               <td>
-                <Badge bg="dark">{voucher.code}</Badge>
+                <Badge bg="primary">{voucher.code}</Badge>
               </td>
-              <td>{voucher.createdAt}</td>
-              <td>{voucher.startDate}</td>
-              <td>{voucher.endDate}</td>
-              <td>{formatDiscount(voucher.discountType, voucher.discountValue)}</td>
+              <td>{formatDate(voucher.create_date)}</td>
+              <td>{formatDate(voucher.start_date)}</td>
+              <td>{formatDate(voucher.end_date)}</td>
+              <td>{formatDiscount(voucher.discount_type, voucher.discount_value)}</td>
+              <td>{formatStatus(voucher.status)}</td>
               <td>
-                <Button variant="info" size="sm">Xem</Button>
+                <Button variant="info" size="sm">
+                  Xem
+                </Button>
               </td>
             </tr>
           ))}
