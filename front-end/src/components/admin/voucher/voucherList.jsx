@@ -4,10 +4,13 @@ import React, { useEffect, useState } from "react";
 import { Table, Button, Badge } from "react-bootstrap";
 import axios from "axios";
 import AddVoucherModal from "./form/addVoucher";
+import EditVoucherModal from "./form/updateVoucher";
 
 export default function VoucherList() {
   const [voucherList, setVoucherList] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedVoucherId, setSelectedVoucherId] = useState(null);
 
   // ✅ Hàm load danh sách voucher từ API
   const fetchVouchers = async () => {
@@ -31,7 +34,7 @@ export default function VoucherList() {
   // 🔧 Format giá trị giảm giá
   const formatDiscount = (type, value) =>
     type === "percent"
-      ? `${value}%`
+      ? `${parseInt(value)}%`
       : `${Number(value).toLocaleString("vi-VN")}đ`;
 
   // 🔧 Format trạng thái
@@ -82,10 +85,19 @@ export default function VoucherList() {
               <td>{formatDate(voucher.create_date)}</td>
               <td>{formatDate(voucher.start_date)}</td>
               <td>{formatDate(voucher.end_date)}</td>
-              <td>{formatDiscount(voucher.discount_type, voucher.discount_value)}</td>
+              <td>
+                {formatDiscount(voucher.discount_type, voucher.discount_value)}
+              </td>
               <td>{formatStatus(voucher.status)}</td>
               <td>
-                <Button variant="info" size="sm">
+                <Button
+                  variant="info"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedVoucherId(voucher.id_voucher);
+                    setShowEditModal(true);
+                  }}
+                >
                   Xem
                 </Button>
               </td>
@@ -98,8 +110,18 @@ export default function VoucherList() {
       <AddVoucherModal
         show={showAddModal}
         handleClose={() => setShowAddModal(false)}
-        onSuccess={fetchVouchers} // ⏪ Sau khi tạo xong gọi lại danh sách
+        onSuccess={fetchVouchers} // ✅ Reload khi tạo xong
       />
+
+      {/* Modal Xem Chi Tiết */}
+      {showEditModal && (
+        <EditVoucherModal
+          show={showEditModal}
+          handleClose={() => setShowEditModal(false)}
+          voucherId={selectedVoucherId}
+          onSuccess={fetchVouchers}
+        />
+      )}
     </div>
   );
 }

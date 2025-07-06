@@ -135,66 +135,49 @@ exports.getVoucherById = async (req, res) => {
 //update voucher
 exports.updateVoucher = async (req, res) => {
   const id = req.params.id;
-  const {
-    name,
-    code,
-    description,
-    discount_type,
-    discount_value,
-    min_order_value,
-    start_date,
-    end_date,
-    status,
-    product_ids, // danh sách id sản phẩm được gán lại
-  } = req.body;
-
-  const t = await sequelize.transaction();
 
   try {
-    // 1. Tìm voucher
+    const {
+      name,
+      code,
+      description,
+      discount_type,
+      discount_value,
+      min_order_value,
+      user_limit,
+      usage_limit,
+      start_date,
+      end_date,
+      status,
+      productIds, // 👉 danh sách ID sản phẩm áp dụng
+    } = req.body;
+
     const voucher = await Voucher.findByPk(id);
-    if (!voucher) {
-      await t.rollback();
-      return res.status(404).json({ message: 'Voucher không tồn tại' });
+    if (!voucher) return res.status(404).json({ message: 'Voucher không tồn tại' });
+
+    // ✅ Cập nhật dữ liệu chính
+    await voucher.update({
+      name,
+      code,
+      description,
+      discount_type,
+      discount_value,
+      min_order_value,
+      user_limit,
+      usage_limit,
+      start_date,
+      end_date,
+      status,
+    });
+
+    // ✅ Cập nhật danh sách sản phẩm áp dụng
+    if (Array.isArray(productIds)) {
+      await voucher.setProducts(productIds);
     }
 
-    // 2. Cập nhật thông tin cơ bản
-    await voucher.update(
-      {
-        name,
-        code,
-        description,
-        discount_type,
-        discount_value,
-        min_order_value,
-        start_date,
-        end_date,
-        status,
-      },
-      { transaction: t }
-    );
-
-    // 3. Cập nhật lại danh sách sản phẩm (xóa + thêm)
-    if (Array.isArray(product_ids)) {
-      // Xóa các product cũ
-      await VoucherProduct.destroy({
-        where: { id_voucher: id },
-        transaction: t,
-      });
-
-      // Thêm lại các product mới
-      const newRelations = product_ids.map((productId) => ({
-        id_voucher: id,
-        id_product: productId,
-      }));
-      await VoucherProduct.bulkCreate(newRelations, { transaction: t });
-    }
-
-    await t.commit();
-    res.json({ message: 'Cập nhật voucher thành công' });
-  } catch (error) {
-    console.error('Lỗi khi cập nhật voucher:', error);
-    await t.rollback();
-    res.status(500).json({ message: 'Lỗi khi cập nhật voucher' });
+    return res.json({ message: 'Cập nhật thành công', voucher });
+  } catch (err) {
+    console.error('❌ Lỗi update voucher:', err);
+    return res.status(500).json({ message: 'Đã xảy ra lỗi khi cập nhật voucher' });
   }
 };
