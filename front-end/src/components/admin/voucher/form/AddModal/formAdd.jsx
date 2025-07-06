@@ -56,6 +56,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
               }
               onChange={handleChange}
               placeholder={form.discount_type === 'fixed' ? 'VNĐ' : '%'}
+              max={form.discount_type === 'percent' ? 100 : undefined}
             />
             <Form.Text>
               {form.discount_type === 'fixed' ? 'VNĐ' : '%'}
@@ -112,6 +113,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
               name="start_date"
               value={form.start_date}
               onChange={handleChange}
+              min={new Date().toISOString().slice(0, 16)}
             />
           </Form.Group>
         </Col>
@@ -123,6 +125,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
               name="end_date"
               value={form.end_date}
               onChange={handleChange}
+              min={new Date().toISOString().slice(0, 16)}
             />
           </Form.Group>
         </Col>

@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { Table, Button, Badge } from "react-bootstrap";
 import axios from "axios";
@@ -8,34 +9,32 @@ export default function VoucherList() {
   const [voucherList, setVoucherList] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Gọi API để lấy danh sách voucher
-  useEffect(() => {
-    const fetchVouchers = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/voucher");
-        setVoucherList(res.data.vouchers || []);
-      } catch (err) {
-        console.error("Lỗi khi lấy danh sách voucher:", err);
-      }
-    };
+  // ✅ Hàm load danh sách voucher từ API
+  const fetchVouchers = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/voucher");
+      setVoucherList(res.data.vouchers || []);
+    } catch (err) {
+      console.error("Lỗi khi lấy danh sách voucher:", err);
+    }
+  };
 
+  // ✅ Gọi khi component mount
+  useEffect(() => {
     fetchVouchers();
   }, []);
 
-  // Format ngày dạng yyyy-mm-dd
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("vi-VN");
-  };
+  // 🔧 Format ngày: dd/mm/yyyy
+  const formatDate = (dateStr) =>
+    dateStr ? new Date(dateStr).toLocaleDateString("vi-VN") : "-";
 
-  // Format giảm giá: % hoặc số tiền
-  const formatDiscount = (type, value) => {
-    return type === "percent"
+  // 🔧 Format giá trị giảm giá
+  const formatDiscount = (type, value) =>
+    type === "percent"
       ? `${value}%`
       : `${Number(value).toLocaleString("vi-VN")}đ`;
-  };
 
-  // Format trạng thái từ status (1: chờ duyệt, 2: hoạt động, 3: ẩn...)
+  // 🔧 Format trạng thái
   const formatStatus = (status) => {
     switch (status) {
       case 1:
@@ -53,7 +52,7 @@ export default function VoucherList() {
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Danh sách Mã Giảm Giá</h2>
-        <Button onClick={() => setShowAddModal(true)} variant="primary">
+        <Button variant="primary" onClick={() => setShowAddModal(true)}>
           Tạo mã voucher
         </Button>
       </div>
@@ -95,8 +94,12 @@ export default function VoucherList() {
         </tbody>
       </Table>
 
-      {/* Modal thêm mới */}
-      <AddVoucherModal show={showAddModal} handleClose={() => setShowAddModal(false)} />
+      {/* Modal Thêm Mới */}
+      <AddVoucherModal
+        show={showAddModal}
+        handleClose={() => setShowAddModal(false)}
+        onSuccess={fetchVouchers} // ⏪ Sau khi tạo xong gọi lại danh sách
+      />
     </div>
   );
 }

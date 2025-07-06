@@ -2,7 +2,9 @@ const db = require('../models/index.model');
 const Voucher = db.Voucher;
 const Product = db.Product;
 const VoucherProduct = db.VoucherProduct;
+const { sequelize } = db;
 
+//create voucher
 exports.createVoucher = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
@@ -81,6 +83,7 @@ exports.createVoucher = async (req, res) => {
   }
 };
 
+//get list all 
 exports.getAllVouchers = async (req, res) => {
   try {
     const vouchers = await Voucher.findAll({
@@ -99,5 +102,99 @@ exports.getAllVouchers = async (req, res) => {
   } catch (error) {
     console.error('Lỗi lấy danh sách voucher:', error);
     res.status(500).json({ message: 'Lỗi server khi lấy danh sách voucher' });
+  }
+};
+
+//get detail voucher
+exports.getVoucherById = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const voucher = await Voucher.findByPk(id, {
+      include: [
+        {
+          model: Product,
+          as: 'products',
+          attributes: ['id_products', 'products_name', 'products_sale_price'],
+          through: { attributes: [] }, // ẩn bảng trung gian
+        },
+      ],
+    });
+
+    if (!voucher) {
+      return res.status(404).json({ message: 'Voucher không tồn tại' });
+    }
+
+    res.json(voucher);
+  } catch (error) {
+    console.error('Lỗi khi lấy chi tiết voucher:', error);
+    res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy chi tiết voucher' });
+  }
+};
+
+//update voucher
+exports.updateVoucher = async (req, res) => {
+  const id = req.params.id;
+  const {
+    name,
+    code,
+    description,
+    discount_type,
+    discount_value,
+    min_order_value,
+    start_date,
+    end_date,
+    status,
+    product_ids, // danh sách id sản phẩm được gán lại
+  } = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+    // 1. Tìm voucher
+    const voucher = await Voucher.findByPk(id);
+    if (!voucher) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Voucher không tồn tại' });
+    }
+
+    // 2. Cập nhật thông tin cơ bản
+    await voucher.update(
+      {
+        name,
+        code,
+        description,
+        discount_type,
+        discount_value,
+        min_order_value,
+        start_date,
+        end_date,
+        status,
+      },
+      { transaction: t }
+    );
+
+    // 3. Cập nhật lại danh sách sản phẩm (xóa + thêm)
+    if (Array.isArray(product_ids)) {
+      // Xóa các product cũ
+      await VoucherProduct.destroy({
+        where: { id_voucher: id },
+        transaction: t,
+      });
+
+      // Thêm lại các product mới
+      const newRelations = product_ids.map((productId) => ({
+        id_voucher: id,
+        id_product: productId,
+      }));
+      await VoucherProduct.bulkCreate(newRelations, { transaction: t });
+    }
+
+    await t.commit();
+    res.json({ message: 'Cập nhật voucher thành công' });
+  } catch (error) {
+    console.error('Lỗi khi cập nhật voucher:', error);
+    await t.rollback();
+    res.status(500).json({ message: 'Lỗi khi cập nhật voucher' });
   }
 };

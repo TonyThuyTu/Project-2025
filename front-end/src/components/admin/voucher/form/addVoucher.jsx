@@ -4,7 +4,7 @@ import FormAdd from './AddModal/formAdd';
 import FormList from './AddModal/formList';
 import axios from 'axios';
 
-export default function AddVoucherModal({ show, handleClose }) {
+export default function AddVoucherModal({ show, handleClose, onSuccess }) {
   const [form, setForm] = useState({
     name: '',
     code: '',
@@ -50,20 +50,34 @@ export default function AddVoucherModal({ show, handleClose }) {
       return;
     }
 
-    if (['discount_value', 'min_order_value'].includes(name)) {
+    if (name === 'discount_value') {
       if (form.discount_type === 'fixed') {
+        // Xử lý tiền
         const onlyNums = parseVND(value);
         if (onlyNums === '' || /^[0-9]*$/.test(onlyNums)) {
           setForm((prev) => ({ ...prev, [name]: onlyNums }));
         }
-        return;
       } else {
-        if (value === '' || /^[0-9]*$/.test(value)) {
-          setForm((prev) => ({ ...prev, [name]: value }));
+        // Xử lý percent, giới hạn <= 100
+        if (/^\d{0,3}$/.test(value)) {
+          const num = parseInt(value);
+          if (value === '' || (num <= 100 && num >= 0)) {
+            setForm((prev) => ({ ...prev, [name]: value }));
+          }
         }
-        return;
       }
+      return;
     }
+
+    if (name === 'min_order_value') {
+      // Luôn xử lý kiểu tiền, không giới hạn 100
+      const onlyNums = parseVND(value);
+      if (onlyNums === '' || /^[0-9]*$/.test(onlyNums)) {
+        setForm((prev) => ({ ...prev, [name]: onlyNums }));
+      }
+      return;
+    }
+
 
     if (['user_limit', 'usage_limit'].includes(name)) {
       if (value === '' || /^[0-9]*$/.test(value)) {
@@ -94,30 +108,62 @@ export default function AddVoucherModal({ show, handleClose }) {
     );
   };
 
-  const handleSubmit = () => {
+  //create
+  const handleSubmit = async () => {
+    // Validate đơn giản
+    if (!form.name || !form.code || !form.discount_value) {
+      alert('Vui lòng nhập đầy đủ các trường: Tên mã, Mã voucher, Giá trị giảm');
+      return;
+    }
+
     const payload = {
       ...form,
-      discount_value:
-        form.discount_type === 'fixed'
-          ? form.discount_value
-            ? parseFloat(form.discount_value) / 1_000_000
-            : 0
-          : form.discount_value
-          ? parseFloat(form.discount_value)
-          : 0,
+      discount_value: form.discount_value ? parseFloat(form.discount_value) : 0,
       min_order_value: form.min_order_value
-        ? parseFloat(form.min_order_value) / 1_000_000
+        ? parseFloat(form.min_order_value)
         : null,
       user_limit: form.user_limit ? parseInt(form.user_limit) : null,
       usage_limit: form.usage_limit ? parseInt(form.usage_limit) : null,
       status: 1,
-      product_ids: selectedProducts,
+      productIds: selectedProducts,
     };
 
-    console.log('🎯 Voucher gửi backend:', payload);
-    handleClose();
+    console.log('Payload gửi lên:', payload);
+
+    try {
+      await axios.post('http://localhost:5000/api/voucher', payload);
+      alert('🎉 Tạo voucher thành công!');
+      // Reset form
+      setForm({
+        name: '',
+        code: '',
+        description: '',
+        discount_type: 'percent',
+        discount_value: '',
+        min_order_value: '',
+        user_limit: '',
+        usage_limit: '',
+        start_date: '',
+        end_date: '',
+        status: 1,
+      });
+      setSelectedProducts([]);
+      setSearchTerm('');
+      setSelectedParent('');
+      setSelectedChild('');
+      handleClose();
+
+      if (typeof onSuccess === "function") {
+        onSuccess(); // ✅ Load lại danh sách
+      }
+      
+    } catch (err) {
+      console.error('Lỗi tạo voucher:', err.response?.data || err.message);
+      alert('❌ Tạo voucher thất bại!');
+    }
   };
 
+  //get list categories filter for products
   useEffect(() => {
     axios
       .get('http://localhost:5000/api/categories')
