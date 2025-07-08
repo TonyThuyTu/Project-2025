@@ -33,7 +33,7 @@ exports.login = async (req, res) => {
 
     // Kiểm tra trạng thái block
     if (employee.block === true || employee.block === 1) {
-        return res.status(403).json({ error: 'Tài khoản đã bị chặn. Lý do: ' + (employee.block_reason || 'Không có lý do') });
+        return res.status(403).json({ error: 'Tài khoản đã bị chặn vui lòng liên hệ với Admin' });
     }
 
     // Kiểm tra mật khẩu
@@ -46,6 +46,7 @@ exports.login = async (req, res) => {
     const payload = {
       id_employee: employee.id_employee,
       employee_name: employee.name,
+      employee_email: employee.email,
       employee_role: employee.role,
     };
 
@@ -159,7 +160,7 @@ exports.updateEmployee = async (req, res) => {
     delete updatedData.block_reason;
 
     // Không cho cập nhật role (role chỉ được set ban đầu)
-    delete updatedData.role;
+    // delete updatedData.role;
 
     // Kiểm tra trùng email hoặc phone (ngoại trừ chính nhân viên này)
     const existing = await Employee.findOne({
@@ -202,36 +203,76 @@ exports.updateEmployee = async (req, res) => {
 
 // Block hoặc un-block nhân viên
 exports.blockEmployee = async (req, res) => {
-  const id = req.params.id;
-  let { block, reason } = req.body;
-  block = Number(block);
-
   try {
+    const id = parseInt(req.params.id);
+    const { block, reason } = req.body;
+
     const employee = await Employee.findByPk(id);
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    if (!employee) {
+      return res.status(404).json({ message: 'Không tìm thấy nhân viên' });
+    }
 
+    // Không cho chặn Super Admin
     if (employee.role === 1) {
-      return res.status(403).json({ message: "Super Admin cannot be blocked" });
+      return res.status(403).json({ message: 'Không thể chặn Super Admin' });
     }
 
-    if (block === 1) { // chặn
-      employee.block = true;
-      employee.block_reason = reason || "Không có lý do";
-      employee.status = '3'; // nghỉ việc
-    } else if (block === 2) { // bỏ chặn
-      employee.block = false;
-      employee.block_reason = '';
-      if (employee.status === '3') {
-        employee.status = '1'; // quay lại đi làm
+    if (block === 1) {
+      if (!reason || reason.trim() === '') {
+        return res.status(400).json({ message: 'Vui lòng nhập lý do chặn' });
       }
+
+      await Employee.update(
+        { block: true, block_reason: reason.trim(), status: 3 },
+        { where: { id_employee: id } }
+      );
+    } else if (block === 0 || block === 2) {
+      await Employee.update(
+        { block: false, block_reason: '', status: 1 },
+        { where: { id_employee: id } }
+      );
     } else {
-      return res.status(400).json({ message: "Giá trị block không hợp lệ" });
+      return res.status(400).json({ message: 'Giá trị block không hợp lệ' });
     }
 
-    await employee.save();
-    res.json({ message: "Employee block status updated", employee });
-
+    return res.json({ message: 'Cập nhật trạng thái chặn thành công' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Lỗi khi chặn/bỏ chặn nhân viên:', error);
+    return res.status(500).json({ message: 'Lỗi server' });
   }
 };
+
+//check status
+exports.checkEmployeeStatus = async (req, res) => {
+  // console.log("✅ Đã gọi tới checkEmployeeStatus");
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      // console.log('Thiếu header Authorization');
+      return res.status(401).json({ message: 'Thiếu token' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    // console.log('Token nhận được:', token);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+    // console.log('Decoded token:', decoded);
+
+    const employee = await Employee.findByPk(decoded.id_employee);
+    // console.log('Employee tìm được:', employee);
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Nhân viên không tồn tại' });
+    }
+
+    if (employee.block === true || employee.block === 1) {
+      return res.status(403).json({ message: 'Tài khoản đã bị chặn' });
+    }
+
+    res.json({ status: 'ok' });
+  } catch (err) {
+    console.error('Lỗi trong checkEmployeeStatus:', err);
+    return res.status(401).json({ message: 'Token không hợp lệ hoặc hết hạn' });
+  }
+};
+

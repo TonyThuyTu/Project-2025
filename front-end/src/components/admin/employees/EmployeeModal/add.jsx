@@ -12,9 +12,10 @@ export default function AddEmployeeModal({ show, onClose, onSuccess }) {
     employee_email: '',
     employee_password: '',
     employee_position: '',
-    employee_role: '2',
+    employee_role: '1',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -124,12 +125,21 @@ export default function AddEmployeeModal({ show, onClose, onSuccess }) {
 
           <Form.Group className="mb-2">
             <Form.Label>Mật khẩu</Form.Label>
-            <Form.Control
-              name="employee_password"
-              type="password"
-              value={form.employee_password}
-              onChange={handleChange}
-            />
+            <div className="input-group">
+              <Form.Control
+                name="employee_password"
+                type={showPassword ? "text" : "password"}
+                value={form.employee_password}
+                onChange={handleChange}
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "Ẩn" : "Hiện"}
+              </button>
+            </div>
           </Form.Group>
 
           <Form.Group className="mb-2">

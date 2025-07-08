@@ -61,7 +61,7 @@ export default function EmployeeDetailModal({ show, onClose, employeeId, onBlock
       setErrorMsg('');
 
       await axios.put(`http://localhost:5000/api/employees/block/${employeeId}`, {
-        block: 2,
+        block: 0,
         reason: '',
       });
 

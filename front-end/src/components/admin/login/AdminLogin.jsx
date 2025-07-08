@@ -67,7 +67,7 @@ export default function AdminLogin() {
               className="form-control form-control-lg pe-5"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              
               placeholder="Nhập mật khẩu"
             />
             <button

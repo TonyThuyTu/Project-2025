@@ -2,23 +2,48 @@
 
 import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 export default function AdminHeader() {
   const [employeeName, setEmployeeName] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("admin_token");
+    const token = localStorage.getItem('admin_token');
     if (token) {
       try {
         const decoded = jwtDecode(token);
         console.log("Decoded token:", decoded); 
-        setEmployeeName(decoded.employee_name || "Admin");
+        setEmployeeName(decoded.employee_name || "Admin - He");
       } catch {
         setEmployeeName("Admin");
       }
     } else {
       setEmployeeName("Admin");
     }
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const token = localStorage.getItem('admin_token');
+      if (!token) return;
+
+      console.log("Đang kiểm tra token:", token); // ✅ check token gửi đi
+
+      axios.get("http://localhost:5000/api/employees/check-status", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }).catch((err) => {
+        if (err.response?.status === 403 || err.response?.status === 401) {
+          alert("Phiên đăng nhập của bạn đã hết hạn hoặc bạn đã bị chặn.");
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("admin_info");
+          window.location.href = "/login-admin/login";
+        }
+      });
+    }, 10000); // mỗi 10s
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {

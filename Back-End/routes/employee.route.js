@@ -7,6 +7,9 @@ const employeeController = require('../controllers/employee.controller');
 //login
 router.post('/login', employeeController.login);
 
+//check status
+router.get('/check-status', employeeController.checkEmployeeStatus);
+
 // lấy danh sách
 router.get('/', employeeController.getAllEmployees);
 
@@ -19,7 +22,7 @@ router.post('/', employeeController.createEmployee);
 //sửa
 router.put('/:id', employeeController.updateEmployee);
 
-//chặn
+//chặn - bỏ chặn
 router.put('/block/:id', employeeController.blockEmployee);
 
 module.exports = router;
