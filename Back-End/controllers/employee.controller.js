@@ -50,7 +50,7 @@ exports.login = async (req, res) => {
       employee_role: employee.role,
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', { expiresIn: '2h' });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', { expiresIn: '12h' });
 
     res.json({
       message: 'Đăng nhập thành công',

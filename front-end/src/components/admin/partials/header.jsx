@@ -12,7 +12,7 @@ export default function AdminHeader() {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log("Decoded token:", decoded); 
+        // console.log("Decoded token:", decoded); 
         setEmployeeName(decoded.employee_name || "Admin - He");
       } catch {
         setEmployeeName("Admin");
@@ -27,7 +27,7 @@ export default function AdminHeader() {
       const token = localStorage.getItem('admin_token');
       if (!token) return;
 
-      console.log("Đang kiểm tra token:", token); // ✅ check token gửi đi
+      // console.log("Đang kiểm tra token:", token); // ✅ check token gửi đi
 
       axios.get("http://localhost:5000/api/employees/check-status", {
         headers: {

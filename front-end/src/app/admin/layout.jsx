@@ -12,7 +12,7 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
-    console.log("🔐 TOKEN:", token);
+    // console.log("🔐 TOKEN:", token);
     if (!token) {
       router.push("/login-admin/login");
     } else {

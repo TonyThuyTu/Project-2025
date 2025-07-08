@@ -15,10 +15,10 @@ export default function AdminSidebar() {
       if (token) {
         try {
           const decoded = jwtDecode(token);
-          console.log("Decoded token:", decoded); // Kiểm tra payload
+          // console.log("Decoded token:", decoded); // Kiểm tra payload
           const userRole = Number(decoded.employee_role); // sửa đúng theo backend
           if (!isNaN(userRole)) {
-            console.log("Đã set role:", userRole);
+            // console.log("Đã set role:", userRole);
             setRole(userRole);
           } else {
             setRole(null);
@@ -48,7 +48,7 @@ export default function AdminSidebar() {
 
   // Nếu chưa xác định quyền → chưa render
   if (role === null) {
-    console.log("Role vẫn là null → không render sidebar");
+    // console.log("Role vẫn là null → không render sidebar");
     return null;
   }
 
