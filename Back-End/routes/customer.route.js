@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/customer.controller');
+const verifyToken = require('../middlewares/verifyToken')
+
+router.get('/profile', verifyToken, customerController.getProfile);
+
+//chặn khách hàng
+router.put('/status/:id', customerController.toggleCustomerStatus);
 
 //lấy danh sách khách hàng
 router.get('/', customerController.getAllCustomers);
@@ -10,9 +16,6 @@ router.get('/:id', customerController.getCustomerById);
 
 //Chỉnh sửa thông tin khách hàng
 router.put('/:id', customerController.updateCustomer);
-
-//chặn khách hàng
-router.put('/status/:id', customerController.toggleCustomerStatus);
 
 // Đăng ký
 router.post('/register', customerController.register);

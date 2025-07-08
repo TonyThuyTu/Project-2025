@@ -6,6 +6,24 @@ const { sendOTPByEmail } = require('../helper/sendMail');
 const redisClient = require('../config/redisClient');
 const { Op } = require('sequelize');
 
+exports.getProfile = async (req, res) => {
+  try {
+    const id = req.customer.id_customer;
+
+    const user = await Customer.findByPk(id, {
+      attributes: ['id_customer', 'name', 'email', 'phone', 'status', 'block_reason']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy khách hàng" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
 // Lấy danh sách tất cả khách hàng
 exports.getAllCustomers = async (req, res) => {
   try {
@@ -81,24 +99,23 @@ exports.updateCustomer = async (req, res) => {
 // Chặn hoặc mở chặn khách hàng
 exports.toggleCustomerStatus = async (req, res) => {
   const customerId = req.params.id;
-  const { status, block_reason } = req.body; // Nhận thêm block_reason
+  let { status, block_reason } = req.body;
 
-  // Kiểm tra giá trị status hợp lệ
-  if (![true, false, 1, 0].includes(status)) {
-    return res.status(400).json({ message: 'Trạng thái không hợp lệ. Chỉ nhận true/false hoặc 1/0.' });
+  // Chuyển status string/number sang boolean
+  if (status === 'true' || status === 1 || status === '1') status = true;
+  else if (status === 'false' || status === 0 || status === '0') status = false;
+  else if (typeof status !== 'boolean') {
+    return res.status(400).json({
+      message: 'Trạng thái không hợp lệ. Chỉ nhận true/false hoặc 1/0.'
+    });
   }
 
-  // Tạo dữ liệu cập nhật
+  // Nếu status = true (1) => mở chặn => block_reason = null
+  // Nếu status = false (0) => chặn => block_reason không null
   const updateData = {
-    status: status === 1 || status === true
+    status,
+    block_reason: status ? null : (block_reason || 'Không rõ lý do')
   };
-
-  // Nếu chặn thì lưu lý do chặn, nếu mở chặn thì xóa lý do
-  if (updateData.status === false) {
-    updateData.block_reason = block_reason || 'Không rõ lý do';
-  } else {
-    updateData.block_reason = null; // Gỡ lý do khi mở chặn
-  }
 
   try {
     const [updated] = await Customer.update(updateData, {
@@ -109,11 +126,11 @@ exports.toggleCustomerStatus = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy khách hàng' });
     }
 
-    const statusMessage = updateData.status
+    const message = status
       ? 'Khách hàng đã được mở chặn'
       : 'Khách hàng đã bị chặn';
 
-    res.json({ message: statusMessage });
+    res.json({ message });
   } catch (error) {
     res.status(500).json({
       message: 'Lỗi khi cập nhật trạng thái khách hàng',
@@ -184,6 +201,13 @@ exports.login = async (req, res) => {
       if (!user) {
         return res.status(404).json({ message: 'Tài khoản không tồn tại' });
       }
+    }
+
+    // Kiểm tra trạng thái block
+    if (user.status === false) {  // status=false => bị chặn
+      return res.status(403).json({ 
+        message: `Tài khoản của bạn đã bị chặn. Vui lòng liên hệ Admin` 
+      });
     }
 
     // So sánh mật khẩu

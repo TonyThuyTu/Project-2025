@@ -9,21 +9,54 @@ const HeaderClient = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [parentCategories, setParentCategories] = useState([]);
 
+  // Kiểm tra trạng thái đăng nhập và trạng thái chặn user
+  // Gọi 1 lần để load danh mục cha
   useEffect(() => {
     axios.get("http://localhost:5000/api/categories/parent")
       .then(res => setParentCategories(res.data))
-      .catch(err => console.error("Lỗi load danh mục", err));
+      .catch(err => console.error("Lỗi load danh mục:", err));
   }, []);
 
+  // Kiểm tra trạng thái đăng nhập và bị chặn (mỗi 10s)
   useEffect(() => {
-    const checkLogin = () => {
+    const checkStatus = async () => {
       const token = localStorage.getItem('token');
-      setIsLoggedIn(!!token);
+      if (!token) {
+        setIsLoggedIn(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get("http://localhost:5000/api/customers/profile", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const user = res.data;
+
+        if (user.status === false) {
+          alert(`Tài khoản của bạn đã bị chặn: ${user.block_reason || "Không rõ lý do"}`);
+          localStorage.removeItem('token');
+          setIsLoggedIn(false);
+          router.push('/login');
+        } else {
+          setIsLoggedIn(true);
+        }
+      } catch (err) {
+        console.error("Lỗi khi xác thực token:", err);
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+        router.push('/login');
+      }
     };
-    checkLogin();
-    window.addEventListener('storage', checkLogin);
-    return () => window.removeEventListener('storage', checkLogin);
-  }, []);
+
+    checkStatus(); // lần đầu
+    const interval = setInterval(checkStatus, 10000); // mỗi 10s
+
+    window.addEventListener('storage', checkStatus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkStatus);
+    };
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

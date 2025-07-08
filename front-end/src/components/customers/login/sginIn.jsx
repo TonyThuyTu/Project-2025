@@ -40,7 +40,6 @@ export default function SignIn() {
       return;
     }
 
-    // Check input is email or phone
     const isEmail = validateEmail(form.phoneOrEmail);
     const isPhone = validatePhone(form.phoneOrEmail);
 
@@ -62,19 +61,22 @@ export default function SignIn() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Đăng nhập thất bại");
+        // Hiển thị lỗi riêng biệt khi bị chặn
+        if (res.status === 403) {
+          setError(data.message || "Tài khoản của bạn đã bị chặn");
+        } else {
+          setError(data.message || "Đăng nhập thất bại");
+        }
         return;
       }
 
-      // Lưu token vào localStorage
       localStorage.setItem("token", data.token);
-
-      // Redirect về trang chủ
       router.push("/");
     } catch (err) {
       setError("Lỗi mạng, vui lòng thử lại sau");
     }
   };
+
 
   return (
     <section className="container py-5">
