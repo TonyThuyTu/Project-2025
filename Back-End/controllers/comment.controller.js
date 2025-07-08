@@ -95,6 +95,11 @@ exports.getAllReviews = async (req, res) => {
       attributes: ['id_review', 'title', 'rating', 'approved', 'date'],
       include: [
         {
+          model: Customer,
+          as: 'customer',
+          attributes: ['id_customer', 'name'],
+        },
+        {
           model: Product,
           as: 'product',       // nhớ đúng alias bạn đã khai báo
           attributes: ['products_name'],
@@ -109,7 +114,8 @@ exports.getAllReviews = async (req, res) => {
       rating: r.rating,
       approved: r.approved,
       date: r.date,
-      product_name: r.product?.products_name || null,
+      products_name: r.product?.products_name || null,
+      name: r.customer.name
     }));
 
     res.json(formatted);
