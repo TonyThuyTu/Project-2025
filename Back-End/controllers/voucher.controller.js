@@ -20,11 +20,11 @@ exports.createVoucher = async (req, res) => {
       start_date,
       end_date,
       status,
-      productIds, // mảng id sản phẩm
+      productIds,
     } = req.body;
 
     // Kiểm tra bắt buộc
-    if (!name || !code || !description || !discount_type || !discount_value) {
+    if (!name || !code || !discount_type || !discount_value) {
       return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin bắt buộc." });
     }
 
@@ -33,18 +33,34 @@ exports.createVoucher = async (req, res) => {
       return res.status(400).json({ message: "Loại giảm giá không hợp lệ. Chỉ nhận 'percent' hoặc 'fixed'." });
     }
 
+    // Kiểm tra discount_value hợp lệ
+    const discountVal = parseFloat(discount_value);
+    if (isNaN(discountVal) || discountVal <= 0) {
+      return res.status(400).json({ message: "Giá trị giảm giá không hợp lệ." });
+    }
+    if (discount_type === 'percent' && discountVal > 100) {
+      return res.status(400).json({ message: "Giá trị giảm giá phần trăm không được vượt quá 100." });
+    }
+
     // Kiểm tra code trùng
     const existing = await Voucher.findOne({ where: { code } });
     if (existing) {
       return res.status(400).json({ message: "Mã voucher đã tồn tại, vui lòng nhập mã khác." });
     }
 
-    // Kiểm tra ngày bắt đầu và kết thúc nếu có
-    if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
-      return res.status(400).json({ message: "Ngày kết thúc phải sau ngày bắt đầu." });
+    // Kiểm tra ngày bắt đầu và kết thúc
+    if (start_date && end_date) {
+      const sd = new Date(start_date);
+      const ed = new Date(end_date);
+      if (sd.toString() === 'Invalid Date' || ed.toString() === 'Invalid Date') {
+        return res.status(400).json({ message: "Ngày bắt đầu hoặc kết thúc không hợp lệ." });
+      }
+      if (sd >= ed) {
+        return res.status(400).json({ message: "Ngày kết thúc phải sau ngày bắt đầu." });
+      }
     }
 
-    // Ép kiểu số cho các trường có thể nhận null
+    // Ép kiểu số
     min_order_value = min_order_value ? parseFloat(min_order_value) : null;
     user_limit = user_limit ? parseInt(user_limit) : null;
     usage_limit = usage_limit ? parseInt(usage_limit) : null;
@@ -54,9 +70,9 @@ exports.createVoucher = async (req, res) => {
     const newVoucher = await Voucher.create({
       name,
       code,
-      description,
+      description: description || '',
       discount_type,
-      discount_value: parseFloat(discount_value),
+      discount_value: discountVal,
       min_order_value,
       user_limit,
       usage_limit,
@@ -65,7 +81,7 @@ exports.createVoucher = async (req, res) => {
       status,
     }, { transaction: t });
 
-    // Liên kết sản phẩm nếu có
+    // Liên kết sản phẩm
     if (Array.isArray(productIds) && productIds.length > 0) {
       const links = productIds.map(productId => ({
         id_voucher: newVoucher.id_voucher,
@@ -77,7 +93,7 @@ exports.createVoucher = async (req, res) => {
     await t.commit();
     res.status(201).json({ message: "Tạo voucher thành công", voucher: newVoucher });
   } catch (error) {
-    console.error("Lỗi khi tạo voucher:", error);
+    console.error("Lỗi khi tạo voucher:", error.message || error);
     await t.rollback();
     res.status(500).json({ message: "Đã xảy ra lỗi khi tạo voucher." });
   }
@@ -149,13 +165,25 @@ exports.updateVoucher = async (req, res) => {
       start_date,
       end_date,
       status,
-      productIds, // 👉 danh sách ID sản phẩm áp dụng
+      productIds,
     } = req.body;
 
     const voucher = await Voucher.findByPk(id);
     if (!voucher) return res.status(404).json({ message: 'Voucher không tồn tại' });
 
-    // ✅ Cập nhật dữ liệu chính
+    // ✅ Kiểm tra mã code đã tồn tại ở voucher khác chưa
+    const existing = await Voucher.findOne({
+      where: {
+        code,
+        id_voucher: { [db.Sequelize.Op.ne]: id }, // khác id hiện tại
+      },
+    });
+
+    if (existing) {
+      return res.status(400).json({ message: 'Mã voucher đã tồn tại' });
+    }
+
+    // ✅ Cập nhật dữ liệu
     await voucher.update({
       name,
       code,
@@ -170,7 +198,6 @@ exports.updateVoucher = async (req, res) => {
       status,
     });
 
-    // ✅ Cập nhật danh sách sản phẩm áp dụng
     if (Array.isArray(productIds)) {
       await voucher.setProducts(productIds);
     }

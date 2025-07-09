@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Button, Badge } from "react-bootstrap";
+import {
+  Table,
+  Button,
+  Badge,
+  Form,
+  Row,
+  Col,
+} from "react-bootstrap";
 import axios from "axios";
 import AddVoucherModal from "./form/addVoucher";
 import EditVoucherModal from "./form/updateVoucher";
@@ -12,7 +19,14 @@ export default function VoucherList() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedVoucherId, setSelectedVoucherId] = useState(null);
 
-  // ✅ Hàm load danh sách voucher từ API
+  const [filters, setFilters] = useState({
+    keyword: "",
+    status: "",
+    createDate: "",
+    startDate: "",
+    endDate: "",
+  });
+
   const fetchVouchers = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/voucher");
@@ -22,22 +36,18 @@ export default function VoucherList() {
     }
   };
 
-  // ✅ Gọi khi component mount
   useEffect(() => {
     fetchVouchers();
   }, []);
 
-  // 🔧 Format ngày: dd/mm/yyyy
   const formatDate = (dateStr) =>
     dateStr ? new Date(dateStr).toLocaleDateString("vi-VN") : "-";
 
-  // 🔧 Format giá trị giảm giá
   const formatDiscount = (type, value) =>
     type === "percent"
       ? `${parseInt(value)}%`
       : `${Number(value).toLocaleString("vi-VN")}đ`;
 
-  // 🔧 Format trạng thái
   const formatStatus = (status) => {
     switch (status) {
       case 1:
@@ -51,6 +61,43 @@ export default function VoucherList() {
     }
   };
 
+  // Bộ lọc client-side
+  const filteredVouchers = voucherList.filter((voucher) => {
+    const keyword = filters.keyword?.toLowerCase() || '';
+
+    const matchesKeyword = keyword
+      ? voucher.name.toLowerCase().includes(keyword) ||
+        voucher.code.toLowerCase().includes(keyword)
+      : true;
+
+    const matchesStatus = filters.status
+      ? voucher.status === parseInt(filters.status)
+      : true;
+
+    const matchesCreateDate = filters.createDate
+      ? new Date(voucher.create_date).toISOString().slice(0, 10) ===
+        filters.createDate
+      : true;
+
+    const matchesStartDate = filters.startDate
+      ? new Date(voucher.start_date).toISOString().slice(0, 10) ===
+        filters.startDate
+      : true;
+
+    const matchesEndDate = filters.endDate
+      ? new Date(voucher.end_date).toISOString().slice(0, 10) ===
+        filters.endDate
+      : true;
+
+    return (
+      matchesKeyword &&
+      matchesStatus &&
+      matchesCreateDate &&
+      matchesStartDate &&
+      matchesEndDate
+    );
+  });
+
   return (
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -60,10 +107,92 @@ export default function VoucherList() {
         </Button>
       </div>
 
+      {/* Bộ lọc */}
+      <Form className="mb-3">
+        <Row className="g-2 align-items-end">
+          <Col md={2}>
+            <Form.Label>Tìm kiếm tên hoặc mã</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Tìm kiếm"
+              value={filters.keyword}
+              onChange={(e) =>
+                setFilters({ ...filters, keyword: e.target.value })
+              }
+            />
+          </Col>
+
+          <Col md={2}>
+            <Form.Label>Ngày tạo</Form.Label>
+            <Form.Control
+              type="date"
+              value={filters.createDate}
+              onChange={(e) =>
+                setFilters({ ...filters, createDate: e.target.value })
+              }
+            />
+          </Col>
+
+          <Col md={2}>
+            <Form.Label>Ngày bắt đầu</Form.Label>
+            <Form.Control
+              type="date"
+              value={filters.startDate}
+              onChange={(e) =>
+                setFilters({ ...filters, startDate: e.target.value })
+              }
+            />
+          </Col>
+
+          <Col md={2}>
+            <Form.Label>Ngày kết thúc</Form.Label>
+            <Form.Control
+              type="date"
+              value={filters.endDate}
+              onChange={(e) =>
+                setFilters({ ...filters, endDate: e.target.value })
+              }
+            />
+          </Col>
+
+          <Col md={2}>
+            <Form.Label>Trạng thái</Form.Label>
+            <Form.Select
+              value={filters.status}
+              onChange={(e) =>
+                setFilters({ ...filters, status: e.target.value })
+              }
+            >
+              <option value="">Tất cả</option>
+              <option value="1">Chờ duyệt</option>
+              <option value="2">Hoạt động</option>
+              <option value="3">Đã ẩn</option>
+            </Form.Select>
+          </Col>
+
+          <Col md={2}>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setFilters({
+                  keyword: "",
+                  status: "",
+                  createDate: "",
+                  startDate: "",
+                  endDate: "",
+                })
+              }
+            >
+              Xóa bộ lọc
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+
+      {/* Bảng danh sách */}
       <Table striped bordered hover responsive>
         <thead>
           <tr>
-            <th>#</th>
             <th>Tên mã</th>
             <th>Mã giảm giá</th>
             <th>Ngày tạo</th>
@@ -75,9 +204,8 @@ export default function VoucherList() {
           </tr>
         </thead>
         <tbody>
-          {voucherList.map((voucher, index) => (
+          {filteredVouchers.map((voucher) => (
             <tr key={voucher.id_voucher}>
-              <td>{index + 1}</td>
               <td>{voucher.name}</td>
               <td>
                 <Badge bg="primary">{voucher.code}</Badge>
@@ -98,7 +226,7 @@ export default function VoucherList() {
                     setShowEditModal(true);
                   }}
                 >
-                  Xem
+                  Chi tiết
                 </Button>
               </td>
             </tr>
@@ -106,14 +234,14 @@ export default function VoucherList() {
         </tbody>
       </Table>
 
-      {/* Modal Thêm Mới */}
+      {/* Modal Thêm */}
       <AddVoucherModal
         show={showAddModal}
         handleClose={() => setShowAddModal(false)}
-        onSuccess={fetchVouchers} // ✅ Reload khi tạo xong
+        onSuccess={fetchVouchers}
       />
 
-      {/* Modal Xem Chi Tiết */}
+      {/* Modal Sửa */}
       {showEditModal && (
         <EditVoucherModal
           show={showEditModal}

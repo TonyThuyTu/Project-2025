@@ -49,7 +49,13 @@ export default function FormAdd({ form, handleChange, formatVND }) {
             <Form.Control
               type="text"
               name="discount_value"
-              value={form.discount_type === 'fixed' ? formatVND(form.discount_value) : `${parseInt(form.discount_value)}%`}
+              value={
+                form.discount_type === 'fixed'
+                  ? formatVND(form.discount_value)
+                  : (form.discount_value !== '' && !isNaN(form.discount_value))
+                    ? `${parseInt(form.discount_value)}%`
+                    : ''
+              }
               onChange={handleChange}
               placeholder={form.discount_type === 'fixed' ? 'VNĐ' : '%'}
               max={form.discount_type === 'percent' ? 100 : undefined}
@@ -130,7 +136,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
       <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Số lượt dùng</Form.Label>
+            <Form.Label>Số lượt đã dùng</Form.Label>
             <Form.Control
               type="text"
               name="name"

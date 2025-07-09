@@ -28,42 +28,47 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
 
-    const formatVND = (num) => {
-    const number = typeof num === 'string' ? parseFloat(num) : num;
-    return number?.toLocaleString('vi-VN') + ' đ';
-    };
+  const parseVND = (str) => {
+    if (!str) return '';
+    return str.replace(/[^\d]/g, '');
+  };
 
-  const parseVND = (str) => str?.replace(/\./g, '') || '';
+  const formatVND = (num) => {
+    const number = typeof num === 'string' ? parseInt(num) : num;
+    if (isNaN(number)) return '';
+    return number.toLocaleString('vi-VN') + ' đ';
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === 'discount_type') {
-      setForm((prev) => ({ ...prev, discount_type: value, discount_value: '' }));
+      setForm((prev) => ({ 
+        ...prev, 
+        discount_type: value, 
+        discount_value: '' ,
+      }));
       return;
     }
 
     if (name === 'discount_value') {
+      const raw = parseVND(value);
       if (form.discount_type === 'fixed') {
-        const onlyNums = parseVND(value);
-        if (onlyNums === '' || /^[0-9]*$/.test(onlyNums)) {
-          setForm((prev) => ({ ...prev, discount_value: onlyNums }));
+        if (raw === '' || /^[0-9]+$/.test(raw)) {
+          setForm((prev) => ({ ...prev, discount_value: raw }));
         }
       } else {
-        if (/^\d{0,3}$/.test(value)) {
-          const num = parseInt(value);
-          if (value === '' || (num <= 100 && num >= 0)) {
-            setForm((prev) => ({ ...prev, discount_value: value }));
-          }
+        if (raw === '' || (/^\d{1,3}$/.test(raw) && parseInt(raw) <= 100)) {
+          setForm((prev) => ({ ...prev, discount_value: raw }));
         }
       }
       return;
     }
 
     if (name === 'min_order_value') {
-      const onlyNums = parseVND(value);
-      if (onlyNums === '' || /^[0-9]*$/.test(onlyNums)) {
-        setForm((prev) => ({ ...prev, min_order_value: onlyNums }));
+      const raw = parseVND(value);
+      if (raw === '' || /^[0-9]+$/.test(raw)) {
+        setForm((prev) => ({ ...prev, min_order_value: raw }));
       }
       return;
     }
@@ -76,8 +81,8 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
     }
 
     if (name === 'status') {
-        setForm((prev) => ({ ...prev, status: parseInt(value) }));
-        return;
+      setForm((prev) => ({ ...prev, status: parseInt(value) }));
+      return;
     }
 
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -106,8 +111,6 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
     return `http://localhost:5000${path}`;
   };
 
-  
-
   const fetchVoucherDetail = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/voucher/${voucherId}`);
@@ -134,7 +137,33 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
     }
   };
 
+  const validateForm = () => {
+    if (!form.name?.trim()) return 'Tên voucher không được để trống';
+    if (!form.code?.trim()) return 'Mã voucher không được để trống';
+
+    const discountVal = parseFloat(form.discount_value);
+    if (isNaN(discountVal)) return 'Giá trị giảm không hợp lệ';
+
+    if (form.discount_type === 'percent') {
+      if (discountVal < 0 || discountVal > 100) return 'Giá trị phần trăm phải nằm trong khoảng 0 - 100';
+    }
+
+    if (!form.start_date || !form.end_date) return 'Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc';
+
+    const start = new Date(form.start_date);
+    const end = new Date(form.end_date);
+    if (start > end) return 'Ngày kết thúc phải sau ngày bắt đầu';
+
+    return null;
+  };
+
   const handleUpdate = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      alert(`⚠️ ${validationError}`);
+      return;
+    }
+
     try {
       const payload = {
         ...form,
@@ -146,12 +175,17 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
       };
 
       await axios.put(`http://localhost:5000/api/voucher/${voucherId}`, payload);
+
       alert('🎉 Cập nhật voucher thành công!');
       if (onSuccess) onSuccess();
       handleClose();
     } catch (err) {
-      console.error('Lỗi cập nhật voucher:', err.response?.data || err.message);
-      alert('❌ Cập nhật thất bại!');
+      const message = err?.response?.data?.message || '';
+      if (err?.response?.status === 400 && message.includes('tồn tại')) {
+        alert(`⚠️ ${message}`);
+      } else {
+        alert('❌ Cập nhật thất bại, vui lòng thử lại sau!');
+      }
     }
   };
 
@@ -239,12 +273,8 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>
-          Hủy
-        </Button>
-        <Button variant="primary" onClick={handleUpdate}>
-          Cập nhật
-        </Button>
+        <Button variant="secondary" onClick={handleClose}>Hủy</Button>
+        <Button variant="primary" onClick={handleUpdate}>Cập nhật</Button>
       </Modal.Footer>
     </Modal>
   );

@@ -1,28 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const employeeController = require('../controllers/employee.controller');
+// const verifyToken = require('../middlewares/verifyTokenAdmin'); // import middleware
 
-// CRUD routes
-
-//login
+// Login không cần xác thực
 router.post('/login', employeeController.login);
 
-//check status
+//check token
+// router.get('/me', verifyToken, employeeController.getCurrentEmployee);
+
+// Check status cần xác thực token
 router.get('/check-status', employeeController.checkEmployeeStatus);
 
-// lấy danh sách
-router.get('/', employeeController.getAllEmployees);
-
-//lấy theo id
-router.get('/:id', employeeController.getEmployeeById);
-
-//thêm
-router.post('/', employeeController.createEmployee);
-
-//sửa
-router.put('/:id', employeeController.updateEmployee);
-
-//chặn - bỏ chặn
-router.put('/block/:id', employeeController.blockEmployee);
+// Các route CRUD nhân viên cần xác thực
+router.get('/',  employeeController.getAllEmployees);
+router.get('/:id',  employeeController.getEmployeeById);
+router.post('/',  employeeController.createEmployee);
+router.put('/:id',  employeeController.updateEmployee);
+router.put('/block/:id',  employeeController.blockEmployee);
 
 module.exports = router;
