@@ -11,4 +11,7 @@ router.get("/", contactController.getAllContacts);
 // Lấy theo ID
 router.get("/:id", contactController.getContactById);
 
+//update
+router.put("/:id", contactController.updateContact);
+
 module.exports = router;

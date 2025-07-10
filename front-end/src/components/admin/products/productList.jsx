@@ -195,7 +195,7 @@ export default function ProductList() {
             onChange={(e) => setSelectedParentCategory(e.target.value)}
             aria-label="Lọc theo danh mục cha"
           >
-            <option value="">-- Lọc theo danh mục cha --</option>
+            <option value="">Danh mục cha</option>
             {parentCategories.map((cat) => (
               <option key={cat.category_id} value={cat.category_id}>
                 {cat.name}
@@ -211,7 +211,7 @@ export default function ProductList() {
             aria-label="Lọc theo danh mục con"
             disabled={!childCategories.length}
           >
-            <option value="">-- Lọc theo danh mục con --</option>
+            <option value="">Danh mục con</option>
             {childCategories.map((cat) => (
               <option key={cat.category_id} value={cat.category_id}>
                 {cat.name}
@@ -226,7 +226,7 @@ export default function ProductList() {
             onChange={(e) => setSelectedStatus(e.target.value)}
             aria-label="Lọc theo trạng thái"
           >
-            <option value="">-- Lọc theo trạng thái --</option>
+            <option value="">Trạng thái</option>
             <option value="1">Chờ duyệt</option>
             <option value="2">Hiển thị</option>
             <option value="3">Đã ẩn</option>

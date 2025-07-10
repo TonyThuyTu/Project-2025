@@ -2,121 +2,130 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import dayjs from "dayjs";
 
-function ViewContactModal({ contactId, onClose }) {
-  const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(false);
+// Plugins
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import "dayjs/locale/vi";
 
-  useEffect(() => {
-    if (!contactId) {
-      setDetail(null);
-      return;
-    }
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("vi");
 
-    const fetchDetail = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(`http://localhost:5000/api/contact/${contactId}`);
-        setDetail(res.data);
-      } catch (error) {
-        console.error(error);
-        setDetail(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDetail();
-  }, [contactId]);
-
-  if (!contactId) return null;
-
-  return (
-    <div
-      className="modal fade show d-block"
-      tabIndex="-1"
-      role="dialog"
-      onClick={onClose}
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", display: "block" }}
-    >
-      <div
-        className="modal-dialog"
-        role="document"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Chi tiết liên hệ</h5>
-            <button
-              type="button"
-              className="btn-close"
-              aria-label="Close"
-              onClick={onClose}
-            ></button>
-          </div>
-          <div className="modal-body">
-            {loading && <p>Đang tải...</p>}
-            {!loading && detail && (
-              <>
-                <p><strong>Tên:</strong> {detail.name}</p>
-                <p><strong>Email:</strong> {detail.email}</p>
-                <p><strong>Số điện thoại:</strong> {detail.phone}</p>
-                <p><strong>Lời nhắn:</strong> {detail.message || detail.note || "Không có"}</p>
-              </>
-            )}
-            {!loading && !detail && <p>Không tìm thấy dữ liệu.</p>}
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Đóng
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import ViewContactDetail from "./contactModal/view";
 
 export default function ContactList() {
   const [contacts, setContacts] = useState([]);
   const [selectedContactId, setSelectedContactId] = useState(null);
 
-  useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/api/contact");
-        setContacts(response.data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  // Filter states
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
+  // Load contacts
+  const fetchContacts = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/contact");
+      setContacts(response.data);
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách liên hệ:", error);
+    }
+  };
+
+  useEffect(() => {
     fetchContacts();
   }, []);
+
+  // Format ngày giờ theo timezone VN
+  const formatDateTime = (datetimeStr) => {
+    if (!datetimeStr) return "";
+    // Nếu datetimeStr không có offset, giả sử là UTC, convert về Asia/Ho_Chi_Minh
+    return dayjs.utc(datetimeStr).tz("Asia/Ho_Chi_Minh").format("D/M/YYYY [lúc] HH:mm");
+  };
+
+  // Hàm render trạng thái
+  const renderStatus = (status) => {
+    switch (status) {
+      case 1:
+        return <span className="badge bg-warning text-dark">Chưa xử lý</span>;
+      case 2:
+        return <span className="badge bg-success">Đã xử lý</span>;
+      default:
+        return <span className="badge bg-secondary">Không xác định</span>;
+    }
+  };
+
+  // Lọc danh sách theo trạng thái và ngày tạo
+  const filteredContacts = contacts.filter((contact) => {
+    // Lọc trạng thái
+    const matchStatus = filterStatus ? contact.status === Number(filterStatus) : true;
+
+    // Lọc ngày tạo (chỉ so sánh ngày, bỏ giờ)
+    const contactDate = contact.date
+      ? dayjs.utc(contact.date).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD")
+      : null;
+    const matchDate = filterDate ? contactDate === filterDate : true;
+
+    return matchStatus && matchDate;
+  });
 
   return (
     <div className="container p-3">
       <h2>Danh sách liên hệ</h2>
+
+      {/* Bộ lọc */}
+      <div className="row mb-3">
+        <div className="col-md-4">
+          <label className="form-label">Lọc theo trạng thái</label>
+          <select
+            className="form-select"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">Tất cả</option>
+            <option value="1">Chưa xử lý</option>
+            <option value="2">Đã xử lý</option>
+          </select>
+        </div>
+
+        <div className="col-md-4">
+          <label className="form-label">Lọc theo ngày tạo</label>
+          <input
+            type="date"
+            className="form-control"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+          />
+        </div>
+      </div>
+
       <table className="table table-bordered table-hover mt-3">
         <thead className="table-secondary">
           <tr>
             <th>Tên</th>
+            <th>Email</th>
             <th>Số điện thoại</th>
-            <th>Hành động</th>
+            <th>Ngày tạo</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
-          {contacts.length === 0 ? (
+          {filteredContacts.length === 0 ? (
             <tr>
-              <td colSpan="3" className="text-center">
+              <td colSpan="6" className="text-center">
                 Không có liên hệ nào.
               </td>
             </tr>
           ) : (
-            contacts.map((contact) => (
+            filteredContacts.map((contact) => (
               <tr key={contact.id_contact}>
                 <td>{contact.name}</td>
+                <td>{contact.email || "Không có"}</td>
                 <td>{contact.phone}</td>
+                <td>{contact.date ? formatDateTime(contact.date) : "Không rõ thời gian"}</td>
+                <td>{renderStatus(contact.status)}</td>
                 <td>
                   <button
                     className="btn btn-primary btn-sm"
@@ -131,10 +140,13 @@ export default function ContactList() {
         </tbody>
       </table>
 
-      <ViewContactModal
-        contactId={selectedContactId}
-        onClose={() => setSelectedContactId(null)}
-      />
+      {selectedContactId && (
+        <ViewContactDetail
+          contactId={selectedContactId}
+          onClose={() => setSelectedContactId(null)}
+          onUpdated={fetchContacts}
+        />
+      )}
     </div>
   );
 }
