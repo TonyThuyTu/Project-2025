@@ -5,6 +5,7 @@ const fs = require('fs');
 const { sequelize } = db;
 const { parseJSONSafe } = require('../helper/parseJson');
 const generateSKU = require('../helper/generateSKU');
+const getAllChildCategoryIds = require('../utils/getCategories');
 
 const {
   Product, 
@@ -1105,18 +1106,49 @@ exports.getProductsById = async (req, res) => {
 //get all products 
 exports.getAllProducts = async (req, res) => {
   try {
+    const {
+      search = "",
+      category_id,
+      parent_id,
+      status,
+      primary,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
     const whereClause = {};
 
-    if (req.query.category_id) {
-      whereClause.category_id = parseInt(req.query.category_id);
-    } else if (req.query.parent_id) {
-      const parentId = parseInt(req.query.parent_id);
-
+    // Lọc theo danh mục con (ưu tiên nếu có)
+    if (category_id) {
+      whereClause.category_id = parseInt(category_id);
+    } 
+    // Nếu không có category_id, dùng parent_id để lấy tất cả danh mục con
+    else if (parent_id) {
+      const parentId = parseInt(parent_id);
       const allIds = await getAllChildCategoryIds(parentId);
       whereClause.category_id = { [Op.in]: allIds };
     }
 
-    const products = await Product.findAll({
+    // Lọc theo trạng thái
+    if (status !== undefined && status !== "") {
+      whereClause.products_status = parseInt(status);
+    }
+
+    // Lọc theo trạng thái ghim (primary)
+    if (primary !== undefined && primary !== "") {
+      whereClause.products_primary = primary === "true";
+    }
+
+    // Tìm kiếm tên sản phẩm
+    if (search) {
+      whereClause.products_name = { [Op.like]: `%${search}%` };
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    const { count, rows } = await Product.findAndCountAll({
       where: whereClause,
       include: [
         {
@@ -1128,20 +1160,30 @@ exports.getAllProducts = async (req, res) => {
         },
       ],
       order: [["id_products", "DESC"]],
+      limit: limitNum,
+      offset,
     });
 
-    const formatted = products.map((p) => ({
+    const formattedProducts = rows.map((p) => ({
       products_id: p.id_products,
       products_name: p.products_name,
       market_price: parseFloat(p.products_market_price),
       sale_price: parseFloat(p.products_sale_price),
-      products_primary: Number(p.products_primary),
+      products_primary: Boolean(p.products_primary),
       products_status: p.products_status,
       main_image_url: p.images?.[0]?.Img_url || null,
       category_id: p.category_id,
     }));
 
-    res.json(formatted);
+    res.json({
+      products: formattedProducts,
+      pagination: {
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
+        currentPage: pageNum,
+        pageSize: limitNum,
+      },
+    });
   } catch (err) {
     console.error("Lỗi khi lấy danh sách sản phẩm:", err);
     res.status(500).json({ message: "Server error" });

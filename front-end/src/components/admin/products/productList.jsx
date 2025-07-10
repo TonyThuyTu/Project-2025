@@ -9,111 +9,92 @@ import { Form, Row, Col } from "react-bootstrap";
 export default function ProductList() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Lấy các param từ URL
+  const pageQuery = searchParams.get("page");
+  const page = pageQuery ? parseInt(pageQuery) : 1;
+  const searchKeyword = searchParams.get("search") || "";
+  const selectedParentCategory = searchParams.get("parentCategory") || "";
+  const selectedChildCategory = searchParams.get("childCategory") || "";
+  const selectedStatus = searchParams.get("status") || "";
+  const selectedPrimary = searchParams.get("primary") || "";
   const id = searchParams.get("id");
 
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-
-  const [categories, setCategories] = useState([]);          // tất cả danh mục (cha + con)
-  const [parentCategories, setParentCategories] = useState([]); // danh mục cha
-  const [childCategories, setChildCategories] = useState([]);   // danh mục con theo cha
-
-  const [selectedParentCategory, setSelectedParentCategory] = useState("");
-  const [selectedChildCategory, setSelectedChildCategory] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [selectedPrimary, setSelectedPrimary] = useState("");
-  const [searchKeyword, setSearchKeyword] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [parentCategories, setParentCategories] = useState([]);
+  const [childCategories, setChildCategories] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Load danh mục lần đầu (cha + con)
+  // Load categories
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  // Load sản phẩm và các modal khi có id
+  // Load child categories khi parent thay đổi
+  useEffect(() => {
+    if (selectedParentCategory) {
+      const parent = categories.find(
+        (cat) => cat.category_id === parseInt(selectedParentCategory)
+      );
+
+      if (parent && parent.children && parent.children.length > 0) {
+        setChildCategories(parent.children);
+      } else {
+        setChildCategories([]);
+      }
+    } else {
+      setChildCategories([]);
+    }
+  }, [selectedParentCategory, categories]);
+
+  // Load products khi các param thay đổi (page, search, filters)
+  useEffect(() => {
+    fetchProducts();
+  }, [page, searchKeyword, selectedParentCategory, selectedChildCategory, selectedStatus, selectedPrimary]);
+
+  // Lấy product chi tiết nếu có id
   useEffect(() => {
     if (!id) {
       setSelectedProduct(null);
       setShowEditModal(false);
       return;
     }
-
     const fetchProduct = async () => {
-      setSelectedProduct(null); // clear cũ
-      setShowEditModal(false);  // đóng modal để đợi data mới
-
       try {
         const res = await axios.get(`http://localhost:5000/api/products/${id}`);
         setSelectedProduct(res.data);
-        setShowEditModal(true); // mở lại khi có dữ liệu
-      } catch (error) {
-        console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
+        setShowEditModal(true);
+      } catch {
         router.push("/admin/products");
       }
     };
-
     fetchProduct();
   }, [id]);
 
-
-  // Khi chọn danh mục cha => cập nhật danh mục con tương ứng
-  useEffect(() => {
-    if (selectedParentCategory) {
-      const children = categories.filter(
-        (c) => c.parent_id === parseInt(selectedParentCategory)
-      );
-      setChildCategories(children);
-      setSelectedChildCategory(""); // reset con khi đổi cha
-    } else {
-      setChildCategories([]);
-      setSelectedChildCategory("");
-    }
-  }, [selectedParentCategory, categories]);
-
-  // Lọc sản phẩm theo các bộ lọc và tìm kiếm
-  useEffect(() => {
-    let result = [...products];
-
-    // Tìm kiếm theo tên
-    if (searchKeyword) {
-      result = result.filter(p =>
-        p.products_name.toLowerCase().includes(searchKeyword.toLowerCase())
-      );
-    }
-
-    // Lọc theo danh mục cha => lọc sản phẩm có category_parent_id trùng cha
-    if (selectedParentCategory) {
-      result = result.filter(p => p.category_parent_id === parseInt(selectedParentCategory));
-    }
-
-    // Lọc theo danh mục con (đã chọn)
-    if (selectedChildCategory) {
-      result = result.filter(p => p.category_id === parseInt(selectedChildCategory));
-    }
-
-    // Lọc theo trạng thái
-    if (selectedStatus) {
-      result = result.filter(p => p.products_status === parseInt(selectedStatus));
-    }
-
-    // Lọc theo ghim (true/false)
-    if (selectedPrimary) {
-      const primaryBool = selectedPrimary === "true";
-      result = result.filter(p => Boolean(p.products_primary) === primaryBool);
-    }
-
-    setFilteredProducts(result);
-  }, [products, searchKeyword, selectedParentCategory, selectedChildCategory, selectedStatus, selectedPrimary]);
-
+  // Hàm fetch products từ API với params lọc
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/products");
-      setProducts(res.data);
+      const res = await axios.get("http://localhost:5000/api/products", {
+        params: {
+          page,
+          limit: 7,
+          search: searchKeyword,
+          parent_id: selectedParentCategory || undefined,
+          category_id: selectedChildCategory || undefined,
+          status: selectedStatus || undefined,
+          primary: selectedPrimary || undefined,
+        },
+      });
+
+      setProducts(res.data.products || []);
+      setTotalPages(res.data.pagination?.totalPages || 1);
     } catch (error) {
       console.error("Lỗi khi tải danh sách sản phẩm:", error);
     } finally {
@@ -121,31 +102,55 @@ export default function ProductList() {
     }
   };
 
-  // Gọi danh sách sản phẩm lần đầu
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   const fetchCategories = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/categories");
-      setCategories(res.data);
-      const parents = res.data.filter(c => c.parent_id === null);
+
+      const parents = res.data; // cây danh mục cha → children nằm bên trong
+      setCategories(parents);
       setParentCategories(parents);
     } catch (err) {
       console.error("Lỗi khi lấy danh mục:", err);
     }
   };
 
-  const handleAddProduct = () => {
-    fetchProducts();
+
+  // Hàm chuyển trang, đồng thời cập nhật URL params
+  const updateUrlParams = (newParams) => {
+    const params = new URLSearchParams(searchParams);
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    router.push(`/admin/products?${params.toString()}`);
   };
 
-  const handleUpdateProduct = () => {
-    fetchProducts();
-    router.push("/admin/products");
+  // Xử lý thay đổi input lọc, cập nhật URL params
+  const handleSearchChange = (e) => {
+    updateUrlParams({ search: e.target.value, page: 1 }); // reset page về 1 khi search
+  };
+  const handleParentCategoryChange = (e) => {
+    updateUrlParams({ parentCategory: e.target.value, childCategory: "", page: 1 });
+  };
+  const handleChildCategoryChange = (e) => {
+    updateUrlParams({ childCategory: e.target.value, page: 1 });
+  };
+  const handleStatusChange = (e) => {
+    updateUrlParams({ status: e.target.value, page: 1 });
+  };
+  const handlePrimaryChange = (e) => {
+    updateUrlParams({ primary: e.target.value, page: 1 });
   };
 
+  // Hàm chuyển trang
+  const goToPage = (pageNum) => {
+    updateUrlParams({ page: pageNum });
+  };
+
+  // Xử lý toggle primary
   const togglePrimary = async (productId, currentPrimary) => {
     try {
       await axios.patch(`http://localhost:5000/api/products/${productId}/toggle-primary`, {
@@ -160,15 +165,18 @@ export default function ProductList() {
   const getStatusText = (status) => {
     switch (Number(status)) {
       case 1:
-        return <span style={{ color: "#f39c12" }}>Chờ duyệt</span>;
+        return <span className="badge bg-warning">Chờ duyệt</span>;
       case 2:
-        return <span style={{ color: "#27ae60" }}>Hiển thị</span>;
+        return <span className="badge bg-success">Hiển thị</span>;
       case 3:
-        return <span style={{ color: "#e74c3c" }}>Đã ẩn</span>;
+        return <span className="badge bg-secondary">Bị ẩn</span>;
       default:
-        return <span style={{ color: "#7f8c8d" }}>Không xác định</span>;
+        return <span className="badge bg-info">Không xác định</span>;
     }
   };
+
+  const pageNumbers = [];
+  for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
 
   return (
     <div className="container p-3">
@@ -185,15 +193,14 @@ export default function ProductList() {
           <Form.Control
             placeholder="Tìm sản phẩm..."
             value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
+            onChange={handleSearchChange}
           />
         </Col>
 
         <Col md={2}>
           <Form.Select
             value={selectedParentCategory}
-            onChange={(e) => setSelectedParentCategory(e.target.value)}
-            aria-label="Lọc theo danh mục cha"
+            onChange={handleParentCategoryChange}
           >
             <option value="">Danh mục cha</option>
             {parentCategories.map((cat) => (
@@ -207,8 +214,7 @@ export default function ProductList() {
         <Col md={2}>
           <Form.Select
             value={selectedChildCategory}
-            onChange={(e) => setSelectedChildCategory(e.target.value)}
-            aria-label="Lọc theo danh mục con"
+            onChange={handleChildCategoryChange}
             disabled={!childCategories.length}
           >
             <option value="">Danh mục con</option>
@@ -223,7 +229,7 @@ export default function ProductList() {
         <Col md={2}>
           <Form.Select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={handleStatusChange}
             aria-label="Lọc theo trạng thái"
           >
             <option value="">Trạng thái</option>
@@ -236,7 +242,7 @@ export default function ProductList() {
         <Col md={2}>
           <Form.Select
             value={selectedPrimary}
-            onChange={(e) => setSelectedPrimary(e.target.value)}
+            onChange={handlePrimaryChange}
             aria-label="Lọc theo ghim"
           >
             <option value="">-- Lọc theo ghim --</option>
@@ -249,72 +255,110 @@ export default function ProductList() {
       {loading ? (
         <p>Đang tải sản phẩm...</p>
       ) : (
-        <table className="table table-bordered table-hover mt-3">
-          <thead className="table-secondary">
-            <tr>
-              <th>Tên sản phẩm</th>
-              <th>Hình ảnh</th>
-              <th>Giá thị trường</th>
-              <th>Giá bán</th>
-              <th>Ghim</th>
-              <th>Trạng thái</th>
-              <th>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((product) => (
-              <tr key={product.products_id}>
-                <td>{product.products_name}</td>
-                <td>
-                  <img
-                    src={
-                      product.main_image_url
-                        ? `http://localhost:5000${product.main_image_url}`
-                        : "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
-                    }
-                    alt="ảnh sản phẩm"
-                    width="80"
-                    height="80"
-                    style={{ objectFit: "cover" }}
-                  />
-                </td>
-                <td>{product.market_price.toLocaleString("vi-VN")} ₫</td>
-                <td>{product.sale_price.toLocaleString("vi-VN")} ₫</td>
-                <td>
-                  {product.products_primary ? (
-                    <span className="badge bg-success">Đã ghim</span>
-                  ) : (
-                    <span className="badge bg-secondary">Chưa ghim</span>
-                  )}
-                </td>
-                <td>{getStatusText(product.products_status)}</td>
-                <td>
-                  <button
-                    className="btn btn-info btn-sm me-2"
-                    onClick={() => router.push(`/admin/products?id=${product.products_id}`)}
-                  >
-                    Xem
-                  </button>
-                  <button
-                    className={`btn btn-sm ${
-                      product.products_primary ? "btn-warning" : "btn-success"
-                    }`}
-                    onClick={() => togglePrimary(product.products_id, product.products_primary)}
-                  >
-                    {product.products_primary ? "Bỏ ghim" : "Ghim"}
-                  </button>
-                </td>
+        <>
+          <table className="table table-bordered table-hover mt-3">
+            <thead className="table-secondary">
+              <tr>
+                <th>Tên sản phẩm</th>
+                <th>Hình ảnh</th>
+                <th>Giá thị trường</th>
+                <th>Giá bán</th>
+                <th>Ghim</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="text-center">
+                    Không có sản phẩm nào.
+                  </td>
+                </tr>
+              ) : (
+                products.map((product) => (
+                  <tr key={product.products_id}>
+                    <td>{product.products_name}</td>
+                    <td>
+                      <img
+                        src={
+                          product.main_image_url
+                            ? `http://localhost:5000${product.main_image_url}`
+                            : "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
+                        }
+                        alt="ảnh sản phẩm"
+                        width="80"
+                        height="80"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </td>
+                    <td>{product.market_price.toLocaleString("vi-VN")} ₫</td>
+                    <td>{product.sale_price.toLocaleString("vi-VN")} ₫</td>
+                    <td>
+                      {product.products_primary ? (
+                        <span className="badge bg-success">Đã ghim</span>
+                      ) : (
+                        <span className="badge bg-secondary">Chưa ghim</span>
+                      )}
+                    </td>
+                    <td>{getStatusText(product.products_status)}</td>
+                    <td>
+                      <button
+                        className="btn btn-info btn-sm me-2"
+                        onClick={() => router.push(`/admin/products?id=${product.products_id}`)}
+                      >
+                        Xem
+                      </button>
+                      <button
+                        className={`btn btn-sm ${
+                          product.products_primary ? "btn-warning" : "btn-success"
+                        }`}
+                        onClick={() => togglePrimary(product.products_id, product.products_primary)}
+                      >
+                        {product.products_primary ? "Bỏ ghim" : "Ghim"}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination */}
+          <nav aria-label="Page navigation example" className="mt-3">
+            <ul className="pagination justify-content-center">
+              <li className={`page-item ${page === 1 ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => goToPage(page - 1)} disabled={page === 1}>
+                  Trang trước
+                </button>
+              </li>
+
+              {pageNumbers.map((pageNum) => (
+                <li
+                  key={pageNum}
+                  className={`page-item ${pageNum === page ? "active" : ""}`}
+                >
+                  <button className="page-link" onClick={() => goToPage(pageNum)}>
+                    {pageNum}
+                  </button>
+                </li>
+              ))}
+
+              <li className={`page-item ${page === totalPages ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => goToPage(page + 1)} disabled={page === totalPages}>
+                  Trang sau
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </>
       )}
 
       {/* Modal thêm */}
       <AddProductModal
         show={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddProduct}
+        onAdd={() => fetchProducts()}
       />
 
       {/* Modal sửa */}
@@ -323,7 +367,7 @@ export default function ProductList() {
           show={showEditModal}
           onClose={() => setShowEditModal(false)}
           productData={selectedProduct}
-          onUpdate={handleUpdateProduct}
+          onUpdate={() => fetchProducts()}
         />
       )}
     </div>
