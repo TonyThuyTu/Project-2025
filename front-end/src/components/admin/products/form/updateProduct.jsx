@@ -1,5 +1,6 @@
 import { Modal, Button, Form, Card } from "react-bootstrap";
 import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from 'next/navigation'; // ⬅️ THÊM
 import { nanoid } from 'nanoid';
 import BasicInfo from "./updateProductComponents/BasicInfo";
 import CategorySelector from "./updateProductComponents/CategorySelector";
@@ -22,9 +23,20 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
   const [images, setImages] = useState([]);
   const [specs, setSpecs] = useState([]);
   const [status, setStatus] = useState(1);
+
+  const router = useRouter();                 // ⬅️ THÊM
+  const searchParams = useSearchParams();     // ⬅️ THÊM
   // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formValid, setFormValid] = useState(false);
   const hasLoadedImages = useRef(false);
+
+  const handleClose = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('id');
+    router.replace(`/admin/products?${params.toString()}`, { scroll: false });
+    onClose?.();
+  };
+
   function getOptionCombinations(arr) {
     if (!arr.length) return [];
     if (arr.length === 1) return arr[0].map(v => [v]);
@@ -99,40 +111,25 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     }
 
     // Tạo tổ hợp giá trị từ attributes
-    const valueMatrix = normalizedAttributes.map(opt => opt.values.map(v => v.value));
-    const allCombos = getCombinations(valueMatrix);
-
-    // Tạo map lookup từ option_combo
-    const skuMap = new Map(
-      (productData.skus || []).map(sku => {
-        const key = JSON.stringify(sku.option_combo?.map(opt => opt.value) || []);
-        return [key, sku];
-      })
-    );
-
-    // Tạo SKU list hợp lệ
-    const newSkuList = allCombos.map(comboValues => {
-      const key = JSON.stringify(comboValues);
-      const sku = skuMap.get(key);
-
-      const combo = comboValues.map((val, index) => {
-        const option = normalizedAttributes[index];
-        const valueItem = option?.values?.find(v => v.value === val);
+    const newSkuList = (productData.skus || []).map((sku) => {
+      const combo = sku.option_combo.map(({ attribute, value }) => {
+        const option = normalizedAttributes.find(opt => opt.name === attribute);
+        const valueItem = option?.values.find(v => v.value === value);
         return {
-          value: val,
-          label: valueItem?.label || val,
-          optionName: option?.name || '',
+          value,
+          label: valueItem?.label || value,
+          optionName: attribute,
         };
       });
 
       return {
         combo,
-        price: sku?.price || 0,
-        quantity: sku?.quantity || 0,
-        status: sku?.status || 2,
-        images: sku?.images || [],   // Thêm trường images đầy đủ
-        sku_id: sku?.sku_id,         // Nếu bạn có id SKU, giữ lại để dễ xử lý
-        sku_code: sku?.sku_code || '', // Nếu có mã SKU
+        price: Number(sku.price) || 0,
+        quantity: sku.quantity || 0,
+        status: sku.status || 2,
+        images: sku.images || [],
+        sku_id: sku.variant_id,
+        sku_code: sku.sku_code || '',
       };
     });
 
@@ -213,6 +210,8 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         });
       });
 
+
+
       const fixedOptions = options.map(opt => ({
         ...opt,
         values: opt.values
@@ -227,6 +226,25 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
           }))
       }));
       console.log("🧪 fixedOptions gửi lên:", JSON.stringify(fixedOptions, null, 2));
+      
+      const validSkus = skuList
+      .filter(sku =>
+        sku.combo?.length === options.length &&
+        sku.combo.every(c => c?.value && c?.optionName) &&
+        !isNaN(Number(sku.price)) &&
+        !isNaN(Number(sku.quantity))
+      )
+      .map(sku => ({
+        variant_id: sku.sku_id || null,
+        sku_code: sku.sku_code || '',
+        price: Number(sku.price),
+        quantity: Number(sku.quantity),
+        status: Number(sku.status),
+        option_combo: sku.combo.map(c => ({
+          attribute: c.optionName,
+          value: c.value
+        }))
+      }));
 
       formData.append('attributes', JSON.stringify(fixedOptions));
       formData.append('products_id', productId);
@@ -238,9 +256,10 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       formData.append('category_id', selectedChild || selectedParent);
       formData.append('specs', JSON.stringify(specs));
       // formData.append('attributes', JSON.stringify(options));
-      formData.append('variants', JSON.stringify(skuList));
+      formData.append('variants', JSON.stringify(validSkus));
       formData.append("optionImages", JSON.stringify(optionImages));
       formData.append('products_status', status);
+      
 
       // Gửi ảnh mới thêm (ảnh từ client, không phải từ server)
       images.forEach((img, index) => {
@@ -270,7 +289,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
       alert('Cập nhật sản phẩm thành công');
       onUpdate?.();
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('Lỗi cập nhật sản phẩm:', error);
       alert(`Lỗi: ${error.response?.data?.message || error.message}`);
@@ -278,7 +297,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
   };
 
   return (
-    <Modal show={show} onHide={onClose} size="xl" centered scrollable>
+    <Modal show={show} onHide={handleClose} size="xl" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>Sửa sản phẩm</Modal.Title>
       </Modal.Header>
@@ -334,7 +353,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>Đóng</Button>
+        <Button variant="secondary" onClick={handleClose}>Đóng</Button>
         <Button variant="primary" onClick={handleUpdate}>
           Cập nhật
         </Button>

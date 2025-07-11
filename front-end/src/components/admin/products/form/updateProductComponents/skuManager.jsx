@@ -1,152 +1,229 @@
-import { useEffect } from "react";
-import { Table, Form, Button } from "react-bootstrap";
+import { useState } from "react";
+import { Table, Form, Button, Alert } from "react-bootstrap";
 
 function isHexColor(value) {
   return /^#([0-9A-F]{3}){1,2}$/i.test(value);
 }
 
 export default function SkuManager({ options = [], skuList = [], setSkuList }) {
-  
-  useEffect(() => {
-    if (options.length < 2) {
-      if (skuList.length !== 0) {
-        setSkuList([]);
-      }
+  const [error, setError] = useState(null);
+
+  if (options.length < 2) return null;
+
+  const isComboExist = (comboToCheck, list) => {
+    return list.some((sku) => {
+      if (!sku.combo || sku.combo.length !== comboToCheck.length) return false;
+      return comboToCheck.every((c, i) => sku.combo[i]?.value === c.value);
+    });
+  };
+
+  const generateAllCombos = (opts) => {
+    if (!opts.length) return [];
+    const valuesList = opts.map((opt) => opt.values.map((v) => v.value));
+    return valuesList.reduce((acc, curr) => {
+      if (!acc.length) return curr.map((v) => [v]);
+      return acc.flatMap((a) => curr.map((c) => [...a, c]));
+    }, []);
+  };
+
+  const handleAddSku = () => {
+    setError(null);
+    const allCombos = generateAllCombos(options);
+    const unusedCombos = allCombos.filter((comboValues) => {
+      const comboObj = comboValues.map((val, i) => ({
+        value: val,
+        label: options[i].values.find((v) => v.value === val)?.label || val,
+        optionName: options[i].name,
+      }));
+      return !isComboExist(comboObj, skuList);
+    });
+
+    if (!unusedCombos.length) {
+      setError("Tất cả tổ hợp SKU đã được tạo, không thể thêm SKU mới.");
       return;
     }
 
-    // Xây dựng tập hợp combo hợp lệ (giữ nguyên code của bạn)
-    const valuesList = options.map(opt =>
-      opt.values.map(v => ({
-        label: v.label,
-        value: v.value || v.label,
-        optionName: opt.name,
-      }))
-    );
+    const comboToUse = unusedCombos[0].map((val, i) => ({
+      value: val,
+      label: options[i].values.find((v) => v.value === val)?.label || val,
+      optionName: options[i].name,
+    }));
 
-    const validComboSet = new Set(
-      valuesList.length > 0
-        ? valuesList.reduce((acc, curr) => {
-            if (acc.length === 0) return curr.map(v => [v]);
-            const result = [];
-            acc.forEach(a => {
-              curr.forEach(c => {
-                result.push([...a, c]);
-              });
-            });
-            return result;
-          }, []).map(combo => JSON.stringify(combo.map(c => c.value)))
-        : []
-    );
+    const newSku = {
+      combo: comboToUse,
+      price: 0,
+      quantity: 0,
+      status: 2,
+      sku_code: "",
+    };
 
-    const filteredSkus = skuList.filter(sku => {
-      if (!Array.isArray(sku.combo)) return false;
-      const comboKey = JSON.stringify(sku.combo.map(c => c.value));
-      return validComboSet.has(comboKey);
-    });
+    setSkuList([...skuList, newSku]);
+  };
 
-    // So sánh sâu skuList và filteredSkus trước khi set
-    const oldStr = JSON.stringify(skuList);
-    const newStr = JSON.stringify(filteredSkus);
-    if (oldStr !== newStr) {
-      setSkuList(filteredSkus);
+  const handleComboChange = (skuIndex, optionIndex, newValue) => {
+    setError(null);
+    const updated = [...skuList];
+    const option = options[optionIndex];
+    const valueObj = option.values.find((v) => v.value === newValue);
+
+    const newCombo = [...updated[skuIndex].combo];
+    newCombo[optionIndex] = {
+      value: newValue,
+      label: valueObj?.label || newValue,
+      optionName: option.name,
+    };
+
+    // Kiểm tra combo trùng
+    if (
+      isComboExist(newCombo, skuList.filter((_, i) => i !== skuIndex)) ||
+      newCombo.some((c) => !c.value)
+    ) {
+      setError("Tổ hợp không hợp lệ hoặc đã tồn tại.");
+      return;
     }
-  }, [options, skuList, setSkuList]);
+
+    updated[skuIndex].combo = newCombo;
+    setSkuList(updated);
+  };
 
   const handleChange = (index, field, value) => {
+    setError(null);
     const updated = [...skuList];
     updated[index][field] = value;
     setSkuList(updated);
   };
 
-  if (options.length < 2) return null;
+  const handleRemoveSku = (index) => {
+    setError(null);
+    const updated = [...skuList];
+    updated.splice(index, 1);
+    setSkuList(updated);
+  };
+
+  const allCombos = generateAllCombos(options);
+  const unusedCombos = allCombos.filter((comboValues) => {
+    const comboObj = comboValues.map((val, i) => ({
+      value: val,
+      label: options[i].values.find((v) => v.value === val)?.label || val,
+      optionName: options[i].name,
+    }));
+    return !isComboExist(comboObj, skuList);
+  });
+
+  const canAddSku = unusedCombos.length > 0;
 
   return (
     <div className="mt-4">
       <h5>Quản lý SKU theo tổ hợp option</h5>
-      <Table bordered size="sm" responsive>
+      {error && <Alert variant="danger">{error}</Alert>}
+      <Button variant="success" size="sm" onClick={handleAddSku} disabled={!canAddSku}>
+        <i className="bi bi-plus-lg"></i> Thêm SKU
+      </Button>
+
+      <Table bordered size="sm" responsive className="mt-2">
         <thead>
           <tr>
-            {options.map((opt, idx) => (
-              <th key={idx}>{opt.name}</th>
-            ))}
+            {options.map((opt, idx) => <th key={idx}>{opt.name}</th>)}
             <th>Giá cộng thêm</th>
             <th>Số lượng</th>
+            <th>SKU Code</th>
             <th>Trạng thái</th>
             <th>Xoá</th>
           </tr>
         </thead>
         <tbody>
-          {skuList.length > 0 ? (
-            skuList.map((skuItem, index) => (
-              <tr key={index}>
-                {(Array.isArray(skuItem.combo) ? skuItem.combo : []).map((c, i) => (
+          {skuList.length > 0 ? skuList.map((skuItem, index) => (
+            <tr key={index}>
+              {skuItem.combo.map((c, i) => {
+                const opt = options[i];
+                const isColor = isHexColor(c.value);
+                return (
                   <td key={i}>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      {isHexColor(c.value) && (
+                    <div className="d-flex align-items-center">
+                      <Form.Select
+                        size="sm"
+                        value={c.value}
+                        onChange={(e) => handleComboChange(index, i, e.target.value)}
+                      >
+                        <option value="">-- Chọn {opt.name} --</option>
+                        {opt.values.map((v, j) => {
+                          const testCombo = [...skuItem.combo];
+                          testCombo[i] = {
+                            value: v.value,
+                            label: v.label,
+                            optionName: opt.name,
+                          };
+                          const comboExisted = isComboExist(
+                            testCombo,
+                            skuList.filter((_, idx) => idx !== index)
+                          );
+                          return (
+                            <option key={j} value={v.value} disabled={comboExisted}>
+                              {v.value}
+                            </option>
+                          );
+                        })}
+                      </Form.Select>
+                      {isColor && (
                         <div
                           style={{
                             width: 20,
                             height: 20,
                             backgroundColor: c.value,
                             border: "1px solid #ccc",
-                            marginRight: 8,
+                            marginLeft: 6,
                             borderRadius: 3,
                           }}
                           title={c.label}
                         />
                       )}
-                      <span>{c.label}</span>
                     </div>
                   </td>
-                ))}
-                <td>
-                  <Form.Control
-                    type="number"
-                    value={skuItem.price ?? ""}
-                    onChange={(e) =>
-                      handleChange(index, "price", parseInt(e.target.value) || 0)
-                    }
-                  />
-                </td>
-                <td>
-                  <Form.Control
-                    type="number"
-                    value={skuItem.quantity}
-                    onChange={(e) =>
-                      handleChange(index, "quantity", parseInt(e.target.value) || 0)
-                    }
-                  />
-                </td>
-                <td>
-                  <Form.Select
-                    value={skuItem.status}
-                    onChange={(e) =>
-                      handleChange(index, "status", parseInt(e.target.value))
-                    }
-                  >
-                    <option value={2}>Hiển thị</option>
-                    <option value={1}>Ẩn</option>
-                  </Form.Select>
-                </td>
-                <td>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => {
-                      const updated = [...skuList];
-                      updated.splice(index, 1);
-                      setSkuList(updated);
-                    }}
-                  >
-                    <i className="bi bi-trash" />
-                  </Button>
-                </td>
-              </tr>
-            ))
-          ) : (
+                );
+              })}
+              <td>
+                <Form.Control
+                  type="number"
+                  value={skuItem.price}
+                  onChange={(e) => handleChange(index, "price", parseFloat(e.target.value) || 0)}
+                  size="sm"
+                />
+              </td>
+              <td>
+                <Form.Control
+                  type="number"
+                  value={skuItem.quantity}
+                  onChange={(e) => handleChange(index, "quantity", parseInt(e.target.value) || 0)}
+                  size="sm"
+                />
+              </td>
+              <td>
+                <Form.Control
+                  type="text"
+                  value={skuItem.sku_code || ""}
+                  onChange={(e) => handleChange(index, "sku_code", e.target.value)}
+                  size="sm"
+                />
+              </td>
+              <td>
+                <Form.Select
+                  value={skuItem.status}
+                  onChange={(e) => handleChange(index, "status", parseInt(e.target.value))}
+                  size="sm"
+                >
+                  <option value={2}>Hiển thị</option>
+                  <option value={1}>Ẩn</option>
+                </Form.Select>
+              </td>
+              <td>
+                <Button variant="danger" size="sm" onClick={() => handleRemoveSku(index)}>
+                  <i className="bi bi-trash" />
+                </Button>
+              </td>
+            </tr>
+          )) : (
             <tr>
-              <td colSpan={options.length + 4} className="text-center text-muted">
+              <td colSpan={options.length + 5} className="text-center text-muted">
                 Chưa có SKU nào
               </td>
             </tr>

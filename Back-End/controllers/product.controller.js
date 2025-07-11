@@ -918,6 +918,120 @@ exports.updateProduct = async (req, res) => {
       await allImages[i].update({ is_main: i === mainIndex }, { transaction: t });
     }
 
+    // === 6. Cập nhật SKU ===
+    try {
+      const skus = typeof req.body.skus === "string" ? JSON.parse(req.body.skus) : req.body.skus;
+
+      if (Array.isArray(skus)) {
+        const existingSkus = await db.ProductVariant.findAll({
+          where: { id_products: id },
+          include: [{ model: db.VariantValue, as: 'variantValues' }],
+          transaction: t,
+        });
+
+        const incomingIds = skus.filter(s => s.variant_id).map(s => s.variant_id);
+
+        // 1. Xoá variant_values của các SKU không còn
+        const toDeleteVariants = existingSkus.filter(sku => !incomingIds.includes(sku.id_variant));
+
+        for (const variant of toDeleteVariants) {
+          await db.VariantValue.destroy({
+            where: { id_variant: variant.id_variant },
+            transaction: t,
+          });
+        }
+
+        // 2. Xoá SKU không còn
+        await db.ProductVariant.destroy({
+          where: {
+            id_products: id,
+            id_variant: { [Op.notIn]: incomingIds },
+          },
+          transaction: t,
+        });
+
+        // 3. Upsert lại SKU
+        for (const sku of skus) {
+          const {
+            variant_id,
+            sku_code,
+            quantity,
+            price,
+            status,
+            option_combo,
+          } = sku;
+
+          const parsedStatus = [1, true, '1', 'true'].includes(status) ? true : false;
+
+          if (variant_id) {
+            // Cập nhật SKU
+            await db.ProductVariant.update({
+              sku: sku_code || '',
+              quantity: parseInt(quantity) || 0,
+              price: parseFloat(price) || 0,
+              status: parsedStatus,
+            }, {
+              where: { id_variant: variant_id, id_products: id },
+              transaction: t,
+            });
+
+            // Xoá hết variant_values cũ và tạo lại cho chắc
+            await db.VariantValue.destroy({
+              where: { id_variant: variant_id },
+              transaction: t,
+            });
+
+            for (const combo of option_combo) {
+              const attributeValue = await db.AttributeValue.findOne({
+                where: {
+                  value: combo.value?.toString() || '',
+                },
+                include: [{ model: db.Attribute, as: 'attribute', where: { name: combo.attribute } }],
+                transaction: t,
+              });
+
+              if (attributeValue) {
+                await db.VariantValue.create({
+                  id_variant: variant_id,
+                  id_value: attributeValue.id_value,
+                }, { transaction: t });
+              }
+            }
+          } else {
+            // Tạo mới SKU
+            const newSku = await db.ProductVariant.create({
+              id_products: id,
+              sku: sku_code || '',
+              quantity: parseInt(quantity) || 0,
+              price: parseFloat(price) || 0,
+              status: parsedStatus,
+            }, { transaction: t });
+
+            for (const combo of option_combo) {
+              const attributeValue = await db.AttributeValue.findOne({
+                where: {
+                  value: combo.value?.toString() || '',
+                },
+                include: [{ model: db.Attribute, as: 'attribute', where: { name: combo.attribute } }],
+                transaction: t,
+              });
+
+              if (attributeValue) {
+                await db.VariantValue.create({
+                  id_variant: newSku.id_variant,
+                  id_value: attributeValue.id_value,
+                }, { transaction: t });
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      await t.rollback();
+      console.error("❌ Lỗi khi cập nhật SKU:", err);
+      return res.status(500).json({ message: "Lỗi khi cập nhật SKU", error: err.message });
+    }
+
     // === 5. Lưu lại product ===
     await product.save({ transaction: t });
     await t.commit();
