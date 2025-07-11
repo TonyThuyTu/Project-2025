@@ -22,7 +22,6 @@ const {
 
 //lấy danh sách danh mục và sản phẩm được ghim
 
-
 //lấy sản phẩm tưng tự
 exports.getSameProducts = async (req, res) => {
   try {

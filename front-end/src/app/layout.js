@@ -1,6 +1,6 @@
 // src/app/layout.js
 import { Roboto, Roboto_Mono } from "next/font/google";
-
+import RouteLoadingProvider from "@/components/loading/RouteLoading";
 
 
 import "./globals.css";
@@ -44,8 +44,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className={`${roboto.variable} ${robotoMono.variable}`}>
-
-        {children}
+      <RouteLoadingProvider>
+          {children}
+      </RouteLoadingProvider>
       </body>
     </html>
   );

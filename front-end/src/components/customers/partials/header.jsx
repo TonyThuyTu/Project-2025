@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
@@ -8,6 +8,7 @@ const HeaderClient = () => {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [parentCategories, setParentCategories] = useState([]);
+  const [isPending, startTransition] = useTransition();
 
   // Kiểm tra trạng thái đăng nhập và trạng thái chặn user
   // Gọi 1 lần để load danh mục cha
@@ -61,7 +62,10 @@ const HeaderClient = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     setIsLoggedIn(false);
-    router.push('/');
+
+    startTransition(() => {
+      router.push('/');
+    });
   };
 
   return (
