@@ -1,6 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
-const voucher = require('./voucher');
 
 // Import các model
 const Contact = require('./contact')(sequelize, DataTypes);
@@ -39,6 +38,12 @@ const Voucher = require('./voucher') (sequelize, DataTypes);
 
 const VoucherProduct = require('./voucherProduct') (sequelize, DataTypes);
 
+const Cart = require('./cart') (sequelize, DataTypes);
+
+const CartItem = require('./cartItems') (sequelize, DataTypes);
+
+const CartItemAttributeValue = require('./cartItemAttributeValues') (sequelize, DataTypes);
+
 // Khởi tạo object db
 const db = {
   sequelize,
@@ -63,6 +68,9 @@ const db = {
   ProductReview,
   Voucher,
   VoucherProduct,
+  Cart,
+  CartItem,
+  CartItemAttributeValue,
 };
 
 /* =========================
@@ -193,10 +201,13 @@ db.Attribute.hasMany(db.ProductAttribute, {
 
 db.ProductAttributeValue.belongsTo(db.Product, { 
   foreignKey: 'id_product', 
-  as: 'product' });
+  as: 'product' 
+});
+
 db.ProductAttributeValue.belongsTo(db.AttributeValue, { 
   foreignKey: 'id_value', 
-  as: 'attributeValue' });
+  as: 'attributeValue' 
+});
 
 db.Product.hasMany(db.ProductAttributeValue, {
   foreignKey: 'id_product',
@@ -241,6 +252,69 @@ db.Product.belongsToMany(db.Voucher, {
   foreignKey: 'id_product',
   otherKey: 'id_voucher',
   as: 'vouchers'
+});
+
+//cart
+// Cart 1-n CartItem
+db.Cart.hasMany(db.CartItem, {
+  foreignKey: 'id_cart',
+  as: 'items'
+});
+db.CartItem.belongsTo(db.Cart, {
+  foreignKey: 'id_cart',
+  as: 'cart'
+});
+
+// Cart thuộc về Customer
+db.Cart.belongsTo(db.Customer, {
+  foreignKey: 'id_customer',
+  as: 'customer'
+});
+db.Customer.hasMany(db.Cart, {
+  foreignKey: 'id_customer',
+  as: 'carts'
+});
+
+// ======================= CART ITEM =======================
+// CartItem 1-n CartItemAttributeValue
+db.CartItem.hasMany(db.CartItemAttributeValue, {
+  foreignKey: 'id_cart_items',
+  as: 'attribute_values'
+});
+db.CartItemAttributeValue.belongsTo(db.CartItem, {
+  foreignKey: 'id_cart_items',
+  as: 'cart_item'
+});
+
+// CartItem thuộc về Product
+db.CartItem.belongsTo(db.Product, {
+  foreignKey: 'id_product',
+  as: 'product'
+});
+db.Product.hasMany(db.CartItem, {
+  foreignKey: 'id_product',
+  as: 'cart_items'
+});
+
+// ======================= ATTRIBUTE VALUE =======================
+// CartItemAttributeValue thuộc về AttributeValue
+db.CartItemAttributeValue.belongsTo(db.AttributeValue, {
+  foreignKey: 'id_value',
+  as: 'attribute_value'
+});
+db.AttributeValue.hasMany(db.CartItemAttributeValue, {
+  foreignKey: 'id_value',
+  as: 'cart_item_values'
+});
+
+db.CartItem.belongsTo(db.ProductVariant, {
+  foreignKey: 'id_variant',  // giả sử trường này có trong cart_items
+  as: 'variant'
+});
+
+db.ProductVariant.hasMany(db.CartItem, {
+  foreignKey: 'id_variant',
+  as: 'cart_items'
 });
 
 module.exports = db;
