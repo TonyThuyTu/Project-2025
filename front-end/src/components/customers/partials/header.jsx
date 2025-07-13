@@ -9,21 +9,23 @@ const HeaderClient = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [parentCategories, setParentCategories] = useState([]);
   const [isPending, startTransition] = useTransition();
+  
+  const [cartItems, setCartItems] = useState([]);
 
-  // Kiểm tra trạng thái đăng nhập và trạng thái chặn user
-  // Gọi 1 lần để load danh mục cha
+  // Load danh mục cha
   useEffect(() => {
     axios.get("http://localhost:5000/api/categories/parent")
       .then(res => setParentCategories(res.data))
       .catch(err => console.error("Lỗi load danh mục:", err));
   }, []);
 
-  // Kiểm tra trạng thái đăng nhập và bị chặn (mỗi 10s)
+  // Kiểm tra đăng nhập và trạng thái user
   useEffect(() => {
     const checkStatus = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
         setIsLoggedIn(false);
+        setCartItems([]);
         return;
       }
 
@@ -36,21 +38,37 @@ const HeaderClient = () => {
         if (user.status === false) {
           alert(`Tài khoản của bạn đã bị chặn: ${user.block_reason || "Không rõ lý do"}`);
           localStorage.removeItem('token');
+          localStorage.removeItem('id_customer'); // xoá luôn nếu bị chặn
           setIsLoggedIn(false);
+          setCartItems([]);
           router.push('/login');
         } else {
+          localStorage.setItem('id_customer', user.id_customer);
           setIsLoggedIn(true);
+
+          // Lấy giỏ hàng theo id_customer
+          const idCustomer = user.id_customer;
+          axios.get(`http://localhost:5000/api/cart/customer/${idCustomer}`)
+            .then(res => {
+              // Dữ liệu server trả về có thể nằm trong res.data.items
+              setCartItems(res.data.items || []);
+            })
+            .catch(err => {
+              console.error("Lỗi khi lấy giỏ hàng:", err);
+              setCartItems([]);
+            });
         }
       } catch (err) {
         console.error("Lỗi khi xác thực token:", err);
         localStorage.removeItem('token');
         setIsLoggedIn(false);
+        setCartItems([]);
         router.push('/login');
       }
     };
 
-    checkStatus(); // lần đầu
-    const interval = setInterval(checkStatus, 10000); // mỗi 10s
+    checkStatus();
+    const interval = setInterval(checkStatus, 10000);
 
     window.addEventListener('storage', checkStatus);
     return () => {
@@ -61,12 +79,17 @@ const HeaderClient = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('id_customer');
     setIsLoggedIn(false);
+    setCartItems([]);
 
     startTransition(() => {
       router.push('/');
     });
   };
+
+  // Tính tổng số lượng sản phẩm trong giỏ hàng
+  const totalQuantity = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   return (
     <>
@@ -151,10 +174,12 @@ const HeaderClient = () => {
                 <i className="fa fa-fw fa-search text-dark mr-2"></i>
               </a>
 
-              <a className="nav-icon position-relative text-decoration-none" href="#">
-                <i className="fa fa-fw fa-cart-arrow-down text-dark mr-1"></i>
-                <span className="position-absolute top-0 left-100 translate-middle badge rounded-pill bg-light text-dark">7</span>
-              </a>
+              <Link href="/cart" className="nav-icon position-relative text-decoration-none">
+                <i className="fa fa-fw fa-cart-arrow-down text-dark mr-1" />
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-light text-dark">
+                  {totalQuantity > 0 ? totalQuantity : 0}
+                </span>
+              </Link>
 
               <div className="dropdown">
                 <a
