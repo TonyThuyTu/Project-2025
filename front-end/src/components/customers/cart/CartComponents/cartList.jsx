@@ -8,7 +8,7 @@ const formatVND = (value) =>
     currency: "VND",
   });
 
-export default function CartList({ items, onUpdateQuantity }) {
+export default function CartList({ items, onUpdateQuantity, onDeleteItem }) {
   return (
     <Table bordered hover responsive className="mt-3">
       <thead>
@@ -18,7 +18,7 @@ export default function CartList({ items, onUpdateQuantity }) {
           <th>Đơn giá</th>
           <th>Số lượng</th>
           <th>Thành tiền</th>
-          <th></th>
+          <th>Thao tác</th>
         </tr>
       </thead>
       <tbody>
@@ -56,18 +56,24 @@ export default function CartList({ items, onUpdateQuantity }) {
 
               <td style={{ maxWidth: 80 }}>
                 <Form.Control
-                type="number"
-                min={1}
-                value={item.quantity}
-                onChange={e => onUpdateQuantity(item.id_cart_items, Number(e.target.value))}
+                  type="number"
+                  min={1}
+                  value={item.quantity}
+                  onChange={(e) =>
+                    onUpdateQuantity(item.id_cart_items, Number(e.target.value))
+                  }
                 />
               </td>
 
               <td>{formatVND(item.price * item.quantity)}</td>
 
               <td>
-                <Button variant="danger" size="sm" disabled>
-                  Xoá
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => onDeleteItem(item.id_cart_items)}
+                >
+                  Xóa
                 </Button>
               </td>
             </tr>

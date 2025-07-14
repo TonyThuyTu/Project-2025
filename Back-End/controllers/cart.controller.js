@@ -14,7 +14,6 @@ const {
 
     VariantValue,
 
-
     } = db;
 
 //add product to cart
@@ -61,6 +60,14 @@ exports.addToCart = async (req, res) => {
           matchedVariant = variant;
           break;
         }
+      }
+
+      // ✅ Nếu có option nhưng không tìm thấy SKU tương ứng thì báo lỗi
+      if (!matchedVariant) {
+        await t.rollback();
+        return res.status(400).json({
+          message: 'Tổ hợp option bạn chọn không hợp lệ hoặc chưa tồn tại SKU tương ứng.'
+        });
       }
     }
 

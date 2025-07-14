@@ -1,7 +1,8 @@
 // src/app/layout.js
 import { Roboto, Roboto_Mono } from "next/font/google";
 import RouteLoadingProvider from "@/components/loading/RouteLoading";
-
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import "./globals.css";
 import "../../public/assets/css/bootstrap.min.css";
@@ -46,6 +47,13 @@ export default function RootLayout({ children }) {
       <body className={`${roboto.variable} ${robotoMono.variable}`}>
       <RouteLoadingProvider>
           {children}
+          <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          pauseOnHover
+          theme="colored"
+        />
       </RouteLoadingProvider>
       </body>
     </html>

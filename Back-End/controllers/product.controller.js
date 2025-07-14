@@ -1184,6 +1184,7 @@ exports.getProductsById = async (req, res) => {
         option_combo: variant.variantValues.map(v => ({
           attribute: v.attributeValue?.attribute?.name,
           value: v.attributeValue?.value,
+          id_value: v.attributeValue?.id_value,
       })),
     }));
 
