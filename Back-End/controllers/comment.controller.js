@@ -151,3 +151,69 @@ exports.reviewApprove = async (req, res) => {
   }
 };
 
+// GET đánh giá theo sản phẩm
+exports.getReviewsByProduct = async (req, res) => {
+  try {
+    const id_products = req.params.id;
+
+    const reviews = await ProductReview.findAll({
+      where: { id_products, approved: 'Approved' }, // chỉ lấy đã duyệt
+      include: [
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: ['id_customer', 'name'],
+        },
+      ],
+      order: [['date', 'DESC']],
+    });
+
+    const formatted = reviews.map((r) => ({
+      id_review: r.id_review,
+      title: r.title,
+      rating: r.rating,
+      comment: r.comment,
+      date: r.date,
+      name: r.customer?.name || "Ẩn danh",
+    }));
+
+    res.json({ reviews: formatted });
+  } catch (error) {
+    console.error("Lỗi khi lấy đánh giá theo sản phẩm:", error);
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+//get review by id guest
+exports.getReviewsByCustomer = async (req, res) => {
+  const id_customer = req.params.id;
+
+  try {
+    const reviews = await ProductReview.findAll({
+      where: { id_customer },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          attributes: ['id_products', 'products_name', 'products_sale_price'],
+        }
+      ],
+      order: [['date', 'DESC']],
+    });
+
+    const formatted = reviews.map((r) => ({
+      id_review: r.id_review,
+      title: r.title,
+      comment: r.comment,
+      rating: r.rating,
+      date: r.date,
+      approved: r.approved,
+      product: r.product,
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error("Lỗi khi lấy đánh giá theo khách hàng:", error);
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};

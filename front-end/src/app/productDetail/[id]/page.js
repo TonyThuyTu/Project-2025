@@ -22,7 +22,9 @@ async function getProductDetail(id) {
 }
 
 // ✅ Metadata: set title động
-export async function generateMetadata({ params }) {
+export async function generateMetadata(propsPromise) {
+  const { params } = await propsPromise; // 👈 await props
+
   const product = await getProductDetail(params.id);
 
   return {

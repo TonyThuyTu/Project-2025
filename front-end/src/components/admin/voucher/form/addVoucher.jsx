@@ -160,21 +160,21 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
   }, [searchTerm, selectedChild, selectedParent, categories]);
 
   // Lọc sản phẩm
-  useEffect(() => {
-    let filtered = [...products];
+  // useEffect(() => {
+  //   let filtered = [...products];
 
-    if (searchTerm) {
-      filtered = filtered.filter((p) =>
-        p.products_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  //   if (searchTerm) {
+  //     filtered = filtered.filter((p) =>
+  //       p.products_name.toLowerCase().includes(searchTerm.toLowerCase())
+  //     );
+  //   }
 
-    if (selectedChild) {
-      filtered = filtered.filter((p) => p.category_id === parseInt(selectedChild));
-    }
+  //   if (selectedChild) {
+  //     filtered = filtered.filter((p) => p.category_id === parseInt(selectedChild));
+  //   }
 
-    setFilteredProducts(filtered);
-  }, [searchTerm, selectedChild, products]);
+  //   setFilteredProducts(filtered);
+  // }, [searchTerm, selectedChild, products]);
 
   const getImageUrl = (path) => {
     if (!path) return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCRRdvpS3KRcG9a43mI5-vbU2kysPylGtfHw&s';

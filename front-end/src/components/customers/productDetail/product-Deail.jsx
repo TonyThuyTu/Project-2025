@@ -25,6 +25,7 @@ export default function ProductDeatail({ product, productId }) {
             attributes: data.attributes,
             skus: data.skus,
             product_imgs: data.images,
+            specs:data.specs
           });
         }
       } catch (error) {
@@ -54,12 +55,20 @@ export default function ProductDeatail({ product, productId }) {
       return;
     }
 
-    const sortedImages = colorValue.images.map(img =>
-      img.Img_url?.startsWith("http") ? img.Img_url : baseURL + img.Img_url
+    // 👉 Lọc ảnh có Img_url hợp lệ
+    const validImgs = colorValue.images.filter(img => img.Img_url && img.Img_url.trim() !== "");
+
+    const sortedImages = validImgs.map(img =>
+      img.Img_url.startsWith("http") ? img.Img_url : baseURL + img.Img_url
     );
-    const mainImg = colorValue.images.find(img => img.is_main)?.Img_url;
-    const sorted = mainImg
-      ? [baseURL + mainImg, ...sortedImages.filter(i => i !== baseURL + mainImg)]
+
+    const mainImg = validImgs.find(img => img.is_main)?.Img_url;
+    const mainImgFull = mainImg
+      ? (mainImg.startsWith("http") ? mainImg : baseURL + mainImg)
+      : null;
+
+    const sorted = mainImgFull
+      ? [mainImgFull, ...sortedImages.filter(i => i !== mainImgFull)]
       : sortedImages;
 
     setImagesForColor(sorted);
@@ -96,10 +105,10 @@ export default function ProductDeatail({ product, productId }) {
             onColorChange={setSelectedColor}
           />
           <ProductDetailDescription 
-          
           products_description = {productData.products_description}
           specs={productData.specs}
-
+          faq=""
+          id_products={productData.id_products}
           />
         </div>
       </div>

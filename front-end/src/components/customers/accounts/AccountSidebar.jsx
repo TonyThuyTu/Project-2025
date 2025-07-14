@@ -33,6 +33,14 @@ export default function AccountSidebar() {
       >
         Thông tin mật khẩu
       </Link>
+      <Link
+        href="/profile/Review"
+        className={`list-group-item list-group-item-action ${
+          pathname === "/profile/Review" ? "active" : ""
+        }`}
+      >
+        Sản phẩm đã được đánh giá
+      </Link>
     </div>
   );
 }

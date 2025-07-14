@@ -14,6 +14,7 @@ export default function ProfileLayout({ children }) {
         {/* Sidebar */}
         <nav className="col-md-3 col-lg-3" id="accountSidebar">
           <div className="list-group">
+
             <a
               href="/profile/UserDetail"
               className={`list-group-item list-group-item-action ${
@@ -22,6 +23,7 @@ export default function ProfileLayout({ children }) {
             >
               Thông tin tài khoản
             </a>
+
             <a
               href="/profile/Address"
               className={`list-group-item list-group-item-action ${
@@ -30,6 +32,7 @@ export default function ProfileLayout({ children }) {
             >
               Thông tin địa chỉ
             </a>
+
             <a
               href="/profile/Password"
               className={`list-group-item list-group-item-action ${
@@ -38,6 +41,16 @@ export default function ProfileLayout({ children }) {
             >
               Thông tin mật khẩu
             </a>
+
+            <a
+              href="/profile/Review"
+              className={`list-group-item list-group-item-action ${
+                pathname === "/profile/Review" ? "active" : ""
+              }`}
+            >
+              Sản phẩm đã từng đánh giá
+            </a>
+            
           </div>
         </nav>
 
