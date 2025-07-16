@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Card, Form, Button } from "react-bootstrap";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const formatVND = (value) =>
   Number(value).toLocaleString("vi-VN", {
@@ -9,18 +11,46 @@ const formatVND = (value) =>
 
 export default function CartTotal({ items }) {
   const [discountCode, setDiscountCode] = useState("");
+  const [voucherInfo, setVoucherInfo] = useState(null);
 
-  const total = items.reduce((sum, item) => {
+  
+
+  const totalBeforeDiscount = items.reduce((sum, item) => {
     return sum + Number(item.price) * Number(item.quantity);
   }, 0);
 
-  const handleApplyDiscount = () => {
-    alert(`Áp dụng mã giảm giá: ${discountCode} (chưa có xử lý thật)`);
+  const applyVoucher = async () => {
+    try {
+      const res = await axios.post("http://localhost:5000/api/voucher/apply", {
+        code: discountCode,
+        total: totalBeforeDiscount,
+        productIds: items.map((item) => item.id_product),
+      });
+
+      setVoucherInfo(res.data.voucher);
+      toast.success("Áp dụng mã giảm giá thành công!");
+    } catch (err) {
+      setVoucherInfo(null);
+      toast.error(err.response?.data?.message || "Mã giảm giá không hợp lệ!");
+    }
   };
+
+  const calculateFinalTotal = () => {
+    if (!voucherInfo) return totalBeforeDiscount;
+
+    if (voucherInfo.discount_type === "percent") {
+      return totalBeforeDiscount * (1 - voucherInfo.discount_value / 100);
+    } else {
+      return totalBeforeDiscount - voucherInfo.discount_value;
+    }
+  };
+
+  const totalAfterDiscount = calculateFinalTotal();
 
   return (
     <Card className="p-3 shadow-sm">
       <h5 className="mb-3">Tạm tính</h5>
+
       <Form.Group controlId="discountCode">
         <Form.Label>Nhập mã giảm giá</Form.Label>
         <Form.Control
@@ -33,24 +63,29 @@ export default function CartTotal({ items }) {
       <Button
         variant="success"
         className="mt-2 w-100"
-        onClick={handleApplyDiscount}
+        onClick={applyVoucher}
         disabled={!discountCode.trim()}
       >
         Áp dụng mã
       </Button>
 
+      {voucherInfo && (
+        <div className="mt-2 text-success">
+          ✅ Mã: <strong>{voucherInfo.code}</strong> - Giảm{" "}
+          {voucherInfo.discount_type === "percent"
+            ? `${voucherInfo.discount_value}%`
+            : formatVND(voucherInfo.discount_value)}
+        </div>
+      )}
+
       <hr />
 
       <div className="d-flex justify-content-between fw-bold fs-5">
         <span>Tổng tiền:</span>
-        <span>{formatVND(total)}</span>
+        <span>{formatVND(totalAfterDiscount)}</span>
       </div>
-      <Button
-        variant="success"
-        className="mt-2 w-100"
-        // onClick={}
-        // disabled={}
-      >
+
+      <Button variant="success" className="mt-2 w-100">
         Thanh toán
       </Button>
     </Card>

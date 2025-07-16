@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row, Col, Form, Table } from 'react-bootstrap';
+import { Row, Col, Form, Table, Pagination } from 'react-bootstrap';
 
 export default function FormList({
   categories,
@@ -13,47 +13,42 @@ export default function FormList({
   selectedProducts,
   handleSelectProduct,
   getImageUrl,
-  formatVND
+  formatVND,
+  currentPage,
+  totalPages,
+  onPageChange
 }) {
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const items = [];
+    for (let page = 1; page <= totalPages; page++) {
+      items.push(
+        <Pagination.Item
+          key={page}
+          active={page === currentPage}
+          onClick={() => onPageChange(page)}
+        >
+          {page}
+        </Pagination.Item>
+      );
+    }
+
+    return (
+      <Pagination className="justify-content-center mt-2">
+        <Pagination.First onClick={() => onPageChange(1)} disabled={currentPage === 1} />
+        <Pagination.Prev onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} />
+        {items}
+        <Pagination.Next onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} />
+        <Pagination.Last onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages} />
+      </Pagination>
+    );
+  };
+
   return (
     <>
       <h5>Chọn sản phẩm áp dụng</h5>
       <Row className="mb-2">
-        <Col md={4}>
-          <Form.Select
-            value={selectedParent}
-            onChange={(e) => {
-              const parentId = e.target.value;
-              setSelectedParent(parentId);
-              setSelectedChild('');
-            }}
-          >
-            <option value="">-- Danh mục cha --</option>
-            {categories
-              .filter((cat) => cat.parent_id === null)
-              .map((cat) => (
-                <option key={cat.category_id} value={cat.category_id}>
-                  {cat.name}
-                </option>
-              ))}
-          </Form.Select>
-        </Col>
-        <Col md={4}>
-          <Form.Select
-            value={selectedChild}
-            onChange={(e) => setSelectedChild(e.target.value)}
-            disabled={!selectedParent}
-          >
-            <option value="">-- Danh mục con --</option>
-            {categories
-              .filter((cat) => cat.parent_id === parseInt(selectedParent))
-              .map((cat) => (
-                <option key={cat.category_id} value={cat.category_id}>
-                  {cat.name}
-                </option>
-              ))}
-          </Form.Select>
-        </Col>
         <Col md={4}>
           <Form.Control
             type="text"
@@ -111,6 +106,8 @@ export default function FormList({
           </tbody>
         </Table>
       </div>
+
+      {renderPagination()}
     </>
   );
 }

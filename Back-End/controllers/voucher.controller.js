@@ -132,7 +132,7 @@ exports.getVoucherById = async (req, res) => {
           model: Product,
           as: 'products',
           attributes: ['id_products', 'products_name', 'products_sale_price'],
-          through: { attributes: [] }, // ẩn bảng trung gian
+          through: { attributes: [] },
         },
       ],
     });
@@ -141,7 +141,13 @@ exports.getVoucherById = async (req, res) => {
       return res.status(404).json({ message: 'Voucher không tồn tại' });
     }
 
-    res.json(voucher);
+    // Đếm số lượng sản phẩm áp dụng
+    const appliedProductCount = voucher.products.length;
+
+    res.json({
+      ...voucher.toJSON(),  // trả toàn bộ voucher kèm products
+      appliedProductCount,  // thêm trường đếm số lượng sản phẩm
+    });
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết voucher:', error);
     res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy chi tiết voucher' });
@@ -206,5 +212,40 @@ exports.updateVoucher = async (req, res) => {
   } catch (err) {
     console.error('❌ Lỗi update voucher:', err);
     return res.status(500).json({ message: 'Đã xảy ra lỗi khi cập nhật voucher' });
+  }
+};
+
+//apply voucher
+exports.applyVoucher = async (req, res) => {
+  const { code, total, productIds } = req.body;
+
+  try {
+    const voucher = await Voucher.findOne({ where: { code } });
+
+    if (!voucher) return res.status(404).json({ message: 'Mã không tồn tại' });
+
+    // Kiểm tra trạng thái
+    if (voucher.status !== 2) {
+      return res.status(400).json({ message: "Voucher không còn hiệu lực" });
+    }
+
+    // Kiểm tra thời gian
+    const now = new Date();
+    if (voucher.start_date > now || voucher.end_date < now)
+      return res.status(400).json({ message: 'Voucher hết hạn' });
+
+    // Kiểm tra đơn hàng tối thiểu
+    if (voucher.min_order_value && total < voucher.min_order_value)
+      return res.status(400).json({ message: `Đơn hàng cần tối thiểu ${voucher.min_order_value.toLocaleString()}₫` });
+
+    // Kiểm tra sản phẩm áp dụng (nếu có)
+    if (voucher.products?.length > 0) {
+      const validProduct = voucher.products.some(id => productIds.includes(id));
+      if (!validProduct) return res.status(400).json({ message: 'Mã không áp dụng cho sản phẩm này' });
+    }
+
+    return res.json({ voucher });
+  } catch (err) {
+    return res.status(500).json({ message: 'Lỗi server khi áp dụng mã' });
   }
 };

@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const voucherController = require('../controllers/voucher.controller');
 
+//apply voucher
+router.post('/apply', voucherController.applyVoucher);
+
 //create voucher
 router.post('/', voucherController.createVoucher);
 

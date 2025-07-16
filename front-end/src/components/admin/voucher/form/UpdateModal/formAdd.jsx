@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, Row, Col } from 'react-bootstrap';
-
+ 
 export default function FormAdd({ form, handleChange, formatVND }) {
   return (
     <>
@@ -49,19 +49,14 @@ export default function FormAdd({ form, handleChange, formatVND }) {
             <Form.Control
               type="text"
               name="discount_value"
-              value={
-                form.discount_type === 'fixed'
-                  ? formatVND(form.discount_value)
-                  : (form.discount_value !== '' && !isNaN(form.discount_value))
-                    ? `${parseInt(form.discount_value)}%`
-                    : ''
-              }
+              value={form.discount_value}
               onChange={handleChange}
               placeholder={form.discount_type === 'fixed' ? 'VNĐ' : '%'}
-              max={form.discount_type === 'percent' ? 100 : undefined}
             />
             <Form.Text>
-              {form.discount_type === 'fixed' ? 'VNĐ' : '%'}
+              {form.discount_type === 'fixed'
+                ? formatVND(form.discount_value)
+                : '%'}
             </Form.Text>
           </Form.Group>
         </Col>

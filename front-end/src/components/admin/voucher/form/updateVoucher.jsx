@@ -3,90 +3,47 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import FormAdd from './UpdateModal/formAdd';
 import FormList from './UpdateModal/formList';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 export default function EditVoucherModal({ show, handleClose, voucherId, onSuccess }) {
-  const [form, setForm] = useState({
-    name: '',
-    code: '',
-    description: '',
-    discount_type: 'percent',
-    discount_value: '',
-    min_order_value: '',
-    user_limit: '',
-    usage_limit: '',
-    start_date: '',
-    usage_count: '',
-    end_date: '',
-    status: 1,
-  });
-
+  const [form, setForm] = useState(initialFormState());
   const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedParent, setSelectedParent] = useState('');
   const [selectedChild, setSelectedChild] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [appliedProductCount, setAppliedProductCount] = useState(0);
 
-  const parseVND = (str) => {
-    if (!str) return '';
-    return str.replace(/[^\d]/g, '');
-  };
+  const toastId = "update-quantity-toast";
 
-  const formatVND = (num) => {
-    const number = typeof num === 'string' ? parseInt(num) : num;
-    if (isNaN(number)) return '';
-    return number.toLocaleString('vi-VN') + ' đ';
-  };
+  function initialFormState() {
+    return {
+      name: '',
+      code: '',
+      description: '',
+      discount_type: 'percent',
+      discount_value: '',
+      min_order_value: '',
+      user_limit: '',
+      usage_limit: '',
+      start_date: '',
+      end_date: '',
+      status: 1,
+      usage_count: '',
+    };
+  }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const formatVND = (num) => (num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '');
+  const parseVND = (str) => (str ? str.replace(/\./g, '') : '');
 
-    if (name === 'discount_type') {
-      setForm((prev) => ({ 
-        ...prev, 
-        discount_type: value, 
-        discount_value: '' ,
-      }));
-      return;
-    }
-
-    if (name === 'discount_value') {
-      const raw = parseVND(value);
-      if (form.discount_type === 'fixed') {
-        if (raw === '' || /^[0-9]+$/.test(raw)) {
-          setForm((prev) => ({ ...prev, discount_value: raw }));
-        }
-      } else {
-        if (raw === '' || (/^\d{1,3}$/.test(raw) && parseInt(raw) <= 100)) {
-          setForm((prev) => ({ ...prev, discount_value: raw }));
-        }
-      }
-      return;
-    }
-
-    if (name === 'min_order_value') {
-      const raw = parseVND(value);
-      if (raw === '' || /^[0-9]+$/.test(raw)) {
-        setForm((prev) => ({ ...prev, min_order_value: raw }));
-      }
-      return;
-    }
-
-    if (['user_limit', 'usage_limit'].includes(name)) {
-      if (value === '' || /^[0-9]*$/.test(value)) {
-        setForm((prev) => ({ ...prev, [name]: value }));
-      }
-      return;
-    }
-
-    if (name === 'status') {
-      setForm((prev) => ({ ...prev, status: parseInt(value) }));
-      return;
-    }
-
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  // const formatVND = (num) => {
+  //   const number = typeof num === 'string' ? parseInt(num) : num;
+  //   if (isNaN(number)) return '';
+  //   return number.toLocaleString('vi-VN');
+  // };
 
   const getAllChildCategoryIds = (parentId) => {
     const result = [];
@@ -95,8 +52,15 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
       const children = categories.filter((cat) => cat.parent_id === id);
       children.forEach((child) => traverse(child.category_id));
     };
-    traverse(parseInt(parentId));
+    if (parentId) traverse(parseInt(parentId));
     return result;
+  };
+
+  const getImageUrl = (path) => {
+    if (!path)
+      return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCRRdvpS3KRcG9a43mI5-vbU2kysPylGtfHw&s';
+    if (path.startsWith('http')) return path;
+    return `http://localhost:5000${path}`;
   };
 
   const handleSelectProduct = (id) => {
@@ -105,17 +69,10 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
     );
   };
 
-  const getImageUrl = (path) => {
-    if (!path) return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCRRdvpS3KRcG9a43mI5-vbU2kysPylGtfHw&s';
-    if (path.startsWith('http')) return path;
-    return `http://localhost:5000${path}`;
-  };
-
   const fetchVoucherDetail = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/voucher/${voucherId}`);
       const data = res.data;
-
       setForm({
         name: data.name,
         code: data.code,
@@ -130,83 +87,31 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
         status: data.status,
         usage_count: data.usage_count,
       });
-
       setSelectedProducts(data.products.map((p) => p.id_products));
+      setAppliedProductCount(data.products.length || 0);
     } catch (err) {
       console.error('Lỗi khi lấy chi tiết voucher:', err);
     }
   };
 
-  const validateForm = () => {
-    if (!form.name?.trim()) return 'Tên voucher không được để trống';
-    if (!form.code?.trim()) return 'Mã voucher không được để trống';
-
-    const discountVal = parseFloat(form.discount_value);
-    if (isNaN(discountVal)) return 'Giá trị giảm không hợp lệ';
-
-    if (form.discount_type === 'percent') {
-      if (discountVal < 0 || discountVal > 100) return 'Giá trị phần trăm phải nằm trong khoảng 0 - 100';
-    }
-
-    if (!form.start_date || !form.end_date) return 'Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc';
-
-    const start = new Date(form.start_date);
-    const end = new Date(form.end_date);
-    if (start > end) return 'Ngày kết thúc phải sau ngày bắt đầu';
-
-    return null;
-  };
-
-  const handleUpdate = async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      alert(`⚠️ ${validationError}`);
-      return;
-    }
-
+  const fetchCategories = async () => {
     try {
-      const payload = {
-        ...form,
-        discount_value: form.discount_value ? parseFloat(form.discount_value) : 0,
-        min_order_value: form.min_order_value ? parseFloat(form.min_order_value) : null,
-        user_limit: form.user_limit ? parseInt(form.user_limit) : null,
-        usage_limit: form.usage_limit ? parseInt(form.usage_limit) : null,
-        productIds: selectedProducts,
+      const res = await axios.get('http://localhost:5000/api/categories');
+      const flatten = [];
+      const traverse = (node) => {
+        flatten.push({
+          category_id: node.category_id,
+          name: node.name,
+          parent_id: node.parent_id,
+        });
+        node.children?.forEach(traverse);
       };
-
-      await axios.put(`http://localhost:5000/api/voucher/${voucherId}`, payload);
-
-      alert('🎉 Cập nhật voucher thành công!');
-      if (onSuccess) onSuccess();
-      handleClose();
+      res.data.forEach(traverse);
+      setCategories(flatten);
     } catch (err) {
-      const message = err?.response?.data?.message || '';
-      if (err?.response?.status === 400 && message.includes('tồn tại')) {
-        alert(`⚠️ ${message}`);
-      } else {
-        alert('❌ Cập nhật thất bại, vui lòng thử lại sau!');
-      }
+      console.error('Lỗi lấy danh mục:', err);
     }
   };
-
-  useEffect(() => {
-    if (show && voucherId) fetchVoucherDetail();
-  }, [show, voucherId]);
-
-  useEffect(() => {
-    axios
-      .get('http://localhost:5000/api/categories')
-      .then((res) => {
-        const flatten = [];
-        const traverse = (node) => {
-          flatten.push({ category_id: node.category_id, name: node.name, parent_id: node.parent_id });
-          node.children?.forEach(traverse);
-        };
-        res.data.forEach(traverse);
-        setCategories(flatten);
-      })
-      .catch((err) => console.error('Lỗi lấy danh mục:', err));
-  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -222,31 +127,144 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
           params: {
             search: searchTerm || undefined,
             category_ids: categoryIds.length > 0 ? categoryIds : undefined,
+            page: currentPage,
+            limit: 5,
           },
         });
 
-        setProducts(res.data);
-        setFilteredProducts(res.data);
+        const { products = [], pagination = {} } = res.data;
+        setProducts(products);
+        setTotalPages(pagination.totalPages || 1);
       } catch (err) {
         console.error('Lỗi lấy sản phẩm:', err);
       }
     };
 
     fetchProducts();
-  }, [searchTerm, selectedChild, selectedParent, categories]);
+  }, [searchTerm, selectedChild, selectedParent, categories, currentPage]);
 
   useEffect(() => {
-    let filtered = [...products];
-    if (searchTerm) {
-      filtered = filtered.filter((p) =>
-        p.products_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (show) {
+      fetchCategories();
+      if (voucherId) fetchVoucherDetail();
+      else {
+        setForm(initialFormState());
+        setSelectedProducts([]);
+        setAppliedProductCount(0);
+      }
     }
-    if (selectedChild) {
-      filtered = filtered.filter((p) => p.category_id === parseInt(selectedChild));
+  }, [show, voucherId]);
+
+  const handleChange = (e) => {
+      const { name, value } = e.target;
+  
+      if (name === 'discount_type') {
+        return setForm((prev) => ({
+          ...prev,
+          discount_type: value,
+          discount_value: '',
+        }));
+      }
+  
+      // Validate giá trị giảm
+      if (name === 'discount_value') {
+        const isPercent = form.discount_type === 'percent';
+  
+        if (isPercent) {
+          const percentValue = value.replace(/\D/g, '');
+          if (/^\d{0,3}$/.test(percentValue) && (+percentValue <= 100 || percentValue === '')) {
+            toast.error("Giảm tối thiểu 100%")
+            return setForm((prev) => ({
+              ...prev,
+              discount_value: percentValue,
+            
+            }));
+          }
+        } else {
+          const onlyNums = parseVND(value);
+          const numericValue = parseInt(onlyNums || '0');
+  
+          if (numericValue > 10000000){
+            toast.error("Giảm tối thiểu 10 triệu")
+          } // ❌ vượt quá 10 triệu → không cho nhập
+  
+          if (/^\d*$/.test(onlyNums)) {
+            return setForm((prev) => ({
+              ...prev,
+              discount_value: onlyNums,
+            }));
+          }
+        }
+  
+        return;
+      }
+  
+      // Validate các giá trị khác
+      if (['min_order_value', 'user_limit', 'usage_limit'].includes(name)) {
+        const val = parseVND(value);
+        const numericValue = parseInt(val || '0');
+  
+        if (name === 'min_order_value' && numericValue > 50000000) {
+          toast.error("Đơn hàng tối thiểu 50 triệu");
+        } // ❌ vượt quá 50 triệu
+  
+        if (/^\d*$/.test(val)) {
+          return setForm((prev) => ({
+            ...prev,
+            [name]: val,
+          }));
+        }
+  
+        return;
+      }
+  
+      setForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+  const validateForm = () => {
+    if (!form.name.trim()) return 'Tên voucher không được để trống';
+    if (!form.code.trim()) return 'Mã voucher không được để trống';
+    if (!form.start_date || !form.end_date) return 'Vui lòng chọn ngày bắt đầu và kết thúc';
+    if (new Date(form.start_date) > new Date(form.end_date))
+      return 'Ngày kết thúc phải sau ngày bắt đầu';
+    return null;
+  };
+
+  const handleUpdate = async () => {
+    const errMsg = validateForm();
+    if (errMsg) {
+      alert(`⚠️ ${errMsg}`);
+      return;
     }
-    setFilteredProducts(filtered);
-  }, [searchTerm, selectedChild, products]);
+
+    try {
+      const payload = {
+        ...form,
+        discount_value:
+          form.discount_type === 'percent'
+            ? parseInt(form.discount_value)
+            : parseInt(form.discount_value.replace(/\./g, '')),
+        min_order_value: form.min_order_value
+          ? parseInt(form.min_order_value.replace(/\./g, ''))
+          : null,
+        user_limit: form.user_limit ? parseInt(form.user_limit) : null,
+        usage_limit: form.usage_limit ? parseInt(form.usage_limit) : null,
+        productIds: selectedProducts,
+      };
+
+      await axios.put(`http://localhost:5000/api/voucher/${voucherId}`, payload);
+      toast.success("🎉 Cập nhật voucher thành công!");
+      if (onSuccess) onSuccess();
+      handleClose();
+    } catch (err) {
+      const message = err?.response?.data?.message || '';
+      if (err?.response?.status === 400 && message.includes("tồn tại")) {
+        alert(`⚠️ ${message}`);
+      } else {
+        toast.error('❌ Cập nhật thất bại, vui lòng thử lại sau!');
+      }
+    }
+  };
 
   return (
     <Modal show={show} onHide={handleClose} backdrop="static" size="lg">
@@ -256,6 +274,9 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
       <Modal.Body>
         <Form>
           <FormAdd form={form} handleChange={handleChange} formatVND={formatVND} />
+          <div className="mb-3">
+            <strong>Số sản phẩm đã áp dụng mã: </strong> {appliedProductCount}
+          </div>
           <FormList
             categories={categories}
             selectedParent={selectedParent}
@@ -264,17 +285,25 @@ export default function EditVoucherModal({ show, handleClose, voucherId, onSucce
             setSelectedChild={setSelectedChild}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            filteredProducts={filteredProducts}
+            filteredProducts={products}
             selectedProducts={selectedProducts}
             handleSelectProduct={handleSelectProduct}
             getImageUrl={getImageUrl}
             formatVND={formatVND}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => setCurrentPage(page)}
           />
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>Hủy</Button>
-        <Button variant="primary" onClick={handleUpdate}>Cập nhật</Button>
+        <Button variant="secondary" onClick={handleClose}>
+          Hủy
+        </Button>
+        <Button variant="primary" onClick={handleUpdate}>
+          Cập nhật
+        </Button>
       </Modal.Footer>
     </Modal>
   );
