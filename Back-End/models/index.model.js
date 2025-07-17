@@ -1,5 +1,7 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
+const orderItemAttributeValue = require('./orderItemAttributeValue');
+const shippingInfo = require('./shippingInfo');
 
 // Import các model
 const Contact = require('./contact')(sequelize, DataTypes);
@@ -44,6 +46,16 @@ const CartItem = require('./cartItems') (sequelize, DataTypes);
 
 const CartItemAttributeValue = require('./cartItemAttributeValues') (sequelize, DataTypes);
 
+const Order = require('./order') (sequelize, DataTypes);
+
+const OrderDetail = require('./orderDetail') (sequelize, DataTypes);
+
+const OrderItemAttributeValue = require('./orderItemAttributeValue') (sequelize, DataTypes);
+
+const ShippingInfo = require('./shippingInfo') (sequelize, DataTypes);
+
+const Payment = require('./payment') (sequelize, DataTypes);
+
 // Khởi tạo object db
 const db = {
   sequelize,
@@ -71,6 +83,11 @@ const db = {
   Cart,
   CartItem,
   CartItemAttributeValue,
+  Order,
+  OrderDetail,
+  OrderItemAttributeValue,
+  ShippingInfo,
+  Payment,
 };
 
 /* =========================
@@ -315,6 +332,74 @@ db.CartItem.belongsTo(db.ProductVariant, {
 db.ProductVariant.hasMany(db.CartItem, {
   foreignKey: 'id_variant',
   as: 'cart_items'
+});
+
+// ========== ASSOCIATION ĐƠN HÀNG ==========
+db.Customer.hasMany(db.Order, {
+  foreignKey: 'id_customer',
+  as: 'orders',
+});
+db.Order.belongsTo(db.Customer, {
+  foreignKey: 'id_customer',
+  as: 'customer',
+});
+
+// ========== ASSOCIATION CHI TIẾT ĐƠN HÀNG ==========
+db.Order.hasMany(db.OrderDetail, {
+  foreignKey: 'id_order',
+  as: 'order_details',
+});
+db.OrderDetail.belongsTo(db.Order, {
+  foreignKey: 'id_order',
+  as: 'order',
+});
+
+db.Product.hasMany(db.OrderDetail, {
+  foreignKey: 'id_product',
+  as: 'order_details',
+});
+db.OrderDetail.belongsTo(db.Product, {
+  foreignKey: 'id_product',
+  as: 'product',
+});
+
+// ========== ASSOCIATION ATTRIBUTE TRONG ORDER ==========
+db.OrderDetail.hasMany(db.OrderItemAttributeValue, {
+  foreignKey: 'id_order_detail',
+  as: 'attribute_values',
+});
+db.OrderItemAttributeValue.belongsTo(db.OrderDetail, {
+  foreignKey: 'id_order_detail',
+  as: 'order_detail',
+});
+
+db.AttributeValue.hasMany(db.OrderItemAttributeValue, {
+  foreignKey: 'id_value',
+  as: 'order_attributes',
+});
+db.OrderItemAttributeValue.belongsTo(db.AttributeValue, {
+  foreignKey: 'id_value',
+  as: 'attribute_value',
+});
+
+// ========== ASSOCIATION SHIPPING ==========
+db.Order.hasOne(db.ShippingInfo, {
+  foreignKey: 'id_order',
+  as: 'shipping_info',
+});
+db.ShippingInfo.belongsTo(db.Order, {
+  foreignKey: 'id_order',
+  as: 'order',
+});
+
+// ========== ASSOCIATION PAYMENT ==========
+db.Order.hasOne(db.Payment, {
+  foreignKey: 'id_order',
+  as: 'payment',
+});
+db.Payment.belongsTo(db.Order, {
+  foreignKey: 'id_order',
+  as: 'order',
 });
 
 module.exports = db;
