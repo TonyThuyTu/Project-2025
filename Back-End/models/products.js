@@ -6,7 +6,6 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true, 
       autoIncrement: true 
     },
-
     category_id: { 
       type: DataTypes.INTEGER },
 
@@ -18,6 +17,10 @@ module.exports = (sequelize, DataTypes) => {
 
     products_sale_price: { 
       type: DataTypes.DECIMAL(10, 2) },
+
+    products_quantity: {
+      type: DataTypes.INTEGER
+    },
 
     products_description: { 
       type: DataTypes.TEXT },

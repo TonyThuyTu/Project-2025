@@ -15,6 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
     },
     price: DataTypes.DECIMAL(10, 2),
+    price_sale: DataTypes.DECIMAL(10, 2),
     quantity: DataTypes.INTEGER,
     status: DataTypes.BOOLEAN,
   }, {
