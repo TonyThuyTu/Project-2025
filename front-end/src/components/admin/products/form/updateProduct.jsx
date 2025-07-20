@@ -10,12 +10,14 @@ import ImgUploaded from "./updateProductComponents/ImgUploaded";
 import OptionsManager from "./updateProductComponents/OptionManager";
 import SkuManager from "./updateProductComponents/SkuManager";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function EditProductModal({ show, onClose, onUpdate, productData }) {
   const [description, setDescription] = useState('');
   const [options, setOptions] = useState([]);
   const [skuList, setSkuList] = useState([]);
   const [productName, setProductName] = useState('');
+  const [productQuantity, setProductQuantity] = useState(0);
   const [marketPrice, setMarketPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [selectedParent, setSelectedParent] = useState(null);
@@ -55,6 +57,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     if (hasLoadedImages.current) return;
     const product = productData.product || productData;
 
+    setProductQuantity(product.products_quantity)
     setProductName(product.products_name || "");
     setMarketPrice(product.products_market_price?.toString() || "");
     setSalePrice(product.products_sale_price?.toString() || "");
@@ -125,6 +128,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       return {
         combo,
         price: Number(sku.price) || 0,
+        price_sale: Number(sku.price_sale) || 0,
         quantity: sku.quantity || 0,
         status: sku.status || 2,
         images: sku.images || [],
@@ -249,10 +253,10 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       formData.append('attributes', JSON.stringify(fixedOptions));
       formData.append('products_id', productId);
       formData.append('products_name', productName);
+      formData.append('products_quantity', productQuantity);
       formData.append('products_market_price', Number(marketPrice).toFixed(2));
       formData.append('products_sale_price', Number(salePrice).toFixed(2));
       formData.append('products_description', description);
-
       formData.append('category_id', selectedChild || selectedParent);
       formData.append('specs', JSON.stringify(specs));
       // formData.append('attributes', JSON.stringify(options));
@@ -287,11 +291,13 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      alert('Cập nhật sản phẩm thành công');
+      // alert('Cập nhật sản phẩm thành công');
+      toast.success('Cập nhật thành công!')
       onUpdate?.();
       handleClose();
     } catch (error) {
-      console.error('Lỗi cập nhật sản phẩm:', error);
+      // console.error('Lỗi cập nhật sản phẩm:', error);
+      toast.error(`Lỗi cập nhật: ${error}`);
       alert(`Lỗi: ${error.response?.data?.message || error.message}`);
     }
   };
@@ -305,7 +311,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         <Form>
 
           <Card className="mb-3 p-3">
-            <BasicInfo {...{ productName, setProductName, marketPrice, setMarketPrice, salePrice, setSalePrice }} />
+            <BasicInfo {...{ productName, setProductName, marketPrice, setMarketPrice, salePrice, setSalePrice, productQuantity, setProductQuantity }} />
           </Card>
 
           <Card className="mb-3 p-3">

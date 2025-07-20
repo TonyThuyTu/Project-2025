@@ -14,6 +14,8 @@ export default function BasicInfo({
   setMarketPrice,
   salePrice,
   setSalePrice,
+  productQuantity,
+  setProductQuantity
 }) {
   return (
     <>
@@ -60,6 +62,18 @@ export default function BasicInfo({
               setSalePrice(raw);
             }
           }}
+        />
+      </div>
+
+      <div className="mb-3">
+        <label htmlFor="productQuantity" className="form-label">Số lượng</label>
+        <input
+          type="text"
+          className="form-control"
+          id="productQuantity"
+          placeholder="Nhập số lượng"
+          value={formatNumber(productQuantity)} // ✅ Truyền đúng giá trị
+          onChange={(e) => setProductQuantity(Number(e.target.value))}
         />
       </div>
     </>

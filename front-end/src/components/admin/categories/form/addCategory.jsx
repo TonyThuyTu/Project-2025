@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Toast } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 
 export default function AddCategoryModal({ show, onClose, onSave }) {
   const [name, setName] = useState('');
@@ -30,6 +32,7 @@ export default function AddCategoryModal({ show, onClose, onSave }) {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
 
+    toast.success('Thêm danh mục thành công!')
     onSave();
     onClose();
     setName(''); setParentId(''); setIsActive(false); setIsPrimary(false); setBanner(null);

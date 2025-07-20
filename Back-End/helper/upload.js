@@ -36,10 +36,10 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,     // 5MB mỗi ảnh
+    fileSize: 10 * 1024 * 1024,     // 5MB mỗi ảnh
     fieldSize: 20 * 1024 * 1024,   // 20MB tổng cho các field text (JSON)
-    files: 30,                     // Tối đa 30 ảnh
-    fields: 100,                   // Tối đa 100 field
+    files: 1000,                     // Tối đa 30 ảnh
+    fields: 1000,                   // Tối đa 100 field
   },
 });
 

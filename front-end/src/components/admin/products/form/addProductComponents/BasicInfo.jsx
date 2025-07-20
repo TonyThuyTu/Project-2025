@@ -6,6 +6,8 @@ export default function BasicInfo({
   setMarketPrice,
   salePrice,
   setSalePrice,
+  productQuantity,
+  setProductQuantity,
 }) {
   const formatCurrency = (value) => {
     const number = value.replace(/\D/g, ""); // chỉ giữ số
@@ -59,6 +61,18 @@ export default function BasicInfo({
           placeholder="Nhập giá bán"
           value={salePrice}
           onChange={handleSalePriceChange}
+        />
+      </div>
+
+      <div className="mb-3">
+        <label htmlFor="salePrice" className="form-label">Số lượng</label>
+        <input
+          type="number"
+          className="form-control"
+          id="productQuantity"
+          placeholder="Nhập số lượng"
+          value={productQuantity}
+          onChange={(e) => setProductQuantity(Number(e.target.value))}
         />
       </div>
     </>

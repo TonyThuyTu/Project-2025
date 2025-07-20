@@ -124,7 +124,8 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
         <thead>
           <tr>
             {options.map((opt, idx) => <th key={idx}>{opt.name}</th>)}
-            <th>Giá cộng thêm</th>
+            <th>Giá bán</th>
+            <th>Giá thị trường</th>
             <th>Số lượng</th>
             <th>SKU Code</th>
             <th>Trạng thái</th>
@@ -186,6 +187,14 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
                   type="number"
                   value={skuItem.price}
                   onChange={(e) => handleChange(index, "price", parseFloat(e.target.value) || 0)}
+                  size="sm"
+                />
+              </td>
+              <td>
+                <Form.Control
+                  type="number"
+                  value={skuItem.price_sale}
+                  onChange={(e) => handleChange(index, "price_sale", parseFloat(e.target.value) || 0)}
                   size="sm"
                 />
               </td>

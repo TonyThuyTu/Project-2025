@@ -8,9 +8,11 @@ import ImgUploaded from "./addProductComponents/ImgUploaded";
 import OptionsManager from "./addProductComponents/OptionManager";
 import SkuManager from "./addProductComponents/SkuManager";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function AddProductModal({ show, onClose, onAdd }) {
   const [description, setDescription] = useState('');
+  const [productQuantity, setProductQuantity] = useState(0);
   const [options, setOptions] = useState([]);
   const [skuList, setSkuList] = useState([]);
   const [productName, setProductName] = useState('');
@@ -46,6 +48,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
       formData.append('products_name', productName);
       formData.append('category_id', categoryId);
       formData.append('products_description', description);
+      formData.append('products_quantity', productQuantity);
       formData.append('products_market_price', marketPrice.replace(/\./g, ''));
       formData.append('products_sale_price', salePrice.replace(/\./g, ''));
 
@@ -76,11 +79,13 @@ export default function AddProductModal({ show, onClose, onAdd }) {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      alert('✅ Thêm sản phẩm thành công');
+      // alert('✅ Thêm sản phẩm thành công');
+      toast.success('Thêm sản phẩm thành công!');
       onAdd?.();
       onClose();
     } catch (error) {
-      console.error('❌ Lỗi thêm sản phẩm:', error);
+      // console.error('❌ Lỗi thêm sản phẩm:', error);
+      toast.error(`Lỗi thêm sản phẩm: ${error}`);
       alert(`Lỗi: ${error.response?.data?.message || error.message}`);
     }
   };
@@ -102,6 +107,8 @@ export default function AddProductModal({ show, onClose, onAdd }) {
               setMarketPrice={setMarketPrice}
               salePrice={salePrice}
               setSalePrice={setSalePrice}
+              setProductQuantity={setProductQuantity}
+              productQuantity={productQuantity}
             />
           </Card>
 
@@ -153,7 +160,6 @@ export default function AddProductModal({ show, onClose, onAdd }) {
         <Button
           variant="primary"
           onClick={handleAdd}
-          
         >
           Lưu sản phẩm
         </Button>
