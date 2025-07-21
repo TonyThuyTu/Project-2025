@@ -68,6 +68,7 @@ export default function BasicInfo({
         <label htmlFor="salePrice" className="form-label">Số lượng</label>
         <input
           type="number"
+          min={0}
           className="form-control"
           id="productQuantity"
           placeholder="Nhập số lượng"

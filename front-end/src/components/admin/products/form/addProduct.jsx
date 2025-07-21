@@ -52,7 +52,10 @@ export default function AddProductModal({ show, onClose, onAdd }) {
       formData.append('products_market_price', marketPrice.replace(/\./g, ''));
       formData.append('products_sale_price', salePrice.replace(/\./g, ''));
 
+      // 🟢 Thêm thông số kỹ thuật
       formData.append('specs', JSON.stringify(specs));
+      
+      // 🟢 Thêm option và sku
       formData.append('attributes', JSON.stringify(options));
       formData.append('variants', JSON.stringify(skuList));
 

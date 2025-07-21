@@ -4,13 +4,13 @@ import { Trash } from 'react-bootstrap-icons';
 
 export default function OptionsManager({ options, setOptions }) {
   const [newOptionName, setNewOptionName] = useState('');
-  const [newOptionType, setNewOptionType] = useState('text');
+  const [newOptionType, setNewOptionType] = useState(1);
 
   const addOption = () => {
     if (!newOptionName.trim()) return;
     setOptions(prev => [...prev, {
       name: newOptionName,
-      type: newOptionType,
+      type: Number(newOptionType),
       values: [],
     }]);
     setNewOptionName('');
@@ -91,12 +91,12 @@ export default function OptionsManager({ options, setOptions }) {
         </Col>
         <Col sm={3}>
           <Form.Select
-            value={newOptionType}
-            onChange={(e) => setNewOptionType(e.target.value)}
-          >
-            <option value="text">Chữ</option>
-            <option value="color">Màu</option>
-          </Form.Select>
+          value={newOptionType}
+          onChange={(e) => setNewOptionType(e.target.value)}
+        >
+          <option value={1}>Chữ</option>
+          <option value={2}>Màu</option>
+        </Form.Select>
         </Col>
         <Col sm="auto">
           <Button onClick={addOption}>Thêm Option</Button>
@@ -135,7 +135,7 @@ export default function OptionsManager({ options, setOptions }) {
               {option.values.map((val, j) => (
                 <tr key={j}>
                   <td>
-                    {option.type === 'color' ? (
+                    {option.type === 2 ? (
                       <Form.Control
                         type="color"
                         value={val.label || '#000000'}

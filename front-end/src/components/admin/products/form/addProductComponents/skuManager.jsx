@@ -33,6 +33,7 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
     if (options.length >= 2) {
       const valuesList = options.map(opt =>
         opt.values.map(v => ({
+          // id_value: v.id_value,
           label: v.label,
           value: v.value || v.label,
           optionName: opt.name,
@@ -51,10 +52,10 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
         return {
           combo,
           price: existingSku ? existingSku.price : 0,
+          price_sale: existingSku ? existingSku.price_sale : 0,
           quantity: existingSku ? existingSku.quantity : 0,
           status: existingSku ? existingSku.status : 2,
-           main_image_index: existingSku?.main_image_index ?? null, // ✅ thêm dòng này
-          // Không cần field `sku`
+          main_image_index: existingSku?.main_image_index ?? null,
         };
       });
 
@@ -85,7 +86,8 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
             {options.map((opt, idx) => (
               <th key={idx}>{opt.name}</th>
             ))}
-            <th>Giá chung</th>
+            <th>Giá thị trường</th>
+            <th>Giá bán</th>
             <th>Số lượng</th>
             <th>Trạng thái</th>
             {/* <th>SKU</th> Nếu muốn ẩn hẳn luôn cột SKU */}
@@ -117,11 +119,21 @@ export default function SkuManager({ options = [], skuList, setSkuList }) {
               ))}
               <td>
                 <Form.Control
-                  type="text"
+                  type="number"
                   min={0}
                   value={skuItem.price}
                   onChange={(e) =>
                     handleChange(index, "price", parseInt(e.target.value) || 0)
+                  }
+                />
+              </td>
+              <td>
+                <Form.Control
+                  type="number"
+                  min={0}
+                  value={skuItem.price_sale}
+                  onChange={(e) =>
+                    handleChange(index, "price_sale", parseInt(e.target.value) || 0)
                   }
                 />
               </td>

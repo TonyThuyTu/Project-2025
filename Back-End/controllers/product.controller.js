@@ -109,21 +109,30 @@ exports.createProducts = async (req, res) => {
 
     // ===== Attributes & Values =====
     const attributeValueMap = {};
+
     for (const attr of attributesParsed) {
       if (!attr.name || !Array.isArray(attr.values)) continue;
 
+      const name = attr.name.trim();
+      const type = Number(attr.type ?? 0); // Mặc định type = 0 nếu không có
+
       const [attribute] = await Attribute.findOrCreate({
-        where: { name: attr.name.trim() },
-        defaults: { name: attr.name.trim() },
+        where: { name },
+        defaults: { name, type },
         transaction: t,
       });
+
+      // Nếu attribute đã tồn tại nhưng type chưa đúng → cập nhật lại type
+      if (attribute.type === null || attribute.type !== type) {
+        await attribute.update({ type }, { transaction: t });
+      }
 
       await ProductAttribute.create({
         id_product: newProduct.id_products,
         id_attribute: attribute.id_attribute,
       }, { transaction: t });
 
-      attributeValueMap[attr.name.trim()] = {};
+      attributeValueMap[name] = {};
 
       for (const val of attr.values) {
         const label = typeof val === 'string' ? val : val?.label;
@@ -141,12 +150,19 @@ exports.createProducts = async (req, res) => {
           transaction: t,
         });
 
-        await ProductAttributeValue.create({
-          id_product: newProduct.id_products,
-          id_value: attributeValue.id_value,
-        }, { transaction: t });
+        await ProductAttributeValue.findOrCreate({
+          where: {
+            id_product: newProduct.id_products,
+            id_value: attributeValue.id_value,
+          },
+          defaults: {
+            id_product: newProduct.id_products,
+            id_value: attributeValue.id_value,
+          },
+          transaction: t,
+        });
 
-        attributeValueMap[attr.name.trim()][label.trim()] = attributeValue.id_value;
+        attributeValueMap[name][label.trim()] = attributeValue.id_value;
       }
     }
 
@@ -272,6 +288,7 @@ async function saveVariants(variantsParsed, newProduct, uploadedImages, attribut
       id_products: newProduct.id_products,
       sku: finalSKU,
       price: parseFloat(v.price),
+      price_sale: pareseFloat(v.price_sale || 0),
       quantity,
       status,
     }, { transaction });
@@ -854,7 +871,7 @@ exports.getProductsById = async (req, res) => {
         {
           model: Attribute,
           as: 'attribute',
-          attributes: ['id_attribute', 'name'],
+          attributes: ['id_attribute', 'name', 'type'],
           include: [
             {
               model: AttributeValue,
@@ -922,10 +939,10 @@ exports.getProductsById = async (req, res) => {
             },
           ],
         },
-        {
-          model: ProductImg,
-          as: 'images',
-        },
+        // {
+        //   model: ProductImg,
+        //   as: 'images',
+        // },
       ],
     });
 
@@ -938,10 +955,11 @@ exports.getProductsById = async (req, res) => {
         price: variant.price,
         price_sale: variant.price_sale,
         status: variant.status,
-        images: variant.images || [],
+        // images: variant.images || [],
         option_combo: variant.variantValues.map(v => ({
           attribute: v.attributeValue?.attribute?.name,
           value: v.attributeValue?.value,
+          type: v.attributeValue.attribute?.type,
           id_value: v.attributeValue?.id_value,
       })),
     }));
