@@ -85,7 +85,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     const normalizedAttributes = (productData.attributes || []).map((attr) => ({
       attribute_id: attr.attribute_id,
       name: attr.name || `Option ${attr.attribute_id}`,
-      type: /màu|color/i.test(attr.name) ? 'color' : 'text',  // ✅ Thêm dòng này để phân biệt kiểu màu
+      type: /màu|color/i.test(attr.name) ? 2 : 1,
       values: (attr.values || []).map((val) => ({
         value_id: val.value_id || val.id_value || null,
         value: val.value || "",
@@ -214,8 +214,6 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         });
       });
 
-
-
       const fixedOptions = options.map(opt => ({
         ...opt,
         values: opt.values
@@ -242,6 +240,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         variant_id: sku.sku_id || null,
         sku_code: sku.sku_code || '',
         price: Number(sku.price),
+        price_sale: Number(sku.price_sale),
         quantity: Number(sku.quantity),
         status: Number(sku.status),
         option_combo: sku.combo.map(c => ({
@@ -260,7 +259,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       formData.append('category_id', selectedChild || selectedParent);
       formData.append('specs', JSON.stringify(specs));
       // formData.append('attributes', JSON.stringify(options));
-      formData.append('variants', JSON.stringify(validSkus));
+      formData.append('skus', JSON.stringify(validSkus));
       formData.append("optionImages", JSON.stringify(optionImages));
       formData.append('products_status', status);
       
@@ -297,8 +296,9 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       handleClose();
     } catch (error) {
       // console.error('Lỗi cập nhật sản phẩm:', error);
-      toast.error(`Lỗi cập nhật: ${error}`);
-      alert(`Lỗi: ${error.response?.data?.message || error.message}`);
+      // toast.error(`Lỗi cập nhật: ${error}`);
+      toast.error(`Lỗi: ${error.response?.data?.message || error.message}`);
+      // alert(`Lỗi: ${error.response?.data?.message || error.message}`);
     }
   };
 

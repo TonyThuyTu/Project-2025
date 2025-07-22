@@ -52,6 +52,7 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
     const newSku = {
       combo: comboToUse,
       price: 0,
+      price_sale: 0,
       quantity: 0,
       status: 2,
       sku_code: "",
@@ -127,7 +128,7 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
             <th>Giá bán</th>
             <th>Giá thị trường</th>
             <th>Số lượng</th>
-            <th>SKU Code</th>
+            {/* <th>SKU Code</th> */}
             <th>Trạng thái</th>
             <th>Xoá</th>
           </tr>
@@ -206,14 +207,14 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
                   size="sm"
                 />
               </td>
-              <td>
+              {/* <td>
                 <Form.Control
                   type="text"
                   value={skuItem.sku_code || ""}
                   onChange={(e) => handleChange(index, "sku_code", e.target.value)}
                   size="sm"
                 />
-              </td>
+              </td> */}
               <td>
                 <Form.Select
                   value={skuItem.status}

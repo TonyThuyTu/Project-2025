@@ -469,7 +469,20 @@ exports.updateProduct = async (req, res) => {
             transaction: t,
           });
 
-          // Cuối cùng xoá attribute_value
+          // Kiểm tra nếu id_value này đang được dùng trong VariantValue (SKU) thì không cho xoá
+          const isUsedInSku = await db.VariantValue.findOne({
+            where: { id_value: oldId },
+            transaction: t,
+          });
+
+          if (isUsedInSku) {
+            await t.rollback();
+            return res.status(400).json({
+              message: `Option vẫn còn được sử dụng trong SKU`,
+            });
+          }
+
+          // Nếu không bị dùng thì mới cho xoá
           await db.AttributeValue.destroy({
             where: { id_value: oldId },
             transaction: t,
@@ -703,116 +716,130 @@ exports.updateProduct = async (req, res) => {
 
     // === 6. Cập nhật SKU ===
     try {
-      const skus = typeof req.body.skus === "string" ? JSON.parse(req.body.skus) : req.body.skus;
+      let skus = req.body.skus;
+      if (typeof skus === "string") {
+        skus = JSON.parse(skus);
+      }
+      if (!Array.isArray(skus)) {
+        skus = [];
+      }
 
-      if (Array.isArray(skus)) {
-        const existingSkus = await db.ProductVariant.findAll({
-          where: { id_products: id },
-          include: [{ model: db.VariantValue, as: 'variantValues' }],
-          transaction: t,
-        });
+      console.log("SKUs received:", skus);
 
-        const incomingIds = skus.filter(s => s.variant_id).map(s => s.variant_id);
+      const existingVariants = await db.ProductVariant.findAll({
+        where: { id_products: id },
+        include: [{ model: db.VariantValue, as: 'variantValues' }],
+        transaction: t,
+      });
 
-        // 1. Xoá variant_values của các SKU không còn
-        const toDeleteVariants = existingSkus.filter(sku => !incomingIds.includes(sku.id_variant));
+      const existingVariantIds = existingVariants.map(v => v.id_variant);
+      // Chú ý dùng id_variant thay vì variant_id
+      const incomingVariantIds = skus.filter(s => s.id_variant).map(s => s.id_variant);
 
-        for (const variant of toDeleteVariants) {
-          await db.VariantValue.destroy({
-            where: { id_variant: variant.id_variant },
+      console.log("Existing variant IDs:", existingVariantIds);
+      console.log("Incoming variant IDs:", incomingVariantIds);
+
+      // Xóa variant cũ không còn trong danh sách mới
+      const removedIds = existingVariantIds.filter(idVar => !incomingVariantIds.includes(idVar));
+      if (removedIds.length > 0) {
+        console.log("Removing variants:", removedIds);
+        await db.VariantValue.destroy({ where: { id_variant: removedIds }, transaction: t });
+        await db.ProductVariant.destroy({ where: { id_variant: removedIds }, transaction: t });
+      }
+
+      for (const sku of skus) {
+        const {
+          id_variant,  // dùng id_variant
+          sku_code,
+          quantity,
+          price,
+          price_sale,
+          status,
+          option_combo = [],
+        } = sku;
+
+        console.log("Processing SKU:", sku);
+
+        const parsedStatus = [1, '1', true, 'true'].includes(status) ? true : false;
+
+        if (id_variant) {
+          // Cập nhật SKU cũ
+          await db.ProductVariant.update({
+            sku: sku_code,
+            quantity: parseInt(quantity) || 0,
+            price: parseFloat(price) || 0,
+            price_sale: parseFloat(price_sale) || 0,
+            status: parsedStatus,
+          }, {
+            where: { id_variant: id_variant },
             transaction: t,
           });
-        }
 
-        // 2. Xoá SKU không còn
-        await db.ProductVariant.destroy({
-          where: {
-            id_products: id,
-            id_variant: { [Op.notIn]: incomingIds },
-          },
-          transaction: t,
-        });
+          // Xóa VariantValue cũ
+          await db.VariantValue.destroy({
+            where: { id_variant: id_variant },
+            transaction: t,
+          });
 
-        // 3. Upsert lại SKU
-        for (const sku of skus) {
-          const {
-            variant_id,
-            sku_code,
-            quantity,
-            price,
-            status,
-            option_combo,
-          } = sku;
-
-          const parsedStatus = [1, true, '1', 'true'].includes(status) ? true : false;
-
-          if (variant_id) {
-            // Cập nhật SKU
-            await db.ProductVariant.update({
-              sku: sku_code || '',
-              quantity: parseInt(quantity) || 0,
-              price: parseFloat(price) || 0,
-              status: parsedStatus,
-            }, {
-              where: { id_variant: variant_id, id_products: id },
-              transaction: t,
+          // Tạo VariantValue mới
+          for (const combo of option_combo) {
+            console.log("Option combo item:", combo);
+            const attrVal = await db.AttributeValue.findOne({
+              where: { value: combo.value?.toString() || '' },
+              include: [{
+                model: db.Attribute,
+                as: 'attribute',
+                where: { name: combo.attribute }
+              }],
+              transaction: t
             });
 
-            // Xoá hết variant_values cũ và tạo lại cho chắc
-            await db.VariantValue.destroy({
-              where: { id_variant: variant_id },
-              transaction: t,
-            });
-
-            for (const combo of option_combo) {
-              const attributeValue = await db.AttributeValue.findOne({
-                where: {
-                  value: combo.value?.toString() || '',
-                },
-                include: [{ model: db.Attribute, as: 'attribute', where: { name: combo.attribute } }],
-                transaction: t,
-              });
-
-              if (attributeValue) {
-                await db.VariantValue.create({
-                  id_variant: variant_id,
-                  id_value: attributeValue.id_value,
-                }, { transaction: t });
-              }
+            if (attrVal) {
+              console.log("Found AttributeValue:", attrVal.id_value);
+              await db.VariantValue.create({
+                id_variant: id_variant,
+                id_value: attrVal.id_value
+              }, { transaction: t });
+            } else {
+              console.warn("Không tìm thấy AttributeValue cho combo:", combo);
             }
-          } else {
-            // Tạo mới SKU
-            const newSku = await db.ProductVariant.create({
-              id_products: id,
-              sku: sku_code || '',
-              quantity: parseInt(quantity) || 0,
-              price: parseFloat(price) || 0,
-              status: parsedStatus,
-            }, { transaction: t });
+          }
 
-            for (const combo of option_combo) {
-              const attributeValue = await db.AttributeValue.findOne({
-                where: {
-                  value: combo.value?.toString() || '',
-                },
-                include: [{ model: db.Attribute, as: 'attribute', where: { name: combo.attribute } }],
-                transaction: t,
-              });
+        } else {
+          // Tạo mới SKU
+          const newVariant = await db.ProductVariant.create({
+            id_products: id,
+            sku: sku_code,
+            quantity: parseInt(quantity) || 0,
+            price: parseFloat(price) || 0,
+            price_sale: parseFloat(price_sale) || 0,
+            status: parsedStatus,
+          }, { transaction: t });
 
-              if (attributeValue) {
-                await db.VariantValue.create({
-                  id_variant: newSku.id_variant,
-                  id_value: attributeValue.id_value,
-                }, { transaction: t });
-              }
+          for (const combo of option_combo) {
+            const attrVal = await db.AttributeValue.findOne({
+              where: { value: combo.value?.toString() || '' },
+              include: [{
+                model: db.Attribute,
+                as: 'attribute',
+                where: { name: combo.attribute }
+              }],
+              transaction: t
+            });
+
+            if (attrVal) {
+              await db.VariantValue.create({
+                id_variant: newVariant.id_variant,
+                id_value: attrVal.id_value
+              }, { transaction: t });
             }
           }
         }
       }
-    } catch (err) {
+    } catch (error) {
       await t.rollback();
-      console.error("❌ Lỗi khi cập nhật SKU:", err);
-      return res.status(500).json({ message: "Lỗi khi cập nhật SKU", error: err.message });
+      console.error("❌ Lỗi cập nhật SKU:", error);
+      return res.status(500).json({ message: "Lỗi khi cập nhật SKU", error: error.message });
     }
 
     // === 5. Lưu lại product ===
@@ -826,7 +853,6 @@ exports.updateProduct = async (req, res) => {
     return res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
-
 
 //getProductByid
 exports.getProductsById = async (req, res) => {
