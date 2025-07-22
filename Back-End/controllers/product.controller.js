@@ -255,12 +255,11 @@ async function saveVariants(variantsParsed, newProduct, uploadedImages, attribut
   console.log("▶️ Thuộc tính chính (mainAttrName):", mainAttrName);
 
   for (const v of variantsParsed) {
-    // Chuyển combo thành values object
     const values = {};
     if (Array.isArray(v.combo)) {
       for (const item of v.combo) {
         if (item.optionName && item.value) {
-          values[item.optionName] = item.value;
+          values[item.optionName.trim()] = item.value.trim();
         }
       }
     }
@@ -288,13 +287,24 @@ async function saveVariants(variantsParsed, newProduct, uploadedImages, attribut
       id_products: newProduct.id_products,
       sku: finalSKU,
       price: parseFloat(v.price),
-      price_sale: pareseFloat(v.price_sale || 0),
+      price_sale: parseFloat(v.price_sale || 0), // ✅ FIX lỗi chính tả
       quantity,
       status,
     }, { transaction });
 
+    // ✅ Tìm id_value chính xác hơn
     for (const [attrName, attrValue] of Object.entries(values)) {
-      const id_value = attributeValueMap[attrName?.trim()]?.[attrValue?.trim()];
+      let id_value = null;
+      const mapByAttr = attributeValueMap[attrName?.trim()];
+      if (mapByAttr) {
+        for (const [key, valId] of Object.entries(mapByAttr)) {
+          if (key.trim() === attrValue.trim()) {
+            id_value = valId;
+            break;
+          }
+        }
+      }
+
       if (!id_value) {
         console.warn(`❌ Không tìm thấy id_value cho ${attrName} = ${attrValue}`);
         throw new Error(`Thiếu giá trị thuộc tính: ${attrName} = ${attrValue}`);
@@ -313,7 +323,6 @@ async function saveVariants(variantsParsed, newProduct, uploadedImages, attribut
       : null;
 
     if (variantImage && mainValueId) {
-      // Reset ảnh đại diện cũ của biến thể này
       await ProductImg.update(
         { is_main: false },
         {
@@ -957,6 +966,7 @@ exports.getProductsById = async (req, res) => {
         status: variant.status,
         // images: variant.images || [],
         option_combo: variant.variantValues.map(v => ({
+          id_value: v.attributeValue?.attribute?.id_value,
           attribute: v.attributeValue?.attribute?.name,
           value: v.attributeValue?.value,
           type: v.attributeValue.attribute?.type,
