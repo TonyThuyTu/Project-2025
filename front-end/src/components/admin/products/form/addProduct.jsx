@@ -27,6 +27,22 @@ export default function AddProductModal({ show, onClose, onAdd }) {
   // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formValid, setFormValid] = useState(false);
 
+  const [touched, setTouched] = useState({
+    productName: false,
+    marketPrice: false,
+    productShorts: false,
+    salePrice: false,
+    productQuantity: false,
+  });
+  
+  const errors = {
+    productName: !productName.trim() ? 'Vui lòng nhập tên sản phẩm' : '',
+    productShorts: !productShorts.trim() ? 'Vui lòng nhập mô tả ngắn' : '',
+    marketPrice: !marketPrice || isNaN(marketPrice.replace(/\./g, '')) ? 'Giá thị trường không hợp lệ' : '',
+    salePrice: !salePrice || isNaN(salePrice.replace(/\./g, '')) ? 'Giá bán không hợp lệ' : '',
+    productQuantity: productQuantity <= 0 ? 'Số lượng không hợp lệ' : '',
+  };
+
   // Validate form inputs
   const validateForm = () => {
     const categoryId = selectedChild || selectedParent;
@@ -39,6 +55,22 @@ export default function AddProductModal({ show, onClose, onAdd }) {
     setFormValid(!!valid);
     return !!valid;
   };
+
+  useEffect(() => {
+    validateForm(); // Kiểm tra mỗi khi dữ liệu thay đổi
+  }, 
+
+  [
+    productName, 
+    productShorts,
+    selectedParent, 
+    selectedChild, 
+    marketPrice, 
+    productQuantity,
+    salePrice, 
+    images
+  ]);
+
 
   const handleAdd = async () => {
     try {
@@ -116,6 +148,9 @@ export default function AddProductModal({ show, onClose, onAdd }) {
               productQuantity={productQuantity}
               productShorts={productShorts}
               setProductShorts={setProductShorts}
+              touched = {touched}
+              setTouched = {setTouched}
+              errors = {errors}
             />
           </Card>
 
@@ -167,8 +202,9 @@ export default function AddProductModal({ show, onClose, onAdd }) {
         <Button
           variant="primary"
           onClick={handleAdd}
+          disabled={!formValid}
         >
-          Lưu sản phẩm
+          Thêm sản phẩm
         </Button>
       </Modal.Footer>
     </Modal>

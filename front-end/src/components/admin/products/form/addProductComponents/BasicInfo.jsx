@@ -1,3 +1,4 @@
+import { Form, Button, Modal } from "react-bootstrap";
 
 export default function BasicInfo({
   productName,
@@ -10,6 +11,9 @@ export default function BasicInfo({
   setProductQuantity,
   productShorts,
   setProductShorts,
+  touched,
+  setTouched,
+  errors,
 }) {
   const formatCurrency = (value) => {
     const number = value.replace(/\D/g, ""); // chỉ giữ số
@@ -30,66 +34,91 @@ export default function BasicInfo({
 
   return (
     <>
-      <div className="mb-3">
-        <label htmlFor="productName" className="form-label">Tên sản phẩm</label>
-        <input
+      <Form.Group controlId="productName">
+        <Form.Label>Tên sản phẩm</Form.Label>
+        <Form.Control
           type="text"
-          className="form-control"
-          id="productName"
           placeholder="Nhập tên sản phẩm"
           value={productName}
-          onChange={e => setProductName(e.target.value)}
+          onChange={(e) => setProductName(e.target.value)}
+          onBlur={() => setTouched((prev) => ({ ...prev, productName: true }))}
+          isInvalid={touched.productName && !!errors.productName}
         />
-      </div>
+        {touched.productName && errors.productName && (
+          <Form.Control.Feedback type="invalid">
+            {errors.productName}
+          </Form.Control.Feedback>
+        )}
+      </Form.Group>
 
-      <div className="mb-3">
-        <label htmlFor="productShorts" className="form-label">Mô tả ngắn</label>
-        <input
+      <Form.Group controlId="productShorts" className="mb-3">
+        <Form.Label>Mô tả ngắn</Form.Label>
+        <Form.Control
           type="text"
-          className="form-control"
-          id="productShorts"
           placeholder="Nhập mô tả ngắn"
           value={productShorts}
           onChange={(e) => setProductShorts(e.target.value)}
+          onBlur={() => setTouched(prev => ({ ...prev, productShorts: true }))}
+          isInvalid={touched.productShorts && !!errors.productShorts}
         />
-      </div>
+        {touched.productShorts && errors.productShorts && (
+          <Form.Control.Feedback type="invalid">
+            {errors.productShorts}
+          </Form.Control.Feedback>
+        )}
+      </Form.Group>
 
-      <div className="mb-3">
-        <label htmlFor="marketPrice" className="form-label">Giá thị trường</label>
-        <input
+      <Form.Group controlId="marketPrice">
+        <Form.Label>Giá thị trường</Form.Label>
+        <Form.Control
           type="text"
-          className="form-control"
-          id="marketPrice"
           placeholder="Nhập giá thị trường"
           value={marketPrice}
           onChange={handleMarketPriceChange}
+          onBlur={() => setTouched(prev => ({ ...prev, marketPrice: true }))}
+          isInvalid={touched.marketPrice && !!errors.marketPrice}
         />
-      </div>
+        {touched.marketPrice && errors.marketPrice && (
+          <Form.Control.Feedback type="invalid">
+            {errors.marketPrice}
+          </Form.Control.Feedback>
+        )}
+      </Form.Group>
 
-      <div className="mb-3">
-        <label htmlFor="salePrice" className="form-label">Giá bán</label>
-        <input
+      <Form.Group controlId="salePrice">
+        <Form.Label>Giá bán</Form.Label>
+        <Form.Control
           type="text"
-          className="form-control"
-          id="salePrice"
           placeholder="Nhập giá bán"
           value={salePrice}
           onChange={handleSalePriceChange}
+          onBlur={() => setTouched(prev => ({ ...prev, salePrice: true }))}
+          isInvalid={touched.salePrice && !!errors.salePrice}
         />
-      </div>
+        {touched.salePrice && errors.salePrice && (
+          <Form.Control.Feedback type="invalid">
+            {errors.salePrice}
+          </Form.Control.Feedback>
+        )}
+      </Form.Group>
 
-      <div className="mb-3">
-        <label htmlFor="salePrice" className="form-label">Số lượng</label>
-        <input
+     <Form.Group controlId="productQuantity">
+        <Form.Label>Số lượng</Form.Label>
+        <Form.Control
           type="number"
-          min={0}
-          className="form-control"
-          id="productQuantity"
           placeholder="Nhập số lượng"
+          min={0}
           value={productQuantity}
           onChange={(e) => setProductQuantity(Number(e.target.value))}
+          onBlur={() => setTouched(prev => ({ ...prev, productQuantity: true }))}
+          isInvalid={touched.productQuantity && !!errors.productQuantity}
         />
-      </div>
+        {touched.productQuantity && errors.productQuantity && (
+          <Form.Control.Feedback type="invalid">
+            {errors.productQuantity}
+          </Form.Control.Feedback>
+        )}
+      </Form.Group>
     </>
   );
 }
