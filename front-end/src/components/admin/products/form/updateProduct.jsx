@@ -83,8 +83,8 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
     // Chuẩn hóa options
     const normalizedAttributes = (productData.attributes || []).map((attr) => ({
-      attribute_id: attr.attribute_id,
-      name: attr.name || `Option ${attr.attribute_id}`,
+      id_attribute: attr.id_attribute,
+      name: attr.name || `Option ${attr.id_attribute}`,
       type: /màu|color/i.test(attr.name) ? 2 : 1,
       values: (attr.values || []).map((val) => ({
         value_id: val.value_id || val.id_value || null,
@@ -215,18 +215,21 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       });
 
       const fixedOptions = options.map(opt => ({
-        ...opt,
+        id_attribute: opt.id_attribute || opt.attribute_id,
+        name: opt.name,
+        type: opt.type,
         values: opt.values
-          .filter(val => val.value?.toString().trim() !== '') // giữ cả mới và cũ, miễn có value
+          .filter(val => val.value?.toString().trim() !== '')
           .map(val => ({
-            value_id: val.value_id || val.id_value,
+            value_id: val.value_id || val.id_value || null,
             value: val.value || val.label || "",
             extra_price: val.extraPrice !== undefined ? Number(val.extraPrice) : 0,
             quantity: val.quantity !== undefined ? Number(val.quantity) : 0,
             status: val.status !== undefined ? Number(val.status) : 1,
-            tempId: val.tempId || null  // ✅ thêm dòng này
+            tempId: val.tempId || null,
           }))
       }));
+
       console.log("🧪 fixedOptions gửi lên:", JSON.stringify(fixedOptions, null, 2));
       
       const validSkus = skuList

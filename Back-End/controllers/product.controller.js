@@ -493,12 +493,32 @@ exports.updateProduct = async (req, res) => {
       }
 
       // 4. Cập nhật hoặc thêm mới các giá trị được gửi từ frontend
+      
       for (const attr of attributes) {
-        const attributeId = attr.attribute_id;
+        let attributeId = attr.id_attribute;
+
+          // Nếu chưa có id_attribute => tạo mới Attribute (option)
+          if (!attributeId) {
+            const newAttr = await db.Attribute.create({
+              name: attr.name,
+              type: attr.type || 1,
+            }, { transaction: t });
+
+            attributeId = newAttr.id_attribute;
+            // Nếu muốn bạn có thể gán lại cho attr để dùng tiếp (nếu cần)
+            attr.id_attribute = attributeId;
+          } else {
+            // Cập nhật tên attribute nếu khác
+            const existingAttr = await db.Attribute.findByPk(attributeId, { transaction: t });
+            if (existingAttr && existingAttr.name !== attr.name) {
+              existingAttr.name = attr.name;
+              await existingAttr.save({ transaction: t });
+            }
+          }
 
         for (const val of attr.values || []) {
           const idVal = val.value_id || val.id_value || val.idVal;
-          const tempId = val.tempId;
+          const tempId = val.tempId || null;
 
           const extraPrice = val.extra_price ?? val.extraPrice ?? 0;
           const quantity = val.quantity ?? 0;
@@ -506,18 +526,19 @@ exports.updateProduct = async (req, res) => {
 
           const parsedExtraPrice = parseFloat(extraPrice);
           const parsedQuantity = parseInt(quantity, 10);
-          const parsedStatus = [1, '1', true].includes(statusInput);
+          const parsedStatus = [1, '1', true, 2, '2'].includes(statusInput) ? 1 : 0;
 
           if (
             isNaN(parsedExtraPrice) ||
             isNaN(parsedQuantity) ||
-            typeof parsedStatus !== 'boolean'
+            typeof parsedStatus !== 'number'
           ) {
             console.warn(`⚠️ Dữ liệu không hợp lệ`, { val });
             continue;
           }
 
-          // Nếu có id_value -> cập nhật
+          let id_value = null;
+
           if (idVal) {
             const exists = await db.AttributeValue.findOne({
               where: { id_value: Number(idVal) },
@@ -530,40 +551,72 @@ exports.updateProduct = async (req, res) => {
               exists.quantity = parsedQuantity;
               exists.status = parsedStatus;
               await exists.save({ transaction: t });
-
-              console.log(`✅ Đã cập nhật id_value=${idVal}`);
-              continue;
+              id_value = exists.id_value;
+              console.log(`✅ Đã cập nhật id_value=${id_value}`);
             }
           }
 
-          // Nếu chưa có -> tạo mới
-          const newVal = await db.AttributeValue.create({
-            id_attribute: attributeId,
-            value: val.value?.toString() || '',
-            extra_price: parsedExtraPrice,
-            quantity: parsedQuantity,
-            status: parsedStatus,
-          }, { transaction: t });
+          if (!id_value) {
+            const newVal = await db.AttributeValue.create({
+              id_attribute: attributeId,
+              value: val.value?.toString() || '',
+              extra_price: parsedExtraPrice,
+              quantity: parsedQuantity,
+              status: parsedStatus,
+            }, { transaction: t });
 
-          if (tempId) {
-            req.tempIdMap[tempId] = newVal.id_value;
-            console.log('📌 Mapping tempId → id_value:', tempId, '→', newVal.id_value);
+            id_value = newVal.id_value;
+
+            if (tempId) {
+              req.tempIdMap[tempId] = id_value;
+              console.log('📌 Mapping tempId → id_value:', tempId, '→', id_value);
+            }
           }
 
-          // Gắn vào bảng trung gian
-          await db.ProductAttributeValue.create({
-            id_product: id,
-            id_value: newVal.id_value,
-            id_attribute: attributeId,
-          }, { transaction: t });
+          await db.ProductAttributeValue.findOrCreate({
+            where: {
+              id_product: id,
+              id_value: id_value,
+              // id_attribute: attributeId,
+            },
+            defaults: {
+              id_product: id,
+              id_value: id_value,
+              // id_attribute: attributeId,
+            },
+            transaction: t,
+          });
 
           console.log('🔗 Gắn vào bảng product_attribute_values:', {
             id_product: id,
-            id_value: newVal.id_value,
+            id_value,
             id_attribute: attributeId,
           });
         }
       }
+      
+      const attributeIds = attributes.map(attr => attr.id_attribute);
+
+      // Xoá các product_attributes không còn nữa
+      await db.ProductAttribute.destroy({
+        where: {
+          id_product: id,
+          id_attribute: { [Op.notIn]: attributeIds },
+        },
+        transaction: t,
+      });
+
+      // Thêm mới nếu chưa có
+      for (const attrId of attributeIds) {
+        await db.ProductAttribute.findOrCreate({
+          where: {
+            id_product: id,
+            id_attribute: attrId,
+          },
+          transaction: t,
+        });
+      }
+
     } catch (err) {
       await t.rollback();
       console.error("❌ Error updating attributes:", err);
@@ -940,7 +993,7 @@ exports.getProductsById = async (req, res) => {
       );
 
       return {
-        attribute_id: pa.attribute.id_attribute,
+        id_attribute: pa.attribute.id_attribute,
         name: pa.attribute.name,
         type: pa.attribute.type,
         values: filteredValues.map(v => ({

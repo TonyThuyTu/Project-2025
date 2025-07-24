@@ -5,7 +5,7 @@ import { Trash } from 'react-bootstrap-icons';
 
 export default function OptionsManager({ options, setOptions }) {
   const [newOptionName, setNewOptionName] = useState('');
-  const [newOptionType, setNewOptionType] = useState('text');
+  const [newOptionType, setNewOptionType] = useState('');
 
   // Cleanup URL object khi component unmount
   useEffect(() => {
@@ -25,12 +25,13 @@ export default function OptionsManager({ options, setOptions }) {
   const addOption = () => {
     if (!newOptionName.trim()) return;
     setOptions(prev => [...prev, {
+      id_attribute: null,
       name: newOptionName,
-      type: newOptionType,
+      type: Number(newOptionType) || 1,
       values: [],
     }]);
     setNewOptionName('');
-    setNewOptionType('text');
+    setNewOptionType(1);
   };
 
   const addValue = (i) => {
@@ -41,7 +42,7 @@ export default function OptionsManager({ options, setOptions }) {
       value: '',
       extraPrice: 0,
       quantity: 0,
-      status: '',
+      status: 1,
       images: [],
     });
     setOptions(updated);
@@ -160,11 +161,11 @@ export default function OptionsManager({ options, setOptions }) {
         </Col>
         <Col sm={3}>
           <Form.Select
-            value={newOptionType}
+            value={newOptionType || 1}
             onChange={(e) => setNewOptionType(e.target.value)}
           >
-            <option value="text">Chữ</option>
-            <option value="color">Màu</option>
+            <option value={1}>Chữ</option>
+            <option value={2}>Màu</option>
           </Form.Select>
         </Col>
         <Col sm="auto">
@@ -204,7 +205,7 @@ export default function OptionsManager({ options, setOptions }) {
               {option.values.map((val, j) => (
                 <tr key={j}>
                   <td>
-                    {option.type === 'color' ? (
+                    {Number(option.type) === 2 ? (
                       <div className="d-flex align-items-center gap-2">
                         <Form.Control
                           type="color"

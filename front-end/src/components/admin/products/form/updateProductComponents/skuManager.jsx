@@ -113,6 +113,16 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
 
   const canAddSku = unusedCombos.length > 0;
 
+  const formatCurrency = (value) => {
+    if (!value) return "";
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseCurrency = (formatted) => {
+    return parseInt(formatted.replace(/\./g, "")) || 0;
+  };
+
+
   return (
     <div className="mt-4">
       <h5>Quản lý SKU theo tổ hợp option</h5>
@@ -185,17 +195,17 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
               })}
               <td>
                 <Form.Control
-                  type="number"
-                  value={skuItem.price}
-                  onChange={(e) => handleChange(index, "price", parseFloat(e.target.value) || 0)}
+                  type="text"
+                  value={formatCurrency(skuItem.price)}
+                  onChange={(e) => handleChange(index, "price", parseCurrency(e.target.value))}
                   size="sm"
                 />
               </td>
               <td>
                 <Form.Control
-                  type="number"
-                  value={skuItem.price_sale}
-                  onChange={(e) => handleChange(index, "price_sale", parseFloat(e.target.value) || 0)}
+                  type="text"
+                  value={formatCurrency(skuItem.price_sale)}
+                  onChange={(e) => handleChange(index, "price_sale", parseCurrency(e.target.value))}
                   size="sm"
                 />
               </td>
