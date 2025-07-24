@@ -16,6 +16,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
   const [options, setOptions] = useState([]);
   const [skuList, setSkuList] = useState([]);
   const [productName, setProductName] = useState('');
+  const [productShorts, setProductShorts] = useState('');
   const [marketPrice, setMarketPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [selectedParent, setSelectedParent] = useState('');
@@ -48,6 +49,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
       formData.append('products_name', productName);
       formData.append('category_id', categoryId);
       formData.append('products_description', description);
+      formData.append('products_shorts', productShorts);
       formData.append('products_quantity', productQuantity);
       formData.append('products_market_price', marketPrice.replace(/\./g, ''));
       formData.append('products_sale_price', salePrice.replace(/\./g, ''));
@@ -112,6 +114,8 @@ export default function AddProductModal({ show, onClose, onAdd }) {
               setSalePrice={setSalePrice}
               setProductQuantity={setProductQuantity}
               productQuantity={productQuantity}
+              productShorts={productShorts}
+              setProductShorts={setProductShorts}
             />
           </Card>
 

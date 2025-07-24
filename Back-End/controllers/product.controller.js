@@ -75,6 +75,7 @@ exports.createProducts = async (req, res) => {
       products_market_price,
       products_sale_price,
       products_description,
+      product_shorts,
       products_quantity,
       specs,
       attributes,
@@ -102,6 +103,7 @@ exports.createProducts = async (req, res) => {
       products_market_price: marketPrice,
       products_sale_price: salePrice,
       products_description: products_description || '',
+      product_shorts: product_shorts,
       products_quantity: products_quantity,
       products_status: 1,
       products_primary: 0,
@@ -366,6 +368,7 @@ exports.updateProduct = async (req, res) => {
       products_status,
       products_description,
       products_quantity,
+      products_shorts,
       category_id,
       specs,
       optionImages,
@@ -376,6 +379,7 @@ exports.updateProduct = async (req, res) => {
 
     // === 1. Cập nhật thông tin cơ bản ===
     if (products_name !== undefined) product.products_name = products_name;
+    if (products_shorts !== undefined) product.products_shorts = products_shorts;
     if (products_quantity !== undefined) product.products_quantity = products_quantity;
     if (products_market_price !== undefined) product.products_market_price = products_market_price;
     if (products_sale_price !== undefined) product.products_sale_price = products_sale_price;
@@ -1058,6 +1062,7 @@ exports.getProductsById = async (req, res) => {
       product: {
         id_products: product.id_products,
         products_name: product.products_name,
+        products_shorts: product.products_shorts,
         products_market_price: product.products_market_price,
         products_sale_price: product.products_sale_price,
         products_description: product.products_description,

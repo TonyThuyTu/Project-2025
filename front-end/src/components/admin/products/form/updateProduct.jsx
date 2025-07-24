@@ -17,6 +17,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
   const [options, setOptions] = useState([]);
   const [skuList, setSkuList] = useState([]);
   const [productName, setProductName] = useState('');
+  const [productShorts, setProductShorts] = useState('');
   const [productQuantity, setProductQuantity] = useState(0);
   const [marketPrice, setMarketPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
@@ -59,6 +60,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
     setProductQuantity(product.products_quantity)
     setProductName(product.products_name || "");
+    setProductShorts(product.products_shorts || "");
     setMarketPrice(product.products_market_price?.toString() || "");
     setSalePrice(product.products_sale_price?.toString() || "");
     setDescription(product.products_description || "");
@@ -255,6 +257,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       formData.append('attributes', JSON.stringify(fixedOptions));
       formData.append('products_id', productId);
       formData.append('products_name', productName);
+      formData.append('products_shorts', productShorts);
       formData.append('products_quantity', productQuantity);
       formData.append('products_market_price', Number(marketPrice).toFixed(2));
       formData.append('products_sale_price', Number(salePrice).toFixed(2));
@@ -314,7 +317,13 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
         <Form>
 
           <Card className="mb-3 p-3">
-            <BasicInfo {...{ productName, setProductName, marketPrice, setMarketPrice, salePrice, setSalePrice, productQuantity, setProductQuantity }} />
+            <BasicInfo {...{ 
+              productName, setProductName, 
+              marketPrice, setMarketPrice, 
+              salePrice, setSalePrice,
+              productQuantity, setProductQuantity,
+              productShorts, setProductShorts
+              }} />
           </Card>
 
           <Card className="mb-3 p-3">
@@ -357,6 +366,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
               <option value={1}>Đang chờ duyệt</option>
               <option value={2}>Hiển thị</option>
               <option value={3}>Đã ẩn</option>
+              <option value={4}>Sắp ra mắt</option>
             </select>
           </div>
         </Form>
