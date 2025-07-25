@@ -52,9 +52,9 @@ exports.getCustomerById = async (req, res) => {
 // Cập nhật thông tin khách hàng
 exports.updateCustomer = async (req, res) => {
   const id = req.params.id;
-  const { name, phone, email } = req.body;
+  const { name, last_name, given_name, phone, email } = req.body;
 
-  if (!name || !phone || !email) {
+  if (!name || !last_name || !given_name || !phone || !email) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
   }
 
@@ -82,7 +82,7 @@ exports.updateCustomer = async (req, res) => {
     }
 
     const [updated] = await Customer.update(
-      { name, phone, email },
+      { name, last_name, given_name, phone, email },
       { where: { id_customer: id } }
     );
 
@@ -141,7 +141,7 @@ exports.toggleCustomerStatus = async (req, res) => {
 
 // Đăng ký khách hàng
 exports.register = async (req, res) => {
-  const { name, phone, email, password } = req.body;
+  const { name, last_name, given_name, phone, email, password } = req.body;
 
   if (!name || !phone || !email || !password) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
@@ -161,10 +161,12 @@ exports.register = async (req, res) => {
     // Tạo khách hàng mới
     const newCustomer = await Customer.create({
       name,
+      last_name,
+      given_name,
       phone,
       email,
       password: hashedPassword,
-      status: false,  // Mặc định chưa chặn
+      status: 1,  // Mặc định chưa chặn
     });
 
     const token = generateToken(newCustomer);
@@ -175,6 +177,8 @@ exports.register = async (req, res) => {
       customer: {
         id_customer: newCustomer.id_customer,
         name: newCustomer.name,
+        last_name: newCustomer.last_name,
+        given_name: newCustomer.given_name,
         email: newCustomer.email,
         phone: newCustomer.phone,
         status: newCustomer.status,
