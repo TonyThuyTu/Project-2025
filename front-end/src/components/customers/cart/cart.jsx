@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import ContactWarningModal from "./Modal/Contact";
 import CartList from "./CartComponents/cartList";
 import CartTotal from "./CartComponents/cartTotal";
 import Link from "next/link";
@@ -12,6 +13,8 @@ export default function CartWrapper() {
   const [idCustomer, setIdCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [showContactModal, setShowContactModal] = useState(false);
+  
   const toastId = "update-quantity-toast";
 
   useEffect(() => {
@@ -171,8 +174,17 @@ export default function CartWrapper() {
         </div>
 
         <div className="col-lg-4">
-          <CartTotal items={cartItems} />
+          <CartTotal 
+          items={cartItems} 
+          onShowContactModal={() => setShowContactModal(true)} // thêm prop này
+          />
         </div>
+
+        <ContactWarningModal
+          show={showContactModal}
+          onHide={() => setShowContactModal(false)}
+        />
+        
       </div>
     </div>
   );

@@ -9,15 +9,14 @@ const formatVND = (value) =>
     currency: "VND",
   });
 
-export default function CartTotal({ items }) {
+export default function CartTotal({ items, onShowContactModal }) {
   const [discountCode, setDiscountCode] = useState("");
   const [voucherInfo, setVoucherInfo] = useState(null);
 
-  
-
-  const totalBeforeDiscount = items.reduce((sum, item) => {
-    return sum + Number(item.price) * Number(item.quantity);
-  }, 0);
+  const totalBeforeDiscount = items.reduce(
+    (sum, item) => sum + Number(item.price) * Number(item.quantity),
+    0
+  );
 
   const applyVoucher = async () => {
     try {
@@ -37,15 +36,19 @@ export default function CartTotal({ items }) {
 
   const calculateFinalTotal = () => {
     if (!voucherInfo) return totalBeforeDiscount;
-
-    if (voucherInfo.discount_type === "percent") {
-      return totalBeforeDiscount * (1 - voucherInfo.discount_value / 100);
-    } else {
-      return totalBeforeDiscount - voucherInfo.discount_value;
-    }
+    return voucherInfo.discount_type === "percent"
+      ? totalBeforeDiscount * (1 - voucherInfo.discount_value / 100)
+      : totalBeforeDiscount - voucherInfo.discount_value;
   };
 
-  const totalAfterDiscount = calculateFinalTotal();
+  const handleCheckout = () => {
+    const hasLargeQuantity = items.some(item => Number(item.quantity) >= 10);
+    if (hasLargeQuantity) {
+      onShowContactModal();
+    } else {
+      window.location.href = "/checkout";
+    }
+  };
 
   return (
     <Card className="p-3 shadow-sm">
@@ -59,15 +62,15 @@ export default function CartTotal({ items }) {
           value={discountCode}
           onChange={(e) => setDiscountCode(e.target.value)}
         />
+        <Button
+          variant="success"
+          className="mt-2 w-100"
+          onClick={applyVoucher}
+          disabled={!discountCode.trim()}
+        >
+          Áp dụng mã
+        </Button>
       </Form.Group>
-      <Button
-        variant="success"
-        className="mt-2 w-100"
-        onClick={applyVoucher}
-        disabled={!discountCode.trim()}
-      >
-        Áp dụng mã
-      </Button>
 
       {voucherInfo && (
         <div className="mt-2 text-success">
@@ -82,10 +85,14 @@ export default function CartTotal({ items }) {
 
       <div className="d-flex justify-content-between fw-bold fs-5">
         <span>Tổng tiền:</span>
-        <span>{formatVND(totalAfterDiscount)}</span>
+        <span>{formatVND(calculateFinalTotal())}</span>
       </div>
 
-      <Button variant="success" className="mt-2 w-100">
+      <Button
+        variant="success"
+        className="mt-2 w-100"
+        onClick={handleCheckout}
+      >
         Thanh toán
       </Button>
     </Card>
