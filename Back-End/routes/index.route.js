@@ -22,6 +22,8 @@ const VoucherRoute = require('./voucher.route');
 
 const CartRoute = require('./cart.route');
 
+const CheckoutRoute = require('./order.route');
+
 // Dùng route con
 router.use('/categories', categoryRoute); // => /api/categories
 
@@ -42,5 +44,7 @@ router.use('/reviews', ReviewsRoute); //=> api/reviwes
 router.use('/voucher', VoucherRoute); //=>api/vouchers
 
 router.use('/cart', CartRoute); //=>api/cart
+
+router.use('/order', CheckoutRoute) //=>api/order
 
 module.exports = router;
