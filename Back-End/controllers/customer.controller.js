@@ -3,6 +3,7 @@ const Customer = db.Customer;
 const bcrypt = require('bcryptjs');
 const generateToken = require('../middlewares/auth');
 const { sendOTPByEmail } = require('../helper/sendMail');
+const { sendOtpSms } = require('../helper/sendSMS');
 const redisClient = require('../config/redisClient');
 const { Op } = require('sequelize');
 
@@ -241,33 +242,49 @@ exports.login = async (req, res) => {
 // Gửi OTP cho email hoặc số điện thoại
 exports.sendOTP = async (req, res) => {
   const { phoneOrEmail } = req.body;
+
   if (!phoneOrEmail) {
     return res.status(400).json({ message: 'Vui lòng nhập email hoặc số điện thoại' });
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000); // 6 số
+  const otp = Math.floor(100000 + Math.random() * 900000); // mã 6 số
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
 
   try {
     let user = await Customer.findOne({ where: { email: phoneOrEmail } });
 
     if (!user) {
+      // Nếu không có email, thử tìm theo số điện thoại
       user = await Customer.findOne({ where: { phone: phoneOrEmail } });
+
       if (!user) {
         return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
       }
-      // Gửi OTP qua SMS (giả lập)
-      await redisClient.set(phoneOrEmail, JSON.stringify({ otp, expiresAt }), { EX: 300 });
-      return res.json({ message: 'OTP đã được gửi đến số điện thoại (demo: gửi thành công)' });
+
+      // ✅ Gửi OTP qua SMS (Twilio)
+      const toPhone = phoneOrEmail.startsWith("0")
+        ? phoneOrEmail.replace("0", "+84")
+        : phoneOrEmail;
+
+      const isSent = await sendOtpSms(toPhone, otp);
+
+      if (!isSent) {
+        return res.status(500).json({ message: 'Gửi OTP qua SMS thất bại' });
+      }
+
+      await redisClient.set(toPhone, JSON.stringify({ otp, expiresAt }), { EX: 300 });
+
+      return res.json({ message: 'OTP đã được gửi đến số điện thoại' });
     } else {
-      // Gửi OTP qua Email
+      // ✅ Gửi OTP qua Email
       await sendOTPByEmail(phoneOrEmail, otp, user.name);
       await redisClient.setEx(phoneOrEmail, 300, JSON.stringify({ otp, expiresAt }));
+
       return res.json({ message: 'OTP đã được gửi đến email' });
     }
   } catch (error) {
     console.error('❌ Lỗi khi gửi OTP:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    return res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
 
