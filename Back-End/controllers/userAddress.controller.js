@@ -1,4 +1,5 @@
 const { Address, Customer } = require('../models/index.model');
+const { Op } = require('sequelize');
 
 // Thêm địa chỉ mới
 exports.createAddress = async (req, res) => {
@@ -7,7 +8,7 @@ exports.createAddress = async (req, res) => {
       id_customer,
       address_label,
       name_city,
-      name_district,
+      // name_district,
       name_ward,
       name_address,
       is_primary
@@ -32,7 +33,7 @@ exports.createAddress = async (req, res) => {
       id_customer,
       address_label,
       name_city,
-      name_district,
+      // name_district,
       name_ward,
       name_address,
       is_primary: !!is_primary // Chuyển về boolean
@@ -51,30 +52,48 @@ exports.createAddress = async (req, res) => {
   }
 };
 
-//cập nhật địa chỉd
+// updateAddress ở backend (Node.js)
 exports.updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
 
-    // Tìm địa chỉ theo id
+    console.log('UpdateAddress:', { id, data });
+
     const address = await Address.findByPk(id);
     if (!address) {
-      return res.status(404).json({ message: 'Không tìm thấy địa chỉ.' });
+      return res.status(404).json({ message: "Không tìm thấy địa chỉ." });
+    }
+    console.log('Address found:', address.toJSON());
+
+    const isPrimary = data.is_primary === true || data.is_primary === 'true' || data.is_primary === 1 || data.is_primary === '1';
+
+    if (isPrimary) {
+      await Address.update(
+        { is_primary: false },
+        {
+          where: {
+            id_customer: address.id_customer,
+            id_address: { [Op.ne]: id },
+          },
+        }
+      );
     }
 
-    // Cập nhật thông tin
-    await address.update(data);
-
-    res.json({
-      message: 'Cập nhật địa chỉ thành công.',
-      data: address
+    const updatedAddress = await address.update({
+      ...data,
+      is_primary: isPrimary,
     });
 
+    return res.json({
+      message: "Cập nhật địa chỉ thành công.",
+      data: updatedAddress,
+    });
   } catch (error) {
-    res.status(500).json({
-      message: 'Đã xảy ra lỗi khi cập nhật địa chỉ.',
-      error: error.message
+    console.error("Lỗi cập nhật địa chỉ:", error);
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi khi cập nhật địa chỉ.",
+      error: error.message,
     });
   }
 };
@@ -139,7 +158,7 @@ exports.getAddressById = async (req, res) => {
         "id_address",
         "address_label",
         "name_city",
-        "name_district",
+        // "name_district",
         "name_ward",
         "name_address",
         "is_primary"

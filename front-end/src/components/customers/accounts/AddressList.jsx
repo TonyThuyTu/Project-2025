@@ -11,14 +11,22 @@ export default function AddressList({ id_customer }) {
   // Lấy danh sách địa chỉ theo id_customer
   const fetchAddresses = async () => {
     if (!id_customer) return;
+
     try {
       const res = await axios.get(`http://localhost:5000/api/address/customer/${id_customer}`);
-      console.log("Fetch addresses:", res.data); // Debug dữ liệu
-      // Lấy mảng trong key data, nếu không có thì trả về mảng rỗng
+      console.log("Fetch addresses:", res.data);
+      // Nếu API trả về mảng địa chỉ, set vào state
       setAddresses(Array.isArray(res.data.data) ? res.data.data : []);
     } catch (error) {
-      console.error("Lỗi khi lấy địa chỉ:", error);
-      setAddresses([]);
+      if (error.response && error.response.status === 404) {
+        // Trường hợp không có địa chỉ → không phải lỗi thực sự
+        console.warn("Không có địa chỉ nào cho khách hàng.");
+        setAddresses([]); // Gán danh sách rỗng
+      } else {
+        console.error("Lỗi khi lấy địa chỉ:", error);
+        toast.error("Đã xảy ra lỗi khi tải địa chỉ.");
+        setAddresses([]);
+      }
     }
   };
 
@@ -73,7 +81,7 @@ export default function AddressList({ id_customer }) {
                   )}
                 </div>
                 <div>
-                  {address.name_address}, {address.name_ward}, {address.name_district},{" "}
+                  {address.name_address}, {address.name_ward},{" "}
                   {address.name_city}
                 </div>
               </div>

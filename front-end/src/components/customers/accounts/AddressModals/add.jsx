@@ -1,12 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Toast } from "react-bootstrap";
+import { toast } from "react-toastify";
 
 export default function AddAddressModal({ id_customer, onSuccess }) {
   const initialForm = {
     address_label: "",
     name_city: "",
-    name_district: "",
+    // name_district: "",
     name_ward: "",
     name_address: "",
     is_primary: false,
@@ -80,8 +82,8 @@ export default function AddAddressModal({ id_customer, onSuccess }) {
 
     try {
       await axios.post("http://localhost:5000/api/address", { ...form, id_customer });
-      alert("Thêm địa chỉ thành công!");
-
+      // alert("Thêm địa chỉ thành công!");
+      toast.success("Thêm địa chỉ thành công!");
       // Reset form
       setForm(initialForm);
       setErrors({});
@@ -122,7 +124,7 @@ export default function AddAddressModal({ id_customer, onSuccess }) {
             {[
               { label: "Tên địa chỉ", id: "address_label" },
               { label: "Thành phố / Tỉnh", id: "name_city" },
-              { label: "Quận / Huyện", id: "name_district" },
+              // { label: "Quận / Huyện", id: "name_district" },
               { label: "Phường / Xã", id: "name_ward" },
             ].map(({ label, id }) => (
               <div className="mb-3" key={id}>

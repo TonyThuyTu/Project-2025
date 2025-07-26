@@ -1,13 +1,16 @@
 "use client";
 
+
+
 import { useState } from "react";
 import axios from "axios";
+
+import { toast } from "react-toastify";
 
 export default function UpdateAddressModal({ address, modalId, onUpdateSuccess }) {
   const [form, setForm] = useState({
     address_label: address.address_label || "",
     name_city: address.name_city || "",
-    name_district: address.name_district || "",
     name_ward: address.name_ward || "",
     name_address: address.name_address || "",
     is_primary: address.is_primary || false,
@@ -15,9 +18,16 @@ export default function UpdateAddressModal({ address, modalId, onUpdateSuccess }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'is_primary' && checked && !form.is_primary) {
+      if (!window.confirm('Bạn có chắc muốn đặt địa chỉ này làm mặc định? Địa chỉ mặc định cũ sẽ bị thay thế.')) {
+        return; // hủy toggle
+      }
+    }
+
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -27,13 +37,15 @@ export default function UpdateAddressModal({ address, modalId, onUpdateSuccess }
       await axios.put(`http://localhost:5000/api/address/${address.id_address}`, {
         ...form,
       });
+      toast.success("Cập nhật thành công!");
       // Close modal manually (Bootstrap 5)
       const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
       modal.hide();
 
       if (onUpdateSuccess) onUpdateSuccess();
     } catch (error) {
-      alert("Cập nhật thất bại: " + (error.response?.data?.message || error.message));
+      // alert("Cập nhật thất bại: " + (error.response?.data?.message || error.message));
+      toast.error(`${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -73,18 +85,6 @@ export default function UpdateAddressModal({ address, modalId, onUpdateSuccess }
                 className="form-control"
                 name="name_city"
                 value={form.name_city}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label">Quận / Huyện</label>
-              <input
-                type="text"
-                className="form-control"
-                name="name_district"
-                value={form.name_district}
                 onChange={handleChange}
                 required
               />

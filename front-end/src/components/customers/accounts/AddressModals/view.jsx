@@ -64,8 +64,8 @@ export default function ViewAddressModal({ addressId, modalId }) {
                 <dt className="col-sm-4">Thành phố / Tỉnh</dt>
                 <dd className="col-sm-8">{address.name_city}</dd>
 
-                <dt className="col-sm-4">Quận / Huyện</dt>
-                <dd className="col-sm-8">{address.name_district}</dd>
+                {/* <dt className="col-sm-4">Quận / Huyện</dt>
+                <dd className="col-sm-8">{address.name_district}</dd> */}
 
                 <dt className="col-sm-4">Phường / Xã</dt>
                 <dd className="col-sm-8">{address.name_ward}</dd>
