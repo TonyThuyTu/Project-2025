@@ -40,6 +40,7 @@ export default function OptionsManager({ options, setOptions }) {
       id_value: null,
       // idProductAttrVal: null,
       value: '',
+      value_note:'',
       extraPrice: 0,
       quantity: 0,
       status: 1,
@@ -206,15 +207,23 @@ export default function OptionsManager({ options, setOptions }) {
                 <tr key={j}>
                   <td>
                     {Number(option.type) === 2 ? (
-                      <div className="d-flex align-items-center gap-2">
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex align-items-center gap-2">
+                          <Form.Control
+                            type="color"
+                            value={val.value || '#000000'}
+                            onChange={(e) => updateValue(i, j, 'value', e.target.value)}
+                            title={val.label}
+                            style={{ width: 50, height: 50 }}
+                          />
+                          <span>{val.value}</span>
+                        </div>
                         <Form.Control
-                          type="color"
-                          value={val.value || '#000000'}
-                          onChange={(e) => updateValue(i, j, 'value', e.target.value)}
-                          title={val.label}
-                          style={{ width: 50, height: 50 }}
+                          type="text"
+                          placeholder="Nhập tên màu"
+                          value={val.value_note || ''}
+                          onChange={(e) => updateValue(i, j, 'value_note', e.target.value)}
                         />
-                        <span>{val.value}</span>
                       </div>
                     ) : (
                       <Form.Control

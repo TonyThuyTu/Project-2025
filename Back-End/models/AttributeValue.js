@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+    value_note: DataTypes.TEXT,
     quantity: DataTypes.INTEGER,
     extra_price: DataTypes.DECIMAL(10, 2),
     status: {

@@ -551,6 +551,7 @@ exports.updateProduct = async (req, res) => {
 
             if (exists) {
               exists.value = val.value?.toString() || '';
+              exists.value_note = val.value_note || null;
               exists.extra_price = parsedExtraPrice;
               exists.quantity = parsedQuantity;
               exists.status = parsedStatus;
@@ -564,6 +565,7 @@ exports.updateProduct = async (req, res) => {
             const newVal = await db.AttributeValue.create({
               id_attribute: attributeId,
               value: val.value?.toString() || '',
+              value_note: val.value_note || null, // 👈 thêm dòng này
               extra_price: parsedExtraPrice,
               quantity: parsedQuantity,
               status: parsedStatus,
@@ -1003,6 +1005,7 @@ exports.getProductsById = async (req, res) => {
         values: filteredValues.map(v => ({
           id_value: v.id_value,
           value: v.value,
+          value_note: v.value_note,
           extra_price: v.extra_price,
           quantity: v.quantity,
           status: v.status,

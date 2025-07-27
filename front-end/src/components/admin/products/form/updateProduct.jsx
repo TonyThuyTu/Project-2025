@@ -91,6 +91,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       values: (attr.values || []).map((val) => ({
         value_id: val.value_id || val.id_value || null,
         value: val.value || "",
+        value_note: val.value_note || "",
         extraPrice: val.extra_price || 0,
         quantity: val.quantity || 0,
         status: val.status ?? 2,
@@ -225,6 +226,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
           .map(val => ({
             value_id: val.value_id || val.id_value || null,
             value: val.value || val.label || "",
+            value_note: val.value_note || "",
             extra_price: val.extraPrice !== undefined ? Number(val.extraPrice) : 0,
             quantity: val.quantity !== undefined ? Number(val.quantity) : 0,
             status: val.status !== undefined ? Number(val.status) : 1,
