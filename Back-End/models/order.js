@@ -35,6 +35,11 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: 0,
             allowNull: false 
         },
+    note: 
+        {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
     order_date: 
         { 
             type: DataTypes.DATE, 

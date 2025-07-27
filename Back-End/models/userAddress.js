@@ -16,7 +16,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       name_city: DataTypes.STRING,
-      name_district: DataTypes.STRING,
       name_ward: DataTypes.STRING,
       name_address: DataTypes.STRING,
       is_primary: {
