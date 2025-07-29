@@ -170,6 +170,8 @@ export default function ProductList() {
         return <span className="badge bg-success">Hiển thị</span>;
       case 3:
         return <span className="badge bg-secondary">Bị ẩn</span>;
+      case 4:
+        return <span className="badge" style={{ backgroundColor: "#d0bfff", color: "#4b0082" }}>Sắp ra mắt</span>;
       default:
         return <span className="badge bg-info">Không xác định</span>;
     }
@@ -236,6 +238,7 @@ export default function ProductList() {
             <option value="1">Chờ duyệt</option>
             <option value="2">Hiển thị</option>
             <option value="3">Đã ẩn</option>
+            <option value="4">Hàng sắp về</option>
           </Form.Select>
         </Col>
 
@@ -269,59 +272,65 @@ export default function ProductList() {
               </tr>
             </thead>
             <tbody>
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center">
-                    Không có sản phẩm nào.
-                  </td>
-                </tr>
-              ) : (
-                products.map((product) => (
-                  <tr key={product.products_id}>
-                    <td>{product.products_name}</td>
-                    <td>
-                      <img
-                        src={
-                          product.main_image_url
-                            ? `http://localhost:5000${product.main_image_url}`
-                            : "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
-                        }
-                        alt="ảnh sản phẩm"
-                        width="80"
-                        height="80"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </td>
-                    <td>{product.market_price.toLocaleString("vi-VN")} ₫</td>
-                    <td>{product.sale_price.toLocaleString("vi-VN")} ₫</td>
-                    <td>
-                      {product.products_primary ? (
-                        <span className="badge bg-success">Đã ghim</span>
-                      ) : (
-                        <span className="badge bg-secondary">Chưa ghim</span>
-                      )}
-                    </td>
-                    <td>{getStatusText(product.products_status)}</td>
-                    <td>
-                      <button
-                        className="btn btn-info btn-sm me-2"
-                        onClick={() => router.push(`/admin/products?id=${product.products_id}`)}
-                      >
-                        Xem
-                      </button>
-                      <button
-                        className={`btn btn-sm ${
-                          product.products_primary ? "btn-warning" : "btn-success"
-                        }`}
-                        onClick={() => togglePrimary(product.products_id, product.products_primary)}
-                      >
-                        {product.products_primary ? "Bỏ ghim" : "Ghim"}
-                      </button>
+                {products.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="text-center">
+                      Không có sản phẩm nào.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
+                ) : (
+                  products.map((product) => {
+                    const marketPrice = product.market_price || 0;
+                    const salePrice = product.sale_price || 0;
+                    return (
+                      <tr key={product.products_id}>
+                        <td>{product.products_name}</td>
+                        <td>
+                          <img
+                            src={
+                              product.main_image_url
+                                ? `http://localhost:5000${product.main_image_url}`
+                                : "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
+                            }
+                            alt="ảnh sản phẩm"
+                            width="80"
+                            height="80"
+                            style={{ objectFit: "cover" }}
+                          />
+                        </td>
+                        <td>{marketPrice.toLocaleString("vi-VN")} ₫</td>
+                        <td>{salePrice.toLocaleString("vi-VN")} ₫</td>
+                        <td>
+                          {product.products_primary ? (
+                            <span className="badge bg-success">Đã ghim</span>
+                          ) : (
+                            <span className="badge bg-secondary">Chưa ghim</span>
+                          )}
+                        </td>
+                        <td>{getStatusText(product.products_status)}</td>
+                        <td>
+                          <button
+                            className="btn btn-info btn-sm me-2"
+                            onClick={() => router.push(`/admin/products?id=${product.products_id}`)}
+                          >
+                            Xem
+                          </button>
+                          {![1, 3].includes(product.products_status) && (
+                            <button
+                              className={`btn btn-sm ${
+                                product.products_primary ? "btn-warning" : "btn-success"
+                              }`}
+                              onClick={() => togglePrimary(product.products_id, product.products_primary)}
+                            >
+                              {product.products_primary ? "Bỏ ghim" : "Ghim"}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
           </table>
 
           {/* Pagination */}

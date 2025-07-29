@@ -21,6 +21,7 @@ export default function OptionsManager({ options, setOptions }) {
     const updated = [...options];
     updated[i].values.push({
       label: '',
+      value_note: '',
       extraPrice: 0,
       quantity: 0,
       status: 2,
@@ -86,7 +87,7 @@ export default function OptionsManager({ options, setOptions }) {
           <Form.Control
             value={newOptionName}
             onChange={(e) => setNewOptionName(e.target.value)}
-            placeholder="Tên option (VD: Màu sắc)"
+            placeholder="Tên option"
           />
         </Col>
         <Col sm={3}>
@@ -136,11 +137,21 @@ export default function OptionsManager({ options, setOptions }) {
                 <tr key={j}>
                   <td>
                     {option.type === 2 ? (
-                      <Form.Control
-                        type="color"
-                        value={val.label || '#000000'}
-                        onChange={(e) => updateValue(i, j, 'label', e.target.value)}
-                      />
+                      <div className="d-flex gap-2 align-items-center">
+                        <Form.Control
+                          type="color"
+                          value={val.label || '#000000'}
+                          onChange={(e) => updateValue(i, j, 'label', e.target.value)}
+                          style={{ width: 50, height: 38, padding: 2 }}
+                        />
+                        <Form.Control
+                          type="text"
+                          value={val.value_note || ''}
+                          placeholder="Tên màu"
+                          onChange={(e) => updateValue(i, j, 'value_note', e.target.value)}
+                          style={{ flex: 1 }}
+                        />
+                      </div>
                     ) : (
                       <Form.Control
                         value={val.label}

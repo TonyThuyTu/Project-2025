@@ -138,6 +138,7 @@ exports.createProducts = async (req, res) => {
 
       for (const val of attr.values) {
         const label = typeof val === 'string' ? val : val?.label;
+        const value_note = typeof val === 'object' ? val?.value_note?.trim() || null : null;
         if (!label?.trim()) continue;
 
         const [attributeValue] = await AttributeValue.findOrCreate({
@@ -148,9 +149,15 @@ exports.createProducts = async (req, res) => {
           defaults: {
             id_attribute: attribute.id_attribute,
             value: label.trim(),
+            value_note, // thêm vào đây
           },
           transaction: t,
         });
+
+        // Nếu đã tồn tại nhưng value_note khác thì cập nhật
+        if (attributeValue.value_note !== value_note) {
+          await attributeValue.update({ value_note }, { transaction: t });
+        }
 
         await ProductAttributeValue.findOrCreate({
           where: {
@@ -383,7 +390,16 @@ exports.updateProduct = async (req, res) => {
     if (products_quantity !== undefined) product.products_quantity = products_quantity;
     if (products_market_price !== undefined) product.products_market_price = products_market_price;
     if (products_sale_price !== undefined) product.products_sale_price = products_sale_price;
-    if (products_status !== undefined) product.products_status = products_status;
+
+    if (products_status !== undefined) {
+      product.products_status = products_status;
+
+      // Nếu sản phẩm bị ẩn thì gỡ ghim
+      if (Number(products_status) === 3) {
+        product.products_primary = false;
+      }
+    }
+
     if (products_description !== undefined) product.products_description = products_description;
     if (category_id && category_id !== "null") {
       product.category_id = parseInt(category_id);
@@ -1094,40 +1110,25 @@ exports.getProductsById = async (req, res) => {
 //get all products 
 exports.getAllProducts = async (req, res) => {
   try {
-    const {
-      search = "",
-      category_id,
-      parent_id,
-      status,
-      primary,
-      page = 1,
-      limit = 10,
-    } = req.query;
+    const { search = "", category_id, parent_id, status, primary, page = 1, limit = 7 } = req.query;
 
     const whereClause = {};
 
-    // Lọc theo danh mục con (ưu tiên nếu có)
     if (category_id) {
       whereClause.category_id = parseInt(category_id);
-    } 
-    // Nếu không có category_id, dùng parent_id để lấy tất cả danh mục con
-    else if (parent_id) {
-      const parentId = parseInt(parent_id);
-      const allIds = await getAllChildCategoryIds(parentId);
+    } else if (parent_id) {
+      const allIds = await getAllChildCategoryIds(parseInt(parent_id));
       whereClause.category_id = { [Op.in]: allIds };
     }
 
-    // Lọc theo trạng thái
     if (status !== undefined && status !== "") {
       whereClause.products_status = parseInt(status);
     }
 
-    // Lọc theo trạng thái ghim (primary)
     if (primary !== undefined && primary !== "") {
       whereClause.products_primary = primary === "true";
     }
 
-    // Tìm kiếm tên sản phẩm
     if (search) {
       whereClause.products_name = { [Op.like]: `%${search}%` };
     }
@@ -1146,22 +1147,69 @@ exports.getAllProducts = async (req, res) => {
           required: false,
           attributes: ["Img_url", "is_main"],
         },
+        {
+          model: ProductVariant,
+          as: 'variants',
+          required: false,
+          attributes: ['id_variant', 'price', 'price_sale'],
+        },
+        {
+          model: ProductAttributeValue,
+          as: 'productAttributeValues',
+          required: false,
+          include: [
+            {
+              model: AttributeValue,
+              as: 'attributeValue',
+              attributes: ['id_value', 'value', 'extra_price'],
+            }
+          ],
+        }
       ],
+      distinct: true,
       order: [["id_products", "DESC"]],
       limit: limitNum,
       offset,
     });
 
-    const formattedProducts = rows.map((p) => ({
-      products_id: p.id_products,
-      products_name: p.products_name,
-      market_price: parseFloat(p.products_market_price),
-      sale_price: parseFloat(p.products_sale_price),
-      products_primary: Boolean(p.products_primary),
-      products_status: p.products_status,
-      main_image_url: p.images?.[0]?.Img_url || null,
-      category_id: p.category_id,
-    }));
+    // map dữ liệu để xử lý giá theo logic productType ở backend
+    const formattedProducts = rows.map(p => {
+      // Tự xác định productType
+      let productType = 1;
+      if (p.variants && p.variants.length > 0) {
+        productType = 3;
+      } else if (p.productAttributeValues && p.productAttributeValues.length > 0) {
+        productType = 2;
+      }
+
+      let marketPrice = parseFloat(p.products_market_price);
+      let salePrice = parseFloat(p.products_sale_price);
+
+      if (productType === 2) {
+        // Giá thị trường giữ nguyên
+        const firstAttrValue = p.productAttributeValues?.[0]?.attributeValue;
+        if (firstAttrValue && firstAttrValue.extra_price != null) {
+          salePrice = parseFloat(firstAttrValue.extra_price);
+        }
+      } else if (productType === 3) {
+        if (p.variants && p.variants.length > 0) {
+          marketPrice = parseFloat(p.variants[0].price);
+          salePrice = parseFloat(p.variants[0].price_sale);
+        }
+      }
+
+      return {
+        products_id: p.id_products,
+        products_name: p.products_name,
+        market_price: marketPrice,
+        sale_price: salePrice,
+        products_primary: Boolean(p.products_primary),
+        products_status: p.products_status,
+        main_image_url: p.images?.[0]?.Img_url || null,
+        category_id: p.category_id,
+        productType,
+      };
+    });
 
     res.json({
       products: formattedProducts,
@@ -1170,14 +1218,13 @@ exports.getAllProducts = async (req, res) => {
         totalPages: Math.ceil(count / limitNum),
         currentPage: pageNum,
         pageSize: limitNum,
-      },
+      }
     });
   } catch (err) {
     console.error("Lỗi khi lấy danh sách sản phẩm:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 //primary products
 exports.togglePrimary = async (req, res) => {

@@ -365,7 +365,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
           <div className="mt-3">
             <label className="form-label">Trạng thái sản phẩm</label>
             <select className="form-select" value={status} onChange={(e) => setStatus(Number(e.target.value))}>
-              <option value={1}>Đang chờ duyệt</option>
+              {/* <option value={1}>Đang chờ duyệt</option> */}
               <option value={2}>Hiển thị</option>
               <option value={3}>Đã ẩn</option>
               <option value={4}>Sắp ra mắt</option>
