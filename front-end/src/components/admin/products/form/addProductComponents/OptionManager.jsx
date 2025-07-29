@@ -115,7 +115,7 @@ export default function OptionsManager({ options, setOptions }) {
               />
             </Col>
             <Col sm="auto">
-              {options.length > 1 && (
+              {options.length > 0 && (
                 <Button variant="danger" size="sm" onClick={() => removeOption(i)}>Xoá</Button>
               )}
             </Col>
@@ -137,13 +137,16 @@ export default function OptionsManager({ options, setOptions }) {
                 <tr key={j}>
                   <td>
                     {option.type === 2 ? (
-                      <div className="d-flex gap-2 align-items-center">
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex align-items-center gap-2">
                         <Form.Control
                           type="color"
                           value={val.label || '#000000'}
                           onChange={(e) => updateValue(i, j, 'label', e.target.value)}
                           style={{ width: 50, height: 38, padding: 2 }}
                         />
+                        <span>{val.label}</span>
+                        </div>
                         <Form.Control
                           type="text"
                           value={val.value_note || ''}

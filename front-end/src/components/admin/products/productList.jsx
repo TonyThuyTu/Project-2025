@@ -311,7 +311,11 @@ export default function ProductList() {
                         <td>
                           <button
                             className="btn btn-info btn-sm me-2"
-                            onClick={() => router.push(`/admin/products?id=${product.products_id}`)}
+                            onClick={() => {
+                              const params = new URLSearchParams(searchParams);
+                              params.set("id", product.products_id);
+                              router.push(`/admin/products?${params.toString()}`);
+                            }}
                           >
                             Xem
                           </button>

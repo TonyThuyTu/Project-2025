@@ -185,7 +185,7 @@ export default function OptionsManager({ options, setOptions }) {
               />
             </Col>
             <Col sm="auto">
-              {options.length > 1 && (
+              {options.length > 0 && (
                 <Button variant="danger" size="sm" onClick={() => removeOption(i)}>Xoá</Button>
               )}
             </Col>

@@ -1174,28 +1174,38 @@ exports.getAllProducts = async (req, res) => {
 
     // map dữ liệu để xử lý giá theo logic productType ở backend
     const formattedProducts = rows.map(p => {
+      
       // Tự xác định productType
       let productType = 1;
+
       if (p.variants && p.variants.length > 0) {
         productType = 3;
       } else if (p.productAttributeValues && p.productAttributeValues.length > 0) {
         productType = 2;
       }
 
-      let marketPrice = parseFloat(p.products_market_price);
-      let salePrice = parseFloat(p.products_sale_price);
+      let marketPrice = parseFloat(p.products_market_price) || 0;
+      let salePrice = parseFloat(p.products_sale_price) || 0;
 
       if (productType === 2) {
+
         // Giá thị trường giữ nguyên
-        const firstAttrValue = p.productAttributeValues?.[0]?.attributeValue;
-        if (firstAttrValue && firstAttrValue.extra_price != null) {
-          salePrice = parseFloat(firstAttrValue.extra_price);
+        const extraPrices = p.productAttributeValues
+          .map(item => parseFloat(item?.attributeValue?.extra_price))
+          .filter(val => !isNaN(val));
+
+        if (extraPrices.length > 0) {
+          salePrice = Math.min(...extraPrices);
         }
+
       } else if (productType === 3) {
-        if (p.variants && p.variants.length > 0) {
-          marketPrice = parseFloat(p.variants[0].price);
-          salePrice = parseFloat(p.variants[0].price_sale);
-        }
+
+        const variantPrices = p.variants.map(v => parseFloat(v.price)).filter(v => !isNaN(v));
+        const variantSalePrices = p.variants.map(v => parseFloat(v.price_sale)).filter(v => !isNaN(v));
+
+        if (variantPrices.length > 0) marketPrice = Math.min(...variantPrices);
+        if (variantSalePrices.length > 0) salePrice = Math.min(...variantSalePrices);
+
       }
 
       return {
