@@ -67,6 +67,9 @@ export default function CategoriesList() {
             </div>
           </td>
           <td>
+            {category.note}
+          </td>
+          <td>
             {category.img ? (
               <img
                 src={`http://localhost:5000/uploads/${category.img}`}
@@ -75,15 +78,16 @@ export default function CategoriesList() {
               />
             ) : '—'}
           </td>
+          
           <td>{category.is_active ? 'Ẩn' : 'Hiển thị'}</td>
           <td>{category.is_primary ? 'Đang ghim' : 'Không'}</td>
           <td>
-            <button
+            {/* <button
               className="btn btn-sm btn-success me-1"
               onClick={() => handleCreateSubCategory(category.category_id)}
             >
               + Thêm danh mục con
-            </button>
+            </button> */}
             <button
               className="btn btn-sm btn-warning me-1"
               onClick={() => handleEdit(category)}
@@ -123,6 +127,7 @@ export default function CategoriesList() {
         <thead className="table-light">
           <tr>
             <th>Tên danh mục</th>
+            <th>Tiêu đề danh mụch</th>
             <th>Ảnh Banner</th>
             <th>Trạng thái</th>
             <th>Trang chủ</th>

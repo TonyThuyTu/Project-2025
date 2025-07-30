@@ -3,6 +3,7 @@ import axios from 'axios';
 
 export default function EditCategoryModal({ show, onClose, onSave, category }) {
   const [name, setName] = useState('');
+  const [note, setNote] = useState('');
   const [parentId, setParentId] = useState('');
   const [isActive, setIsActive] = useState(false);
   const [isPrimary, setIsPrimary] = useState(false);
@@ -18,6 +19,7 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
 
       if (category) {
         setName(category.name || '');
+        setNote(category.note || '');
         setParentId(category.parent_id || '');
         setIsActive(category.is_active || false);
         setIsPrimary(category.is_primary || false);
@@ -41,6 +43,7 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
     e.preventDefault();
     const form = new FormData();
     form.append('name', name);
+    form.append('note', note);
     form.append('parent_id', parentId || '');
     form.append('is_active', isActive);
     form.append('is_primary', isPrimary);
@@ -73,6 +76,11 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
             <div className="mb-3">
               <label className="form-label">Tên danh mục</label>
               <input type="text" className="form-control" value={name} onChange={e => setName(e.target.value)} required />
+            </div>
+            {/* Note */}
+            <div className="mb-3">
+              <label className="form-label">Tiêu đề danh mục</label>
+              <input type="text" className="form-control" value={note} onChange={e => setNote(e.target.value)} required />
             </div>
             {/* Preview ảnh */}
             {previewImg && (

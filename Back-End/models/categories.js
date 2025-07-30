@@ -10,6 +10,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true,
     },
+    note : {
+      type:DataTypes.TEXT,
+      allowNull: false,
+    },
     img: {
       type: DataTypes.STRING(225),
       allowNull: true,

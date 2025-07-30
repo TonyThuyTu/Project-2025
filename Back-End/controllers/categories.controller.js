@@ -5,7 +5,7 @@ exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.findAll({
       where: { parent_id: null }, // Bỏ is_active tạm thời
-      attributes: ['category_id', 'name', 'img', 'is_active', 'is_primary', 'parent_id'],
+      attributes: ['category_id', 'name','note', 'img', 'is_active', 'is_primary', 'parent_id'],
       include: [
         {
           model: Category,
@@ -132,7 +132,7 @@ exports.togglePrimary = async (req, res) => {
 // Cập nhật danh mục
 exports.updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { name, parent_id, is_active, is_primary } = req.body;
+  const { name, note, parent_id, is_active, is_primary } = req.body;
 
   try {
     const category = await Category.findByPk(id);
@@ -144,6 +144,7 @@ exports.updateCategory = async (req, res) => {
     }
 
     category.name = name || category.name;
+    category.note = note || category.note;
     category.parent_id = parent_id || null;
     category.is_active = is_active !== undefined ? is_active : category.is_active;
     category.is_primary = is_primary !== undefined ? is_primary : category.is_primary;
