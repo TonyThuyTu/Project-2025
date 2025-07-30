@@ -46,18 +46,16 @@ export default function Banner() {
         </div>
 
         {/* Slide ảnh */}
-        <div className="carousel-inner text-center">
+        <div className="carousel-inner">
           {banners.map((banner, index) => (
             <div
               key={banner.id_banner}
               className={`carousel-item ${index === 0 ? "active" : ""}`}
             >
-              <Image
+              <img
                 src={`http://localhost:5000/uploads/${banner.banner_img}`}
-                className="banner-img"
                 alt={`Banner ${banner.id_banner}`}
-                width={1200}
-                height={600}
+                className="d-block w-100 banner-img"
               />
             </div>
           ))}

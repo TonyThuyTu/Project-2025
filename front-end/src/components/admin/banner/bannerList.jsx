@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BannerModal from "./bannerModal/add"; // Đường dẫn đúng với file của bạn nhé
+import { Toast } from "bootstrap";
+import { toast } from "react-toastify";
 
 export default function BannerManager() {
   const [banners, setBanners] = useState([]);
@@ -49,19 +51,22 @@ export default function BannerManager() {
         await axios.put(`http://localhost:5000/api/banner/${editId}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        alert("Cập nhật banner thành công");
+        // alert("Cập nhật banner thành công");
+        toast.success('Cập nhật thành công!');
       } else {
         // Create banner
         await axios.post("http://localhost:5000/api/banner", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        alert("Thêm banner thành công");
+        // alert("Thêm banner thành công");
+        toast.success('Thêm thành công!');
       }
       setShowModal(false);
       fetchBanners();
     } catch (error) {
       console.error("Lỗi khi thêm/cập nhật banner:", error);
-      alert("Có lỗi xảy ra");
+      // alert("Có lỗi xảy ra");
+      toast.error('Có lỗi xảy ra!');
     }
   };
 
@@ -69,7 +74,8 @@ export default function BannerManager() {
     if (!window.confirm("Bạn có chắc muốn xóa banner này?")) return;
     try {
       await axios.delete(`http://localhost:5000/api/banner/${id}`);
-      alert("Xóa banner thành công");
+      // alert("Xóa banner thành công");
+      toast.success('Xóa thành công!');
       fetchBanners();
     } catch (error) {
       console.error("Lỗi khi xóa banner:", error);
@@ -109,8 +115,6 @@ export default function BannerManager() {
                     alt="Banner"
                     style={{ width: 200, height: 100, objectFit: "cover" }}
                     />
-
-
                 </td>
                 <td>
                   <button

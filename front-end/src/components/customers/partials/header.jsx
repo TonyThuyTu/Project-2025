@@ -117,7 +117,9 @@ const HeaderClient = () => {
       <nav className="navbar navbar-expand-lg navbar-light shadow">
         <div className="container d-flex justify-content-between align-items-center">
           <Link href="/" className="navbar-brand text-success logo h1 align-self-center">
-            Táo Bro
+            <img src="/assets/image/IMG_2254.jpg" 
+            alt="logo" 
+            style={{ width: "auto", height: "60px" }} />
           </Link>
 
           <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#templatemo_main_nav" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,35 +127,21 @@ const HeaderClient = () => {
           </button>
 
           <div className="align-self-center collapse navbar-collapse flex-fill d-lg-flex justify-content-lg-between" id="templatemo_main_nav">
+
             <div className="flex-fill">
               <ul className="nav navbar-nav d-flex justify-content-between mx-lg-auto">
                 <li className="nav-item">
                   <Link href="/" className="nav-link">Trang Chủ</Link>
                 </li>
-                <li className="nav-item">
-                  <Link href="/aboutUs" className="nav-link">Giới Thiệu</Link>
-                </li>
-                <li className="nav-item dropdown">
-                  <a
-                    className="nav-link dropdown-toggle"
-                    href="#"
-                    id="productDropdown"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Sản phẩm
-                  </a>
-                  <ul className="dropdown-menu" aria-labelledby="productDropdown">
-                    {parentCategories.map(cat => (
-                      <li key={cat.category_id}>
-                        <Link href={`/products/${cat.name}`} className="dropdown-item">
+                
+                {parentCategories.map(cat => (
+                      <li className="nav-item mx-2" key={cat.category_id} >
+                        <Link href={`/products/${cat.name}`} className="nav-link">
                           {cat.name}
                         </Link>
                       </li>
-                    ))}
-                  </ul>
-                </li>
+                  ))}
+    
                 <li className="nav-item">
                   <Link href="/contact" className="nav-link">Liên Hệ</Link>
                 </li>
