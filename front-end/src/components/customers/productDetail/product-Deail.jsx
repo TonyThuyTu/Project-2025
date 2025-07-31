@@ -1,9 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import BasicInfo from "./productDeatailInfo";
-import ProductImg from "./productDeailImg";
-import ProductDetailDescription from "./productDetailDescription";
+import '../../../../public/assets/css/productDetail.css';
+import ProductActions from "./productAction";
+import ProductDescription from "./productDescription";
+import ProductGallery from "./productGallery";
+import ProductReview from "./productReview";
+import ProductSpec from "./productSpec";
+import ProductOptions from "./productOptions";
+import ProductTitle from "./productTitle";
 
 const baseURL = "http://localhost:5000";
 
@@ -105,33 +110,28 @@ export default function ProductDeatail({ product, productId }) {
       : allImages.find((img) => img.includes("/uploads/")) || allImages[0] || null;
 
   return (
-    <section className="bg-light">
-      <div className="container pb-5">
-        <div className="row">
-          <ProductImg
-            images={imagesForColor.length > 0 ? imagesForColor : allImages}
-            mainImage={mainImage}
-            attributes={productData.attributes || []}
-            selectedColor={selectedColor}
+        <>
+          <ProductTitle 
+            name = {productData.products_name}
+            title = {productData.products_shorts}
           />
-          <BasicInfo
-            name={productData.products_name}
-            price={productData.products_sale_price}
-            originalPrice={productData.products_market_price}
-            attributes={productData.attributes || []}
-            variants={productData.skus || []}
-            onColorChange={setSelectedColor}
-            id_product={productData.id_products}
+            <section className="container split" id="buy">
+              <ProductGallery />
+              <aside className="purchase" aria-labelledby="configHeading">
+                <ProductOptions />
+                <ProductActions />
+              </aside>
+            </section>
+          <ProductDescription 
+            description = {productData.products_description}
+          />
+          <ProductSpec
+            specs = {productData.specs} 
+          />
+          <ProductReview
+            id_products={params.id}
             id_customer={idCustomer}
           />
-          <ProductDetailDescription
-            products_description={productData.products_description}
-            specs={productData.specs}
-            faq=""
-            id_products={productData.id_products}
-          />
-        </div>
-      </div>
-    </section>
-  );
+        </>
+       );
 }
