@@ -1,5 +1,6 @@
 import React from "react";
 
+
 export default function ProductGrid({ products = [] }) {
   const formatVND = (number) => {
     const value = Number(number);
@@ -25,59 +26,31 @@ export default function ProductGrid({ products = [] }) {
   }
 
   return (
-    <section className="bg-light">
-      <div className="container py-3">
-        <div className="row">
-          {products.map((product, i) => {
-            const mainImg =
-              product?.images?.find((img) => img.is_main)?.Img_url ||
-              product?.images?.[0]?.Img_url ||
-              null;
+    <section className={products}>
+      <div className='grid'>
+        {products.map((product, i) => {
+          const mainImg =
+            product?.images?.find((img) => img.is_main)?.Img_url ||
+            product?.images?.[0]?.Img_url ||
+            null;
 
-            const imgUrl = getImageUrl(mainImg);
+          const imgUrl = getImageUrl(mainImg);
 
-            return (
-              <div key={product.id_products || i} className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-                <div className="card h-100 shadow-sm border-0 rounded-4">
-                  <a href={`/productDetail/${product.slug || product.id_products}`}>
-                    <img
-                      src={imgUrl}
-                      className="card-img-top p-3 rounded-4"
-                      alt={product.products_name}
-                      style={{ maxHeight: "220px", objectFit: "contain" }}
-                    />
-                  </a>
-                  <div className="card-body text-center">
-                    <h6 className="card-title mb-2">
-                      <a
-                        href={`/productDetail/${product.slug || product.id_products}`}
-                        className="text-decoration-none text-dark fw-bold"
-                      >
-                        {product.products_name}
-                      </a>
-                    </h6>
-                    <div className="mb-2">
-                      <span className="text-danger fw-bold">
-                        {formatVND(product.products_sale_price)}
-                      </span>{" "}
-                      {product.products_market_price && (
-                        <span className="text-muted text-decoration-line-through small">
-                          {formatVND(product.products_market_price)}
-                        </span>
-                      )}
-                    </div>
-                    <a
-                      href={`/productDetail/${product.slug || product.id_products}`}
-                      className="btn btn-outline-dark btn-sm rounded-pill px-3"
-                    >
-                      Xem chi tiết
-                    </a>
-                  </div>
-                </div>
+          return (
+            <div key={product.id_products || i} className='product-card'>
+              <a href={`/productDetail/${product.slug || product.id_products}`}>
+                <img src={imgUrl} alt={product.products_name} />
+              </a>
+              <h3>{product.products_name}</h3>
+              <p> Giá chỉ từ {formatVND(product.products_sale_price)}</p>
+              <div className="buttons-buy">
+                <a href={`/productDetail/${product.slug || product.id_products}`}>
+                  Xem chi tiết
+                </a>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

@@ -172,7 +172,7 @@ exports.getParentCategories = async (req, res) => {
   try {
     const categories = await Category.findAll({
       where: { is_active: 0, parent_id: null },
-      order: [['name', 'ASC']],
+      order: [['name','ASC']],
     });
     res.json(categories);
   } catch (err) {
@@ -189,7 +189,7 @@ exports.getCategoryDetail = async (req, res) => {
     // 1. Lấy thông tin danh mục cha
     const parentCategory = await Category.findOne({
       where: { name, parent_id: null },
-      attributes: ['category_id', 'name', 'img'],
+      attributes: ['category_id', 'name', 'note', 'img'],
     });
 
     if (!parentCategory) {
@@ -236,6 +236,7 @@ exports.getCategoryDetail = async (req, res) => {
       category_id: parentId,
       name: parentCategory.name,
       img: parentCategory.img,
+      note: parentCategory.note,
       children,
       products, // bao gồm sản phẩm của cả cha và con
     });

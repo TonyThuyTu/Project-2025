@@ -6,6 +6,7 @@ import axios from 'axios';
 
 const HeaderClient = () => {
   const router = useRouter();
+  const [customer, setCustomer] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [parentCategories, setParentCategories] = useState([]);
   const [isPending, startTransition] = useTransition();
@@ -26,6 +27,7 @@ const HeaderClient = () => {
       if (!token) {
         setIsLoggedIn(false);
         setCartItems([]);
+        
         return;
       }
 
@@ -34,7 +36,7 @@ const HeaderClient = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         const user = res.data;
-
+        setCustomer(user);
         if (user.status === false) {
           alert(`Tài khoản của bạn đã bị chặn: ${user.block_reason || "Không rõ lý do"}`);
           localStorage.removeItem('token');
@@ -171,7 +173,7 @@ const HeaderClient = () => {
 
               <div className="dropdown">
                 <a
-                  className="nav-icon position-relative text-decoration-none"
+                  className="nav-icon position-relative text-decoration-none d-flex align-items-center gap-2"
                   href="#"
                   id="accountDropdown"
                   role="button"
@@ -179,6 +181,7 @@ const HeaderClient = () => {
                   aria-expanded="false"
                 >
                   <i className="fa fa-fw fa-user text-dark"></i>
+                      
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end mt-2" aria-labelledby="accountDropdown">
                   {!isLoggedIn ? (
@@ -204,10 +207,14 @@ const HeaderClient = () => {
                   )}
                 </ul>
               </div>
+              {isLoggedIn && customer && (
+                <span className="text-dark ">Xin chào, {customer.name}</span>
+              )} 
             </div>
           </div>
         </div>
       </nav>
+      
 
       {/* Modal search */}
       <div className="modal fade bg-white" id="templatemo_search" tabIndex="-1" role="dialog" aria-hidden="true">

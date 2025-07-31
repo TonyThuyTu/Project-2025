@@ -41,9 +41,14 @@ export default function ProductList() {
   if (!categoryData) return <div>Không tìm thấy danh mục</div>;
 
   return (
-    <div>
+    <div className="mb-5">
       {/* Banner danh mục cha */}
-      <BannerCategory bannerImg={categoryData.img} title={categoryData.name} />
+      <BannerCategory 
+      bannerImg={categoryData.img} 
+      title={categoryData.name} 
+      name={categoryData.name}
+      subText={categoryData.note || "Khám phá sản phẩm"}
+      />
 
       {/* Danh mục con */}
       <CategoryChildren childrenCategories={categoryData.children} />

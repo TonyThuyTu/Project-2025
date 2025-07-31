@@ -57,58 +57,52 @@ export default function ProductFilter({ name = "" }) {
 
   return (
     
-        <div className="container py-3" style={{ maxWidth: 1320 }}>
-      <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <h2 className="fw-bold mb-0">
-          Tất cả sản phẩm {name && `- ${name}`}
-        </h2>
-
-        <select
-          className="form-select w-auto"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="featured">Nổi bật</option>
-          <option value="price_asc">Giá thấp đến cao</option>
-          <option value="price_desc">Giá cao đến thấp</option>
-          <option value="newest">Mới nhất</option>
-        </select>
-      </div>
-
-      <div className="d-flex flex-wrap gap-2">
-        {filters.map((filter) => (
-          <div
-            key={filter.label}
-            ref={(el) => (dropdownRefs.current[filter.label] = el)}
-          >
-            <DropdownButton
-              drop="down"
-              title={filter.label}
-              variant="outline-secondary"
-              className="rounded-pill"
-              style={{ minWidth: 50 }}
-              onToggle={(isOpen) => isOpen && handleToggle(filter.label)}
-            >
-              <div className="px-3 py-2">
-                {filter.options.map((option) => (
-                  <Form.Check
-                    key={option}
-                    type="checkbox"
-                    label={option}
-                    checked={
-                      selectedFilters[filter.label]?.includes(option) || false
-                    }
-                    onChange={() =>
-                      handleCheckboxChange(filter.label, option)
-                    }
-                  />
-                ))}
+      <div className="container py-3" style={{ maxWidth: 1520 }}>
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div className="d-flex flex-wrap gap-2">
+            {filters.map((filter) => (
+              <div
+                key={filter.label}
+                ref={(el) => (dropdownRefs.current[filter.label] = el)}
+              >
+                <DropdownButton
+                  drop="down"
+                  title={filter.label}
+                  variant="outline-secondary"
+                  className="rounded-pill"
+                  style={{ minWidth: 50 }}
+                  onToggle={(isOpen) => isOpen && handleToggle(filter.label)}
+                >
+                  <div className="px-3 py-2">
+                    {filter.options.map((option) => (
+                      <Form.Check
+                        key={option}
+                        type="checkbox"
+                        label={option}
+                        checked={
+                          selectedFilters[filter.label]?.includes(option) || false
+                        }
+                        onChange={() =>
+                          handleCheckboxChange(filter.label, option)
+                        }
+                      />
+                    ))}
+                  </div>
+                </DropdownButton>
               </div>
-            </DropdownButton>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
-    
+            <select
+              className="form-select w-auto"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="featured">Nổi bật</option>
+              <option value="price_asc">Giá thấp đến cao</option>
+              <option value="price_desc">Giá cao đến thấp</option>
+              <option value="newest">Mới nhất</option>
+            </select>
+          </div>
+     </div>
   );
 }

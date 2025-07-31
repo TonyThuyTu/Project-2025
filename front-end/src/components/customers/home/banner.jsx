@@ -25,7 +25,7 @@ export default function Banner() {
   }
 
   return (
-    <div className="bannerback">
+    <div className="bannerback mt-2">
       <div
         id="carouselExample"
         className="carousel slide"
