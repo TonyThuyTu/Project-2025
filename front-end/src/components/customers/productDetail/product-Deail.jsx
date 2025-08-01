@@ -18,6 +18,10 @@ export default function ProductDeatail({ product, productId }) {
   const [selectedColor, setSelectedColor] = useState(null);
   const [imagesForColor, setImagesForColor] = useState([]);
   const [idCustomer, setIdCustomer] = useState(null);
+  const [selectedPrice, setSelectedPrice] = useState(productData?.sale_price || 0);
+  const [selectedOriginalPrice, setSelectedOriginalPrice] = useState(productData?.market_price || 0);
+  const [selectedValues, setSelectedValues] = useState([]);
+  const [selectedSku, setSelectedSku] = useState(null);
 
   // ✅ Hàm giải mã token và lấy id_customer
   const getCustomerIdFromToken = () => {
@@ -31,6 +35,14 @@ export default function ProductDeatail({ product, productId }) {
       return null;
     }
   };
+
+
+  useEffect(() => {
+  if (productData) {
+    setSelectedPrice(productData.sale_price || 0);
+    setSelectedOriginalPrice(productData.market_price || 0);
+  }
+}, [productData]);
 
   // ✅ Lấy id_customer từ token khi mounted
   useEffect(() => {
@@ -116,10 +128,33 @@ export default function ProductDeatail({ product, productId }) {
             title = {productData.products_shorts}
           />
             <section className="container split" id="buy">
-              <ProductGallery />
+              <ProductGallery 
+              images={imagesForColor.length > 0 ? imagesForColor : allImages} 
+              />
+
               <aside className="purchase" aria-labelledby="configHeading">
-                <ProductOptions />
-                <ProductActions />
+
+                <ProductOptions
+                  attributes={productData.attributes}
+                  selectedValues={selectedValues}
+                  setSelectedValues={setSelectedValues}
+                  skus={productData.skus}
+                  setSelectedPrice={setSelectedPrice}
+                  setSelectedOriginalPrice={setSelectedOriginalPrice}
+                  setSelectedSku={setSelectedSku}
+                  setSelectedColor={setSelectedColor}
+                  price={selectedPrice}
+                  originalPrice={selectedOriginalPrice}
+                />
+
+
+               <ProductActions
+                selectedSku={selectedSku}
+                idCustomer={idCustomer}
+                productId={params.id}
+                quantity={selectedSku?.quantity || 1}
+              />
+
               </aside>
             </section>
           <ProductDescription 

@@ -1076,6 +1076,43 @@ exports.getProductsById = async (req, res) => {
       })),
     }));
 
+    // Xác định loại sản phẩm (giống như getAllProducts)
+    let productType = 1;
+
+    if (skus && skus.length > 0) {
+      productType = 3;
+    } else if (attributes && attributes.length > 0) {
+      productType = 2;
+    }
+
+    // Tính giá hiển thị đúng theo loại
+    let originalPrice = parseFloat(product.products_market_price) || 0;
+    let salePrice = parseFloat(product.products_sale_price) || 0;
+
+    if (productType === 2) {
+      // Lấy giá nhỏ nhất từ extra_price
+      const extraPrices = attributes.flatMap(attr =>
+        attr.values.map(v => parseFloat(v.extra_price || 0))
+      ).filter(n => !isNaN(n));
+
+      if (extraPrices.length > 0) {
+        salePrice += Math.min(...extraPrices);
+      }
+
+    } else if (productType === 3) {
+      const variantPrices = skus.map(sku => parseFloat(sku.price)).filter(n => !isNaN(n));
+      const variantSalePrices = skus.map(sku => parseFloat(sku.price_sale)).filter(n => !isNaN(n));
+
+      if (variantPrices.length > 0) {
+        originalPrice = Math.min(...variantPrices);
+      }
+
+      if (variantSalePrices.length > 0) {
+        salePrice = Math.min(...variantSalePrices);
+      }
+    }
+
+
     // Format response để khớp với frontend
     const response = {
       product: {
@@ -1088,6 +1125,9 @@ exports.getProductsById = async (req, res) => {
         products_quantity: product.products_quantity,
         products_status: product.products_status,
         products_primary: product.products_primary,
+        //price for customers
+        market_price: originalPrice,
+        sale_price: salePrice,
       },
       category: product.category || null,
       images,
