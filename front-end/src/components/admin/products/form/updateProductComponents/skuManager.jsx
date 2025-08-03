@@ -43,11 +43,16 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
       return;
     }
 
-    const comboToUse = unusedCombos[0].map((val, i) => ({
-      value: val,
-      label: options[i].values.find((v) => v.value === val)?.label || val,
-      optionName: options[i].name,
-    }));
+    const comboToUse = unusedCombos[0].map((val, i) => {
+      const option = options[i];
+      const valueObj = option.values.find((v) => v.value == val || v.label == val); // tránh so sánh sai kiểu
+      return {
+        value: valueObj.value,
+        label: valueObj.label || valueObj.value,
+        optionName: option.name,
+        id_value: valueObj.id_value || valueObj.id, // cần chính xác từ `options`
+      };
+    });
 
     const newSku = {
       combo: comboToUse,
@@ -72,6 +77,7 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
       value: newValue,
       label: valueObj?.label || newValue,
       optionName: option.name,
+      id_value: valueObj?.id_value || valueObj?.id || null, // <-- thêm dòng này
     };
 
     // Kiểm tra combo trùng
@@ -164,6 +170,7 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
                             value: v.value,
                             label: v.label,
                             optionName: opt.name,
+                            id_value: v.id_value || v.id,
                           };
                           const comboExisted = isComboExist(
                             testCombo,
@@ -217,14 +224,6 @@ export default function SkuManager({ options = [], skuList = [], setSkuList }) {
                   size="sm"
                 />
               </td>
-              {/* <td>
-                <Form.Control
-                  type="text"
-                  value={skuItem.sku_code || ""}
-                  onChange={(e) => handleChange(index, "sku_code", e.target.value)}
-                  size="sm"
-                />
-              </td> */}
               <td>
                 <Form.Select
                   value={skuItem.status}

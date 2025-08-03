@@ -118,11 +118,7 @@ exports.createProducts = async (req, res) => {
       const name = attr.name.trim();
       const type = Number(attr.type ?? 0); // Mặc định type = 0 nếu không có
 
-      const [attribute] = await Attribute.findOrCreate({
-        where: { name },
-        defaults: { name, type },
-        transaction: t,
-      });
+      const attribute = await Attribute.create({ name, type }, { transaction: t });
 
       // Nếu attribute đã tồn tại nhưng type chưa đúng → cập nhật lại type
       if (attribute.type === null || attribute.type !== type) {
@@ -139,20 +135,15 @@ exports.createProducts = async (req, res) => {
       for (const val of attr.values) {
         const label = typeof val === 'string' ? val : val?.label;
         const value_note = typeof val === 'object' ? val?.value_note?.trim() || null : null;
+        const extra_price = typeof val === 'object' && val.extra_price ? val.extra_price : 0;
         if (!label?.trim()) continue;
 
-        const [attributeValue] = await AttributeValue.findOrCreate({
-          where: {
-            id_attribute: attribute.id_attribute,
-            value: label.trim(),
-          },
-          defaults: {
-            id_attribute: attribute.id_attribute,
-            value: label.trim(),
-            value_note, // thêm vào đây
-          },
-          transaction: t,
-        });
+        const attributeValue = await AttributeValue.create({
+          id_attribute: attribute.id_attribute,
+          value: label.trim(),
+          extra_price,
+          value_note,
+        }, { transaction: t });
 
         // Nếu đã tồn tại nhưng value_note khác thì cập nhật
         if (attributeValue.value_note !== value_note) {
@@ -253,6 +244,7 @@ exports.createProducts = async (req, res) => {
     res.status(201).json({ message: 'Tạo sản phẩm thành công', product: newProduct });
   } catch (err) {
     await t.rollback();
+    console.error('❌ Lỗi tạo sản phẩm:', err);
     res.status(500).json({ message: 'Lỗi khi tạo sản phẩm', error: err.message });
   }
 };
@@ -375,7 +367,7 @@ exports.updateProduct = async (req, res) => {
       products_status,
       products_description,
       products_quantity,
-      products_shorts,
+      products_shorts, 
       category_id,
       specs,
       optionImages,
@@ -859,15 +851,28 @@ exports.updateProduct = async (req, res) => {
           // Tạo VariantValue mới
           for (const combo of option_combo) {
             console.log("Option combo item:", combo);
-            const attrVal = await db.AttributeValue.findOne({
-              where: { value: combo.value?.toString() || '' },
-              include: [{
-                model: db.Attribute,
-                as: 'attribute',
-                where: { name: combo.attribute }
-              }],
-              transaction: t
-            });
+
+            let attrVal = null;
+
+            if (combo.id_value) {
+              attrVal = await db.AttributeValue.findOne({
+                where: { id_value: combo.id_value },
+                transaction: t,
+              });
+            }
+
+            // Nếu không có hoặc không tìm thấy → fallback tìm bằng value + attribute name
+            if (!attrVal) {
+              attrVal = await db.AttributeValue.findOne({
+                where: { value: combo.value?.toString() || '' },
+                include: [{
+                  model: db.Attribute,
+                  as: 'attribute',
+                  where: { name: combo.attribute }
+                }],
+                transaction: t
+              });
+            }
 
             if (attrVal) {
               console.log("Found AttributeValue:", attrVal.id_value);
@@ -1061,7 +1066,6 @@ exports.getProductsById = async (req, res) => {
       .filter(variant => variant.variantValues.length === attributes.length)
       .map(variant => ({
         variant_id: variant.id_variant,
-        sku_code: variant.sku,
         quantity: variant.quantity,
         price: variant.price,
         price_sale: variant.price_sale,
@@ -1298,56 +1302,45 @@ exports.togglePrimary = async (req, res) => {
 };
 
 // delete products
-exports.deleteProduct = async (req, res) => {
-  const t = await db.sequelize.transaction();
+// deleteProductHard.js
+exports.deleteProductHard = async (req, res) => {
+
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
+    // Tìm các variants của sản phẩm
+    const variants = await ProductVariant.findAll({ where: { id_products: id } });
+    const variantIds = variants.map(v => v.id_variant);
 
-    // Kiểm tra tồn tại sản phẩm
-    const product = await Product.findByPk(id);
-    if (!product) {
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+    if (variantIds.length > 0) {
+      // Xóa các variant_values theo id_variant
+      await VariantValue.destroy({ where: { id_variant: variantIds } });
     }
 
-    // Lấy danh sách ảnh để xóa file vật lý
-    const images = await ProductImg.findAll({
-      where: { id_products: id }
-    });
+    // Xóa các product_variants
+    await ProductVariant.destroy({ where: { id_products: id } });
 
-    // Xóa file ảnh vật lý
-    for (const img of images) {
-      const filePath = path.join(__dirname, '..', img.Img_url); // ví dụ: /uploads/products/...
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
+    // Xóa các thông số kỹ thuật
+    await ProductSpec.destroy({ where: { id_products: id } });
 
-    // Xóa ảnh trong DB
-    await ProductImg.destroy({
-      where: { id_products: id },
-      transaction: t,
-    });
+    // Xóa ảnh sản phẩm
+    await ProductImg.destroy({ where: { id_products: id } });
 
-    // Xóa thông số kỹ thuật
-    await ProductSpec.destroy({
-      where: { id_products: id },
-      transaction: t,
-    });
+    // Xóa các product_attributes
+    await ProductAttribute.destroy({ where: { id_product: id } });
 
-    // Xóa sản phẩm
-    await Product.destroy({
-      where: { id_products: id },
-      transaction: t,
-    });
+    // Xóa product_attribute_value (nối sản phẩm và value)
+    await ProductAttributeValue.destroy({ where: { id_product: id } });
 
-    await t.commit();
-    res.status(200).json({ message: 'Đã xóa sản phẩm và toàn bộ dữ liệu liên quan thành công' });
+    // ❗ Không xóa Attribute hoặc AttributeValue tại đây nếu dùng chung cho nhiều sản phẩm
+
+    // Cuối cùng, xóa sản phẩm
+    await Product.destroy({ where: { id_products: id } });
+
+    return res.status(200).json({ message: `Đã xóa sản phẩm ${id} và toàn bộ dữ liệu liên quan.` });
   } catch (error) {
-    await t.rollback();
-    console.error('Lỗi khi xóa sản phẩm:', error);
-    res.status(500).json({
-      message: 'Xóa sản phẩm thất bại',
-      error: error.message,
-    });
+    console.error('Lỗi xóa sản phẩm:', error);
+    return res.status(500).json({ message: 'Xóa thất bại.', error });
   }
+
 };

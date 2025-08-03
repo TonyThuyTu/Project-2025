@@ -6,7 +6,7 @@ import { Trash } from 'react-bootstrap-icons';
 export default function OptionsManager({ options, setOptions }) {
   const [newOptionName, setNewOptionName] = useState('');
   const [newOptionType, setNewOptionType] = useState('');
-
+ 
   // Cleanup URL object khi component unmount
   useEffect(() => {
     return () => {

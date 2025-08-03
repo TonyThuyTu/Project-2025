@@ -11,7 +11,7 @@ import OptionsManager from "./updateProductComponents/OptionManager";
 import SkuManager from "./updateProductComponents/SkuManager";
 import axios from "axios";
 import { toast } from "react-toastify";
-
+ 
 export default function EditProductModal({ show, onClose, onUpdate, productData }) {
   const [description, setDescription] = useState('');
   const [options, setOptions] = useState([]);
@@ -170,9 +170,38 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     console.log("Images state updated:", images);
   }, [productName, selectedParent, selectedChild, marketPrice, salePrice, images]);
 
+  const normalizeSkusForBackend = (skuList, options) => {
+    return skuList
+      .filter(sku =>
+        sku.combo?.length === options.length &&
+        sku.combo.every(c => c?.value && c?.optionName) &&
+        !isNaN(Number(sku.price)) &&
+        !isNaN(Number(sku.quantity))
+      )
+      .map(sku => ({
+        variant_id: sku.sku_id || null,
+        sku_code: sku.sku_code || '',
+        price: Number(sku.price),
+        price_sale: Number(sku.price_sale),
+        quantity: Number(sku.quantity),
+        status: Number(sku.status),
+        option_combo: sku.combo.map(c => {
+          const attr = options.find(opt => opt.name === c.optionName);
+          const val = attr?.values.find(v => v.value === c.value);
+          return {
+            attribute: c.optionName,
+            value: c.value,
+            id_value: val?.value_id || val?.id_value || null,
+          };
+        }),
+      }));
+  };
+
   const handleUpdate = async () => {
     try {
       const formData = new FormData();
+
+      const validSkus = normalizeSkusForBackend(skuList, options);
 
       // Lấy ID danh mục (ưu tiên danh mục con)
       const categoryId = selectedChild || selectedParent;
@@ -236,25 +265,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
       console.log("🧪 fixedOptions gửi lên:", JSON.stringify(fixedOptions, null, 2));
       
-      const validSkus = skuList
-      .filter(sku =>
-        sku.combo?.length === options.length &&
-        sku.combo.every(c => c?.value && c?.optionName) &&
-        !isNaN(Number(sku.price)) &&
-        !isNaN(Number(sku.quantity))
-      )
-      .map(sku => ({
-        variant_id: sku.sku_id || null,
-        sku_code: sku.sku_code || '',
-        price: Number(sku.price),
-        price_sale: Number(sku.price_sale),
-        quantity: Number(sku.quantity),
-        status: Number(sku.status),
-        option_combo: sku.combo.map(c => ({
-          attribute: c.optionName,
-          value: c.value
-        }))
-      }));
+        
 
       formData.append('attributes', JSON.stringify(fixedOptions));
       formData.append('products_id', productId);

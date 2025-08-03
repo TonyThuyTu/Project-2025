@@ -36,7 +36,7 @@ router.get('/', productController.getAllProducts);
 router.patch('/:id/toggle-primary', productController.togglePrimary);
 
 //delete product for tester
-router.delete('/:id', productController.deleteProduct);
+router.delete('/:id', productController.deleteProductHard);
 
 //get product by id
 router.get('/same-products/:id/same', productController.getSameProducts);
