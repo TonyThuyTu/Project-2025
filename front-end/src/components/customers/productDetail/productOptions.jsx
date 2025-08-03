@@ -17,6 +17,17 @@ export default function ProductOptions({
 }) {
   if (!attributes || attributes.length === 0) return null;
 
+  // Hàm format giá tiền VND
+  const formatPrice = (value) => {
+    if (value == null || value === "") return "Đang cập nhật";
+    const number = Number(value);
+    if (isNaN(number)) return "Giá không hợp lệ";
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(number);
+  };
+
   useEffect(() => {
     if (!skus || skus.length === 0) return;
 
@@ -38,18 +49,23 @@ export default function ProductOptions({
 
   const handleClickOption = (attrId, valId, attrName, attrType, valueNote) => {
     // Cập nhật giá trị được chọn
-    const newSelected = [...selectedValues.filter((id) => {
-      const matchAttr = attributes.find(attr =>
-        attr.values.some(val => val.id_value === id && attr.id_attribute === attrId)
-      );
-      return !matchAttr;
-    }), valId];
+    const newSelected = [
+      ...selectedValues.filter((id) => {
+        const matchAttr = attributes.find((attr) =>
+          attr.values.some(
+            (val) => val.id_value === id && attr.id_attribute === attrId
+          )
+        );
+        return !matchAttr;
+      }),
+      valId,
+    ];
 
     setSelectedValues(newSelected);
 
     // Nếu là màu thì cập nhật selectedColor
     if (attrType === 2) {
-      setSelectedColor(valueNote || attrName);
+      setSelectedColor(valId);
     }
   };
 
@@ -69,12 +85,21 @@ export default function ProductOptions({
                     key={val.id_value}
                     className={isSelected ? "active" : ""}
                     onClick={() =>
-                      handleClickOption(attr.id_attribute, val.id_value, attr.name, attr.type, val.value_note)
+                      handleClickOption(
+                        attr.id_attribute,
+                        val.id_value,
+                        attr.name,
+                        attr.type,
+                        val.value_note
+                      )
                     }
                   >
                     {isColor ? (
                       <>
-                        <span className="color-dot" style={{ background: val.value }}></span>
+                        <span
+                          className="color-dot"
+                          style={{ background: val.value }}
+                        ></span>
                         {val.value_note}
                       </>
                     ) : (
@@ -87,18 +112,21 @@ export default function ProductOptions({
           </div>
         );
       })}
-
-        <div className="price-display mt-3 d-flex align-items-baseline gap-3" id="priceDisplay">
-          <span className="text-danger fw-bold fs-3">
-            {price ? price.toLocaleString("vi-VN") + "₫" : "Đang cập nhật"}
+      <div className="price-display mt-3 d-flex align-items-baseline gap-3" id="priceDisplay">
+        {price && price > 0 ? (
+          <>
+            <span className="text-danger fw-bold fs-3">{formatPrice(originalPrice)}</span>
+        
+          <span className="text-muted text-decoration-line-through fs-5">
+            {formatPrice(price)}
           </span>
-          {originalPrice && originalPrice > price && (
-            <span className="text-muted text-decoration-line-through fs-5">
-              {originalPrice.toLocaleString("vi-VN") + "₫"}
-            </span>
-          )}
-        </div>
-
+          </>
+        ) : (
+          <span className="text-danger fw-bold fs-4">
+            Hết hàng tạm thời
+          </span>
+        )}
+      </div>
     </>
   );
 }

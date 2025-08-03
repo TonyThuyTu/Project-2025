@@ -1072,7 +1072,7 @@ exports.getProductsById = async (req, res) => {
         status: variant.status,
         // images: variant.images || [],
         option_combo: variant.variantValues.map(v => ({
-          id_value: v.attributeValue?.attribute?.id_value,
+          // id_value: v.attributeValue?.attribute?.id_value,
           attribute: v.attributeValue?.attribute?.name,
           value: v.attributeValue?.value,
           type: v.attributeValue.attribute?.type,
