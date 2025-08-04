@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import ReviewDetailModal from "./form/reviewsModalDetail";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function ReviewList() {
   const [reviews, setReviews] = useState([]);
@@ -13,6 +14,19 @@ export default function ReviewList() {
 
   const [filterStatus, setFilterStatus] = useState("");
   const [filterRating, setFilterRating] = useState("");
+
+  const handleDeleteReview = async (id_review) => {
+    if (!window.confirm("Bạn có chắc muốn xóa bình luận này không?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/reviews/${id_review}`);
+      toast.success("Xóa bình luận thành công!");
+      fetchReviews(); // Cập nhật lại danh sách
+    } catch (error) {
+      toast.error("Lỗi khi xóa bình luận!");
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
     fetchReviews();
@@ -154,6 +168,13 @@ export default function ReviewList() {
                         onClick={() => openDetailModal(r)}
                       >
                         Chi tiết
+                      </button>
+
+                      <button
+                        className="btn btn-danger btn-sm ms-2"
+                        onClick={() => handleDeleteReview(r.id_review)}
+                      >
+                        Xóa
                       </button>
                     </td>
                   </tr>

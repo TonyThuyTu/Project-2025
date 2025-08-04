@@ -1,6 +1,10 @@
 const express = require('express');
-const router = express.Router()
+const router = express.Router();
 const ReviewController = require ('../controllers/comment.controller');
+const verifyToken = require('../middlewares/verifyToken');
+
+//delete review by id
+router.delete('/:id', ReviewController.deleteReview);
 
 //get review by id guest
 router.get('/customer/:id', ReviewController.getReviewsByCustomer);
@@ -9,7 +13,7 @@ router.get('/customer/:id', ReviewController.getReviewsByCustomer);
 router.get('/product/:id', ReviewController.getReviewsByProduct);
 
 //post review with condition
-router.post('/', ReviewController.postReview);
+router.post('/', verifyToken, ReviewController.postReview);
 
 //get review by id guest and customer
 router.get('/:id', ReviewController.getReviewById);

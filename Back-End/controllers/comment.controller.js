@@ -217,3 +217,23 @@ exports.getReviewsByCustomer = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
+//delete product
+exports.deleteReview = async (req, res) => {
+  const id_review = req.params.id;
+
+  try {
+    const review = await ProductReview.findByPk(id_review);
+
+    if (!review) {
+      return res.status(404).json({ message: "Không tìm thấy bình luận." });
+    }
+
+    await review.destroy();
+
+    return res.status(200).json({ message: "Xóa bình luận thành công." });
+  } catch (error) {
+    console.error("Lỗi khi xóa bình luận:", error);
+    return res.status(500).json({ message: "Lỗi server." });
+  }
+};
