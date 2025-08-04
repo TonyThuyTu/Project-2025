@@ -27,6 +27,7 @@ export default function ProductDeatail({ product, productId }) {
   const [selectedSku, setSelectedSku] = useState(null);
   const [mainImage, setMainImage] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [isOutOfStock, setIsOutOfStock] = useState(false);
 
   // Hàm giải mã token lấy id_customer
   const getCustomerIdFromToken = () => {
@@ -116,31 +117,31 @@ export default function ProductDeatail({ product, productId }) {
 
   // Cập nhật selectedSku và giá khi selectedValues thay đổi
   useEffect(() => {
-  if (!productData?.skus || selectedValues.length === 0) return;
+    if (!productData?.skus || selectedValues.length === 0) return;
 
-  const matchedSku = productData.skus.find((sku) =>
-    JSON.stringify(sku.option_combo.map(o => o.id_value).sort()) ===
-    JSON.stringify(selectedValues.slice().sort())
-  );
+    const matchedSku = productData.skus.find((sku) =>
+      JSON.stringify(sku.option_combo.map(o => o.id_value).sort()) ===
+      JSON.stringify(selectedValues.slice().sort())
+    );
 
-  if (matchedSku) {
-    if (matchedSku.quantity > 0) {
-      setSelectedPrice(matchedSku.price_sale);
-      setSelectedOriginalPrice(matchedSku.price);
-      setSelectedSku(matchedSku);
+    if (matchedSku) {
+      if (matchedSku.quantity > 0) {
+        setSelectedPrice(matchedSku.price_sale);
+        setSelectedOriginalPrice(matchedSku.price);
+        setSelectedSku(matchedSku);
+      } else {
+        // SKU hết hàng
+        setSelectedPrice(null);         // hoặc 0
+        setSelectedOriginalPrice(null);
+        setSelectedSku(null);
+      }
     } else {
-      // SKU hết hàng
-      setSelectedPrice(null);         // hoặc 0
+      // SKU không tồn tại với option hiện tại
+      setSelectedPrice(null);           // hoặc 0
       setSelectedOriginalPrice(null);
       setSelectedSku(null);
     }
-  } else {
-    // SKU không tồn tại với option hiện tại
-    setSelectedPrice(null);           // hoặc 0
-    setSelectedOriginalPrice(null);
-    setSelectedSku(null);
-  }
-}, [selectedValues, productData]);
+  }, [selectedValues, productData]);
 
 
   // Cập nhật selectedColor dựa vào selectedValues

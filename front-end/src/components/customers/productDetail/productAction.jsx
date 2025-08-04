@@ -5,9 +5,10 @@ export default function ProductActions({
     onAddToCart, 
     quantity,
     setQuantity, 
+    selectedSku
   }) {
 
-  // const [quantity, setQuantity] = useState(1);
+  const isDisabled = !selectedSku || selectedSku.quantity <= 0;
 
   const handleDecrease = () => {
     setQuantity((q) => (q > 1 ? q - 1 : 1));
@@ -20,7 +21,11 @@ export default function ProductActions({
   return (
     <>
       <div className="quantity-wrapper">
-        <button type="button" className="btn-qty" onClick={handleDecrease}>
+        <button 
+        type="button" 
+        className="btn-qty" 
+        onClick={handleDecrease} 
+        disabled={isDisabled}>
           –
         </button>
         <input
@@ -28,8 +33,14 @@ export default function ProductActions({
           value={quantity}
           readOnly
           className="input-qty"
+          disabled={isDisabled}
         />
-        <button type="button" className="btn-qty" onClick={handleIncrease}>
+        <button 
+        type="button" 
+        className="btn-qty" 
+        onClick={handleIncrease}
+        disabled={isDisabled}
+        >
           +
         </button>
       </div>
@@ -39,6 +50,7 @@ export default function ProductActions({
         <button
           className="btn btn-primary flex-fill"
           onClick={() => onBuyNow && onBuyNow(quantity)}
+          disabled={isDisabled}
         >
           Mua ngay
         </button>
@@ -46,6 +58,7 @@ export default function ProductActions({
         <button
           className="btn btn-secondary flex-fill"
           onClick={() => onAddToCart && onAddToCart()}
+          disabled={isDisabled}
         >
           Thêm vào giỏ
         </button>
