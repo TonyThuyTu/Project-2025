@@ -54,7 +54,7 @@ export default function ProductList() {
       <CategoryChildren childrenCategories={categoryData.children} />
 
       {/* Hiển thị sản phẩm */}
-      <ProductFilter name ={categoryData.name}/>
+      <ProductFilter />
       <ProductGrid products={categoryData.products} />
     </div>
   );

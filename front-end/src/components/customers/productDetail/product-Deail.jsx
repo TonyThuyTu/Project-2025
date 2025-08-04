@@ -1,6 +1,8 @@
 // ProductDeatail.jsx
 "use client";
 import { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
 import '../../../../public/assets/css/productDetail.css';
 import ProductActions from "./productAction";
@@ -24,6 +26,7 @@ export default function ProductDeatail({ product, productId }) {
   const [selectedValues, setSelectedValues] = useState([]);
   const [selectedSku, setSelectedSku] = useState(null);
   const [mainImage, setMainImage] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   // Hàm giải mã token lấy id_customer
   const getCustomerIdFromToken = () => {
@@ -35,6 +38,38 @@ export default function ProductDeatail({ product, productId }) {
     } catch (err) {
       console.error("Không giải mã được token:", err);
       return null;
+    }
+  };
+
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedSku]);
+
+  const handleAddToCart = async () => {
+    if (!idCustomer) {
+      toast.warning("Vui lòng đăng nhập để thêm vào giỏ hàng!");
+      return;
+    }
+
+    if (!selectedSku) {
+      toast.warning("Vui lòng chọn đầy đủ các tuỳ chọn sản phẩm!");
+      return;
+    }
+
+    const payload = {
+      id_customer: idCustomer,
+      id_product: params.id,
+      quantity: quantity,
+      attribute_value_ids: selectedSku.option_combo.map(o => o.id_value),
+    };
+
+    try {
+      await axios.post(`${baseURL}/api/cart/add`, payload);
+      toast.success("Đã thêm vào giỏ hàng!");
+    } catch (err) {
+      console.error("❌ Thêm giỏ hàng lỗi:", err);
+      const msg = err?.response?.data?.message || "Không thể thêm vào giỏ hàng.";
+      toast.error(msg);
     }
   };
 
@@ -205,7 +240,9 @@ export default function ProductDeatail({ product, productId }) {
             selectedSku={selectedSku}
             idCustomer={idCustomer}
             productId={params.id}
-            quantity={selectedSku?.quantity || 1}
+            setQuantity={setQuantity}
+            quantity={quantity}
+            onAddToCart={handleAddToCart}
           />
         </aside>
       </section>

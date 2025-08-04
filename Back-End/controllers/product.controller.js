@@ -1130,8 +1130,9 @@ exports.getProductsById = async (req, res) => {
         products_status: product.products_status,
         products_primary: product.products_primary,
         //price for customers
-        market_price: originalPrice,
-        sale_price: salePrice,
+        salePrice: salePrice,
+        marketPrice: originalPrice,
+
       },
       category: product.category || null,
       images,

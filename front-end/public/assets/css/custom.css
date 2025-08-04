@@ -7,6 +7,37 @@ Custom Css
   margin-top: 0; /* fix delay nhảy xuống */
 }
 
+.quantity-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.btn-qty {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  border: 1px solid #ced4da;
+  background-color: white;
+  color: #333;
+  border-radius: 4px;
+}
+
+.input-qty {
+  width: 40px;
+  height: 28px;
+  font-size: 14px;
+  text-align: center;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0;
+}
+
+
+
 /* .nav-link {
   margin: 10px;
 } */
@@ -21,7 +52,7 @@ Custom Css
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 30px;
   max-width: 1500px;
   margin: 0 auto;

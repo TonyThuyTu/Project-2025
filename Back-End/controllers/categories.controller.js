@@ -1,4 +1,14 @@
-const { Category, Product, ProductImg } = require('../models/index.model');
+const { 
+          Category, 
+          Product, 
+          ProductImg,
+          ProductAttribute,
+          ProductAttributeValue,
+          Attribute,
+          AttributeValue,
+          ProductVariant,
+          VariantValue,
+        } = require('../models/index.model');
 
 // Lấy tất cả danh mục
 exports.getCategories = async (req, res) => {
@@ -186,7 +196,7 @@ exports.getCategoryDetail = async (req, res) => {
   const { name } = req.params;
 
   try {
-    // 1. Lấy thông tin danh mục cha
+    // 1. Lấy danh mục cha
     const parentCategory = await Category.findOne({
       where: { name, parent_id: null },
       attributes: ['category_id', 'name', 'note', 'img'],
@@ -207,7 +217,7 @@ exports.getCategoryDetail = async (req, res) => {
     const childIds = children.map(child => child.category_id);
     const allCategoryIds = [parentId, ...childIds];
 
-    // 3. Lấy sản phẩm theo cả cha và con
+    // 3. Lấy sản phẩm
     const products = await Product.findAll({
       where: {
         category_id: allCategoryIds,
@@ -218,7 +228,7 @@ exports.getCategoryDetail = async (req, res) => {
         'products_name',
         'products_market_price',
         'products_sale_price',
-        'category_id'
+        'category_id',
       ],
       include: [
         {
@@ -226,21 +236,151 @@ exports.getCategoryDetail = async (req, res) => {
           as: 'images',
           required: false,
           attributes: ['Img_url', 'is_main'],
-          where: { is_main: true, id_value: null, id_variant: null  },
+          where: { is_main: true, id_value: null, id_variant: null },
         },
       ],
     });
 
-    // 4. Trả về dữ liệu tổng hợp
+    // 4. Với mỗi sản phẩm, lấy attributes và skus, rồi tính giá
+    const productsWithPrices = await Promise.all(products.map(async (product) => {
+      const id = product.id_products;
+
+      // Lấy attributes + giá trị
+      const productAttributes = await ProductAttribute.findAll({
+        where: { id_product: id },
+        include: [
+          {
+            model: Attribute,
+            as: 'attribute',
+            attributes: ['id_attribute', 'name', 'type'],
+            include: [
+              {
+                model: AttributeValue,
+                as: 'values',
+                required: false,
+                include: [
+                  {
+                    model: ProductAttributeValue,
+                    as: 'productAttributeValues',
+                    where: { id_product: id },
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const attributes = productAttributes
+        .filter(pa => pa.attribute && Array.isArray(pa.attribute.values))
+        .map(pa => {
+          const filteredValues = pa.attribute.values.filter(
+            v => v.productAttributeValues && v.productAttributeValues.length > 0
+          );
+
+          return {
+            id_attribute: pa.attribute.id_attribute,
+            name: pa.attribute.name,
+            type: pa.attribute.type,
+            values: filteredValues.map(v => ({
+              id_value: v.id_value,
+              value: v.value,
+              value_note: v.value_note,
+              extra_price: v.extra_price,
+              quantity: v.quantity,
+              status: v.status,
+            })),
+          };
+        });
+
+      // Lấy skus + option combo
+      const variantsRaw = await ProductVariant.findAll({
+        where: { id_products: id },
+        include: [
+          {
+            model: VariantValue,
+            as: 'variantValues',
+            include: [
+              {
+                model: AttributeValue,
+                as: 'attributeValue',
+                include: [
+                  {
+                    model: Attribute,
+                    as: 'attribute',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const skus = variantsRaw.map(variant => ({
+        variant_id: variant.id_variant,
+        quantity: variant.quantity,
+        price: variant.price,
+        price_sale: variant.price_sale,
+        status: variant.status,
+        option_combo: variant.variantValues.map(v => ({
+          attribute: v.attributeValue?.attribute?.name,
+          value: v.attributeValue?.value,
+          type: v.attributeValue.attribute?.type,
+          id_value: v.attributeValue?.id_value,
+        })),
+      }));
+
+      // Xác định loại sản phẩm
+      let productType = 1;
+      if (skus.length > 0) {
+        productType = 3;
+      } else if (attributes.length > 0) {
+        productType = 2;
+      }
+
+      // Tính giá
+      let originalPrice = parseFloat(product.products_market_price) || 0;
+      let salePrice = parseFloat(product.products_sale_price) || 0;
+
+      if (productType === 2) {
+        const extraPrices = attributes.flatMap(attr =>
+          attr.values.map(v => parseFloat(v.extra_price || 0))
+        ).filter(n => !isNaN(n));
+        if (extraPrices.length > 0) {
+          salePrice += Math.min(...extraPrices);
+        }
+      } else if (productType === 3) {
+        const variantPrices = skus.map(sku => parseFloat(sku.price)).filter(n => !isNaN(n));
+        const variantSalePrices = skus.map(sku => parseFloat(sku.price_sale)).filter(n => !isNaN(n));
+        if (variantPrices.length > 0) {
+          originalPrice = Math.min(...variantPrices);
+        }
+        if (variantSalePrices.length > 0) {
+          salePrice = Math.min(...variantSalePrices);
+        }
+      }
+
+      // Trả về sản phẩm kèm giá đã tính
+      return {
+        ...product.toJSON(),
+        attributes,
+        skus,
+        productType,
+        market_price: originalPrice,
+        sale_price: salePrice,
+      };
+    }));
+
+    // 5. Trả về dữ liệu
     res.json({
       category_id: parentId,
       name: parentCategory.name,
       img: parentCategory.img,
       note: parentCategory.note,
       children,
-      products, // bao gồm sản phẩm của cả cha và con
+      products: productsWithPrices,
     });
-
   } catch (err) {
     console.error("Lỗi khi lấy chi tiết danh mục:", err);
     res.status(500).json({ error: err.message });
