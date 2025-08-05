@@ -8,7 +8,15 @@ module.exports = (sequelize, DataTypes) => {
     banner_img: {
       type: DataTypes.STRING,
       allowNull: false
-    }
+    },
+    is_primary: {
+      type:DataTypes.TINYINT,
+      allowNull: true,
+    },
+    type: {
+      type: DataTypes.INTEGER,
+      allowNull:true,
+    },
   }, {
     tableName: 'Banner',
     timestamps: false

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button } from "react-bootstrap";
 
-export default function BannerModal  ({ show, onClose, onSubmit, initialImageUrl, isEdit })  {
+export default function BannerModal({ show, onClose, onSubmit, initialImageUrl, isEdit }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(initialImageUrl || null);
+  const [isVideo, setIsVideo] = useState(false);
 
   useEffect(() => {
-    // Khi mở modal reset file & preview (khi sửa thì preview là ảnh cũ)
     setSelectedFile(null);
     setPreview(initialImageUrl || null);
+    setIsVideo(initialImageUrl?.match(/\.(mp4|webm|ogg)$/i) ? true : false);
   }, [show, initialImageUrl]);
 
   const handleFileChange = (e) => {
@@ -16,13 +17,15 @@ export default function BannerModal  ({ show, onClose, onSubmit, initialImageUrl
     setSelectedFile(file);
 
     if (file) {
-      setPreview(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setPreview(url);
+      setIsVideo(file.type.startsWith("video"));
     }
   };
 
   const handleSubmit = () => {
-    if (!selectedFile) {
-      alert("Vui lòng chọn ảnh để upload");
+    if (!selectedFile && !isEdit) {
+      alert("Vui lòng chọn file để upload");
       return;
     }
     onSubmit(selectedFile);
@@ -34,14 +37,22 @@ export default function BannerModal  ({ show, onClose, onSubmit, initialImageUrl
         <Modal.Title>{isEdit ? "Sửa Banner" : "Thêm Banner"}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <input type="file" accept="image/*" onChange={handleFileChange} />
+        <input type="file" accept="image/*,video/*" onChange={handleFileChange} />
         {preview && (
           <div className="mt-3 text-center">
-            <img
-              src={preview}
-              alt="preview"
-              style={{ width: 300, height: 150, objectFit: "cover" }}
-            />
+            {isVideo ? (
+              <video
+                src={preview}
+                controls
+                style={{ width: 300, height: 150, objectFit: "cover" }}
+              />
+            ) : (
+              <img
+                src={preview}
+                alt="preview"
+                style={{ width: 300, height: 150, objectFit: "cover" }}
+              />
+            )}
           </div>
         )}
       </Modal.Body>
@@ -55,6 +66,4 @@ export default function BannerModal  ({ show, onClose, onSubmit, initialImageUrl
       </Modal.Footer>
     </Modal>
   );
-};
-
-
+}

@@ -11,7 +11,7 @@ if (!fs.existsSync(uploadDir)) {
 // Cấu hình lưu trữ
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir); // /uploads
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -20,14 +20,14 @@ const storage = multer.diskStorage({
   },
 });
 
-// Kiểm tra định dạng ảnh
+// Kiểm tra định dạng video (hoặc ảnh nếu cần)
 const fileFilter = function (req, file, cb) {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const allowedTypes = /mp4|mov|avi|mkv|webm|jpeg|jpg|png|gif|webp/;
   const ext = path.extname(file.originalname).toLowerCase();
   if (allowedTypes.test(ext)) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed!"));
+    cb(new Error("Only video and image files are allowed!"));
   }
 };
 
@@ -36,10 +36,10 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024,     // 5MB mỗi ảnh
-    fieldSize: 20 * 1024 * 1024,   // 20MB tổng cho các field text (JSON)
-    files: 1000,                     // Tối đa 30 ảnh
-    fields: 1000,                   // Tối đa 100 field
+    fileSize: 50 * 1024 * 1024, // 50MB mỗi file
+    fieldSize: 20 * 1024 * 1024,
+    files: 1000,
+    fields: 1000,
   },
 });
 

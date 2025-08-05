@@ -21,6 +21,17 @@ export default function BannerManager() {
     }
   };
 
+  const togglePrimary = async (id) => {
+    try {
+      await axios.put(`http://localhost:5000/api/banner/toggle/${id}`);
+      toast.success("Cập nhật ghim thành công");
+      fetchBanners(); // cập nhật lại danh sách sau khi toggle
+    } catch (error) {
+      console.error("Lỗi toggle ghim:", error);
+      toast.error("Không thể ghim banner");
+    }
+  };
+
   useEffect(() => {
     fetchBanners();
   }, []);
@@ -129,6 +140,22 @@ export default function BannerManager() {
                   >
                     Xóa
                   </button>
+                  {banner.is_primary === 1 ? (
+                    <button
+                      className="btn btn-success btn-sm me-2 ms-2"
+                      onClick={() => togglePrimary(banner.id_banner)}
+                    >
+                      Bỏ ghim
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-outline-primary btn-sm me-2 ms-2"
+                      disabled={banners.some(b => b.is_primary === 1)} // Disable nếu đã có banner khác được ghim
+                      onClick={() => togglePrimary(banner.id_banner)}
+                    >
+                      Ghim
+                    </button>
+                  )}
                 </td>
               </tr>
             ))

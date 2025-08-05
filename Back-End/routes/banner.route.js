@@ -3,6 +3,9 @@ const router = express.Router();
 const bannerController = require('../controllers/banner.controller');
 const upload = require('../helper/upload');
 
+//ghim
+router.put('/toggle/:id', bannerController.toggleBanner);
+
 // lấy tất cả danh sách banner
 router.get('/', bannerController.getAllBanners);
 
