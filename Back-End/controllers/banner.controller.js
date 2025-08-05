@@ -37,13 +37,13 @@ exports.getAllBanners = async (req, res) => {
     const banners = await Banner.findAll({ order: [["id_banner", "DESC"]] });
 
     const bannersWithType = banners.map((banner) => {
-      const ext = path.extname(banner.file_path || "").toLowerCase();
+      const ext = path.extname(banner.banner_img || "").toLowerCase();
       const isImage = [".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext);
       const isVideo = [".mp4", ".webm", ".ogg"].includes(ext);
 
       let type = "unknown";
-      if (isImage) type = "image";
-      else if (isVideo) type = "video";
+      if (isImage) type = 1;
+      else if (isVideo) type = 2;
 
       return {
         ...banner.toJSON(),
@@ -57,21 +57,35 @@ exports.getAllBanners = async (req, res) => {
   }
 };
 
+
 // Thêm banner
 exports.createBanner = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn ảnh' });
+    const file = req.file;
+    const { is_primary } = req.body;
 
-    // Lưu đường dẫn ảnh để frontend truy cập được
-    const imageUrl = `/uploads/${req.file.filename}`;
+    if (!file) return res.status(400).json({ message: "Không có file nào được upload" });
 
-    const banner = await Banner.create({ banner_img: imageUrl });
+    const ext = path.extname(file.filename || "").toLowerCase();
+    const isImage = [".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext);
+    const isVideo = [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"].includes(ext);
+    let type = "unknown";
+    if (isImage) type = 1;
+    else if (isVideo) type = 2;
 
-    res.status(201).json(banner);
-  } catch (err) {
-    res.status(500).json({ error: 'Lỗi khi tạo banner', detail: err.message });
+    const newBanner = await Banner.create({
+      banner_img: file.filename, // chỉ lưu tên file
+      is_primary: is_primary || 0,
+      type,
+    });
+
+    res.json({ message: "Tạo banner thành công", banner: newBanner });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server khi tạo banner" });
   }
 };
+
 
 // Cập nhật banner
 exports.updateBanner = async (req, res) => {
@@ -80,12 +94,28 @@ exports.updateBanner = async (req, res) => {
     const banner = await Banner.findByPk(id);
     if (!banner) return res.status(404).json({ error: 'Không tìm thấy banner' });
 
-    const newImage = req.file ? req.file.filename : banner.banner_img;
-    await banner.update({ banner_img: newImage });
+    const file = req.file;
+    const newFilename = file ? file.filename : banner.banner_img;
 
+    // Xác định type dựa vào extension
+    const ext = path.extname(newFilename || "").toLowerCase();
+    const isImage = [".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext);
+    const isVideo = [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"].includes(ext);
+    let type = "unknown";
+    if (isImage) type = 1;
+    else if (isVideo) type = 2;
 
-    res.json(banner);
+    await banner.update({
+      banner_img: newFilename,
+      type,
+    });
+
+    res.json({
+      message: "Cập nhật banner thành công",
+      banner: banner.toJSON(),
+    });
   } catch (err) {
+    console.error("Lỗi update banner:", err);
     res.status(500).json({ error: 'Lỗi khi cập nhật banner', detail: err.message });
   }
 };

@@ -10,10 +10,10 @@ router.put('/toggle/:id', bannerController.toggleBanner);
 router.get('/', bannerController.getAllBanners);
 
 //tạo banner
-router.post('/', upload.single('image'), bannerController.createBanner);
+router.post('/', upload.single('file'), bannerController.createBanner);
 
 //cập nhật banner
-router.put('/:id', upload.single('image'), bannerController.updateBanner);
+router.put('/:id', upload.single('file'), bannerController.updateBanner);
 
 //xóa banner
 router.delete('/:id', bannerController.deleteBanner);

@@ -40,6 +40,49 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-color: rgba(0, 0, 0, 0.3); /* Màu hơi mờ */
+  border-radius: 50%; /* Hình tròn */
+  width: 30px;
+  height: 30px;
+  background-size: 60% 60%; /* Thu nhỏ icon */
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: opacity 0.3s ease;
+  opacity: 0.5;
+}
+
+.carousel-control-prev-icon:hover,
+.carousel-control-next-icon:hover {
+  opacity: 0.9;
+}
+
+.custom-arrow {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.custom-arrow:hover {
+  opacity: 1;
+}
+
+.custom-icon {
+  background-size: 50% 50%;
+  width: 16px;
+  height: 16px;
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-size: 100% 100%;
+}
 
 
 /* .nav-link {
