@@ -40,46 +40,7 @@ export default function CartWrapper() {
     }
   }, []);
 
-  const handleChangeOptionCombo = async (item, selectedSku) => {
-    try {
-      await axios.put(`http://localhost:5000/api/cart/update/${idCustomer}`, {
-        id_cart_items: item.id_cart_items,
-        id_product: item.id_product,
-        attribute_value_ids: selectedSku.option_combo.map((v) => v.id_value),
-        quantity: item.quantity,
-      });
-
-      // Cập nhật UI sau khi thay đổi option
-      const updatedItems = cartItems.map((cartItem) => {
-        if (cartItem.id_cart_items === item.id_cart_items) {
-          return {
-            ...cartItem,
-            id_variant: selectedSku.id_variant,
-            price: selectedSku.price, // cập nhật giá theo SKU
-            attribute_values: selectedSku.option_combo.map((comboItem) => ({
-              attribute_value: {
-                id_value: comboItem.id_value,
-                value: comboItem.value,
-                attribute: {
-                  name: comboItem.attribute,
-                },
-                images: comboItem.images || [],
-              },
-              id_value: comboItem.id_value,
-            })),
-          };
-        }
-        return cartItem;
-      });
-
-      setCartItems(updatedItems);
-      toast.success("Cập nhật phân loại thành công");
-    } catch (error) {
-      console.error("❌ Lỗi khi đổi option:", error.response?.data || error.message);
-      toast.error("Đổi phân loại thất bại");
-    }
-  };
-
+  
   const handleUpdateQuantity = async (idCartItem, newQuantity) => {
     const idCustomer = localStorage.getItem("id_customer");
 
@@ -162,14 +123,14 @@ export default function CartWrapper() {
 
   return (
     <div className="container mt-4 mb-5">
-      <h3 className="mb-4">🛒 Giỏ hàng của bạn</h3>
+      <h3 className="mb-4 text-center">Giỏ hàng</h3>
       <div className="row">
         <div className="col-lg-8 mb-4">
           <CartList
             items={cartItems}
             onUpdateQuantity={handleUpdateQuantity}
             onDeleteItem={handleDeleteItem} // truyền hàm xóa xuống con
-            onChangeOptionCombo={handleChangeOptionCombo}
+            
           />
         </div>
 

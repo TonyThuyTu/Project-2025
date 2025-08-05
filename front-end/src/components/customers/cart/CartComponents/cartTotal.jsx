@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, Form, Button } from "react-bootstrap";
 import axios from "axios";
 import { toast } from "react-toastify";
+import confetti from "canvas-confetti";
 
 const formatVND = (value) =>
   Number(value).toLocaleString("vi-VN", {
@@ -12,6 +13,7 @@ const formatVND = (value) =>
 export default function CartTotal({ items, onShowContactModal }) {
   const [discountCode, setDiscountCode] = useState("");
   const [voucherInfo, setVoucherInfo] = useState(null);
+  const checkoutBtnRef = useRef(null); // Gắn ref vào nút thanh toán
 
   const totalBeforeDiscount = items.reduce(
     (sum, item) => sum + Number(item.price) * Number(item.quantity),
@@ -42,56 +44,73 @@ export default function CartTotal({ items, onShowContactModal }) {
   };
 
   const handleCheckout = () => {
+    // Tính vị trí nút thanh toán
+    const rect = checkoutBtnRef.current.getBoundingClientRect();
+    const x = (rect.left + rect.width / 2) / window.innerWidth;
+    const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+    // Hiệu ứng hoa giấy tại vị trí nút
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { x, y },
+    });
+
     const hasLargeQuantity = items.some(item => Number(item.quantity) >= 10);
     if (hasLargeQuantity) {
       onShowContactModal();
     } else {
-      window.location.href = "/checkout";
+      setTimeout(() => {
+        window.location.href = "/checkout";
+      }, 1000);
     }
   };
 
   return (
-    <Card className="p-3 shadow-sm">
-      <h5 className="mb-3">Tạm tính</h5>
+    <Card className="p-4 shadow-sm border rounded-3">
+      <h5 className="mb-3 border-bottom pb-2">Tạm tính</h5>
 
-      <Form.Group controlId="discountCode">
-        <Form.Label>Nhập mã giảm giá</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="Nhập mã..."
-          value={discountCode}
-          onChange={(e) => setDiscountCode(e.target.value)}
-        />
-        <Button
-          variant="success"
-          className="mt-2 w-100"
-          onClick={applyVoucher}
-          disabled={!discountCode.trim()}
-        >
-          Áp dụng mã
-        </Button>
-      </Form.Group>
+      <div className="mb-3 p-3 border rounded">
+        <Form.Group controlId="discountCode">
+          <Form.Label>Nhập mã giảm giá</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Nhập mã..."
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value)}
+          />
+          <Button
+            variant="success"
+            className="mt-2 w-100"
+            onClick={applyVoucher}
+            disabled={!discountCode.trim()}
+          >
+            Áp dụng mã
+          </Button>
+        </Form.Group>
 
-      {voucherInfo && (
-        <div className="mt-2 text-success">
-          ✅ Mã: <strong>{voucherInfo.code}</strong> - Giảm{" "}
-          {voucherInfo.discount_type === "percent"
-            ? `${voucherInfo.discount_value}%`
-            : formatVND(voucherInfo.discount_value)}
+        {voucherInfo && (
+          <div className="mt-2 text-success small">
+            ✅ Mã: <strong>{voucherInfo.code}</strong> - Giảm{" "}
+            {voucherInfo.discount_type === "percent"
+              ? `${voucherInfo.discount_value}%`
+              : formatVND(voucherInfo.discount_value)}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 p-3 border rounded bg-light">
+        <div className="d-flex justify-content-between fw-bold fs-5 mb-1">
+          <span>Tổng tiền:</span>
+          <span>{formatVND(calculateFinalTotal())}</span>
         </div>
-      )}
-
-      <hr />
-
-      <div className="d-flex justify-content-between fw-bold fs-5">
-        <span>Tổng tiền:</span>
-        <span>{formatVND(calculateFinalTotal())}</span>
       </div>
 
       <Button
         variant="success"
-        className="mt-2 w-100"
+        className="mt-3 w-100"
         onClick={handleCheckout}
+        ref={checkoutBtnRef}
       >
         Thanh toán
       </Button>

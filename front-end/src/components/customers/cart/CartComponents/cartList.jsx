@@ -1,85 +1,127 @@
 import React from "react";
-import { Table, Image, Form, Button } from "react-bootstrap";
+import { Row, Col, Image, Form } from "react-bootstrap";
 
 // Hàm định dạng tiền VND
 const formatVND = (value) =>
   Number(value).toLocaleString("vi-VN", {
     style: "currency",
     currency: "VND",
+    minimumFractionDigits: 0,
   });
 
 export default function CartList({ items, onUpdateQuantity, onDeleteItem }) {
   return (
-    <Table bordered hover responsive className="mt-3">
-      <thead>
-        <tr className="text-center">
-          <th>Sản phẩm</th>
-          <th>Phân loại</th>
-          <th>Đơn giá</th>
-          <th>Số lượng</th>
-          <th>Thành tiền</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((item) => {
-          const image =
-            item.attribute_values?.find(
-              (val) => val.attribute_value?.images?.length > 0
-            )?.attribute_value.images[0]?.img_url || "/no-image.png";
+    <div className="cart-list mt-4">
+      <Row className="fw-bold border-bottom pb-2 mb-3">
+        <Col md={6}>Sản phẩm</Col>
+        <Col md={2} className="text-center">
+          Số lượng
+        </Col>
+        <Col md={2} className="text-end">
+          Tổng
+        </Col>
+      </Row>
 
-          const productName = item.product?.products_name || "Không rõ";
+      {items.map((item) => {
+        const image =
+          item.attribute_values?.find(
+            (val) => val.attribute_value?.images?.length > 0
+          )?.attribute_value.images[0]?.img_url || "/no-image.png";
 
-          return (
-            <tr key={item.id_cart_items} className="text-center align-middle">
-              <td>
-                <Image
-                  src={image}
-                  width={80}
-                  height={80}
-                  rounded
-                  className="mb-2"
-                />
-                <div>{productName}</div>
-              </td>
+        const productName = item.product?.products_name || "Không rõ";
 
-              <td>
-                {item.attribute_values?.map((attr, idx) => (
-                  <div key={idx}>
-                    <strong>{attr.attribute_value?.attribute?.name}:</strong>{" "}
-                    {attr.attribute_value?.value}
-                  </div>
-                ))}
-              </td>
+        return (
+          <Row
+            key={item.id_cart_items}
+            className="align-items-center py-3 border-bottom"
+          >
+            {/* Sản phẩm */}
+            <Col md={6} className="d-flex">
+              <Image
+                src={image}
+                width={80}
+                height={80}
+                rounded
+                className="me-3"
+                alt="product-img"
+              />
+              <div>
+                <div className="fw-semibold">{productName}</div>
+                <div className="text-muted small">
+                  {formatVND(item.price)}
+                </div>
 
-              <td>{formatVND(item.price)}</td>
+                {/* Option sản phẩm */}
+                <div className="d-flex flex-wrap gap-2 mt-1">
+                  {item.attribute_values?.map((attr, idx) => {
+                      const attrValue = attr.attribute_value;
+                      const attribute = attrValue?.attribute;
 
-              <td style={{ maxWidth: 80 }}>
-                <Form.Control
-                  type="number"
-                  min={1}
-                  value={item.quantity}
-                  onChange={(e) =>
-                    onUpdateQuantity(item.id_cart_items, Number(e.target.value))
-                  }
-                />
-              </td>
+                      if (!attrValue || !attribute) {
+                        console.warn("⚠️ Thiếu attrValue hoặc attribute", attr);
+                        return null;
+                      }
 
-              <td>{formatVND(item.price * item.quantity)}</td>
+                      const type = Number(attribute?.type);
 
-              <td>
-                <Button
-                  variant="danger"
-                  size="sm"
+                      // Logging để bạn thấy rõ dữ liệu đang nhận
+                      console.log(`[Option ${idx}]`, {
+                        name: attribute?.name,
+                        type: type,
+                        value: attrValue?.value,
+                        value_note: attrValue?.value_note,
+                      });
+
+                      const label = type === 2
+                        ? attrValue?.value_note || "Không rõ"
+                        : attrValue?.value || "Không rõ";
+
+
+                      return (
+                        <span
+                          key={idx}
+                          className="badge bg-light border text-dark px-2 py-1 d-flex align-items-center gap-1"
+                          style={{ fontSize: "13px" }}
+                        >
+                          {type === 2
+                            ? attrValue?.value_note || "Không rõ"
+                            : attrValue?.value || "Không rõ"}
+                        </span>
+                      );
+                    })}
+                </div>
+                {/* Xoá */}
+                <div
+                  className="text-primary mt-1"
+                  style={{ cursor: "pointer", fontSize: "14px" }}
                   onClick={() => onDeleteItem(item.id_cart_items)}
                 >
-                  Xóa
-                </Button>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </Table>
+                  Bỏ
+                </div>
+              </div>
+            </Col>
+
+            {/* Số lượng */}
+            <Col md={2} className="text-center">
+              <Form.Control
+                type="number"
+                min={1}
+                max={100}
+                value={item.quantity}
+                style={{ width: "80px", margin: "0 auto" }}
+                onChange={(e) =>
+                  onUpdateQuantity(item.id_cart_items, Number(e.target.value))
+                }
+              />
+            </Col>
+
+            {/* Tổng tiền */}
+            <Col md={2} className="text-end fw-semibold">
+              {formatVND(item.price * item.quantity)}
+            </Col>
+          </Row>
+        );
+      })}
+    </div>
   );
 }

@@ -161,7 +161,7 @@ exports.getCartByCustomer = async (req, res) => {
             {
               model: db.ProductVariant,
               as: 'variant',
-              attributes: ['id_variant', 'sku', 'price', 'quantity', 'status'] // bỏ sku_code nếu không có
+              attributes: ['id_variant', 'sku', 'price', 'quantity', 'status']
             },
             {
               model: db.CartItemAttributeValue,
@@ -170,12 +170,12 @@ exports.getCartByCustomer = async (req, res) => {
                 {
                   model: db.AttributeValue,
                   as: 'attribute_value',
-                  attributes: ['id_value', 'value', 'id_attribute'],
+                  attributes: ['id_value', 'value', 'id_attribute', 'value_note'],
                   include: [
                     {
                       model: db.Attribute,
                       as: 'attribute',
-                      attributes: ['id_attribute', 'name']
+                      attributes: ['id_attribute', 'name', 'type']
                     },
                     {
                       model: db.ProductImg,
