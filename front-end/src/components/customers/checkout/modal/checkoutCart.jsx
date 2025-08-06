@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { Row, Col, Image } from "react-bootstrap";
+import { Row, Col, Image, Button } from "react-bootstrap";
+import { useRouter } from "next/navigation";
 
 // Hàm định dạng tiền VND
 const formatVND = (value) =>
@@ -11,10 +12,17 @@ const formatVND = (value) =>
   });
 
 export default function CheckoutCart({ cartItems }) {
+
   const totalPrice = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  const router = useRouter();
+
+  const handleCancel = () => {
+    router.push("/cart");
+  }
 
   return (
     <div className="checkout-cart mt-3">
@@ -119,6 +127,27 @@ export default function CheckoutCart({ cartItems }) {
       <div className="text-end fw-bold mt-3 fs-5">
         Tổng cộng: {formatVND(totalPrice)}
       </div>
+
+      <div className="d-flex gap-2 mt-3">
+        <Button
+          variant="secondary"
+          className="flex-grow-0"
+          style={{
+            width: "50%",
+            backgroundColor: "#f0f0f0",
+            color: "#333",
+            borderColor: "#ccc",
+          }}
+          onClick={handleCancel}
+        >
+          Hủy
+        </Button>
+
+        <Button className="flex-grow-0" style={{ width: "50%" }} variant="primary">
+          Xác nhận đơn hàng
+        </Button>
+      </div>
+
     </div>
   );
 }

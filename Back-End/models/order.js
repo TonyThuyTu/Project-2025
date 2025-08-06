@@ -9,6 +9,21 @@ module.exports = (sequelize, DataTypes) => {
         { type: DataTypes.INTEGER, 
             allowNull: false 
         },
+    name : 
+        {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+    phone : 
+        {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+    email : 
+        {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
     total_amount: 
         { type: DataTypes.DECIMAL(10, 2), 
             allowNull: false 
@@ -39,6 +54,11 @@ module.exports = (sequelize, DataTypes) => {
         {
             type: DataTypes.TEXT,
             allowNull: true
+        },
+    address:
+        {
+          type: DataTypes.TEXT,
+          allowNull: true,  
         },
     order_date: 
         { 

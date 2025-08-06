@@ -13,6 +13,40 @@ export default function CheckoutPage({ idCustomer }) {
   const [cartItems, setCartItems] = useState([]);
   const [loadingCart, setLoadingCart] = useState(true);
   const [loadingAddress, setLoadingAddress] = useState(true);
+  const [userInfo, setUserInfo] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const token = localStorage.getItem("token");
+    const customerId = idCustomer || localStorage.getItem("id_customer");
+
+    if (!token || !customerId) {
+      setLoadingUser(false);
+      return;
+    }
+
+    const fetchUser = async () => {
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+        const res = await axios.get(`http://localhost:5000/api/customers/${customerId}`, { headers });
+        const c = res.data.customer;
+        setUserInfo({
+          name: `${c.last_name} ${c.given_name}`,
+          email: c.email,
+          phone: c.phone
+        });
+      } catch (err) {
+        console.error("Lỗi khi fetch thông tin người dùng:", err);
+        toast.error("Không thể tải thông tin người dùng");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUser();
+  }, [idCustomer]);
 
   // Fetch giỏ hàng
   useEffect(() => {
@@ -73,14 +107,23 @@ export default function CheckoutPage({ idCustomer }) {
           `http://localhost:5000/api/address/customer/${customerId}`,
           { headers }
         );
+
         const addressesData = Array.isArray(addrRes.data.data)
           ? addrRes.data.data
           : [];
         setAddresses(addressesData);
         setSelectedAddress(addressesData.find((a) => a.is_primary) || null);
+
       } catch (err) {
-        console.error("Lỗi khi fetch địa chỉ:", err);
-        toast.error("Có lỗi khi tải địa chỉ");
+        if (err.response?.status === 404) {
+          // Không có địa chỉ → không coi là lỗi, chỉ set mảng rỗng
+          console.warn("Không có địa chỉ nào cho khách hàng.");
+          setAddresses([]);
+          setSelectedAddress(null);
+        } else {
+          console.error("Lỗi khi fetch địa chỉ:", err);
+          toast.error("Có lỗi khi tải địa chỉ");
+        }
       } finally {
         setLoadingAddress(false);
       }
@@ -106,6 +149,8 @@ export default function CheckoutPage({ idCustomer }) {
         <Col md={7}>
           <Card className="p-3 mb-3 shadow-sm border-0">
             <CheckoutInfo
+              userInfo={userInfo}
+              setUserInfo={setUserInfo}
               addresses={addresses}
               selectedAddress={selectedAddress}
               setSelectedAddress={setSelectedAddress}
