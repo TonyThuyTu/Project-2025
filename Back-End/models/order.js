@@ -38,12 +38,7 @@ module.exports = (sequelize, DataTypes) => {
             // defaultValue: 0,
             allowNull: false 
         },
-    payment_status: 
-        { 
-            type: DataTypes.TINYINT,
-            defaultValue: 0,
-            allowNull: false 
-        },
+    
     order_status: 
         {
             type: DataTypes.TINYINT,

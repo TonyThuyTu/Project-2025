@@ -28,6 +28,10 @@ const robotoMono = Roboto_Mono({
 export const metadata = {
   title: "Táo Bro - Trang Chủ",
   description: "Website bán sản phẩm Apple chính hãng",
+  icons: {
+    icon: "/apple_logo.ico",
+    apple: "/assets/image/apple_logo.png", 
+  }
 };
 
 export default function RootLayout({ children }) {
@@ -35,8 +39,10 @@ export default function RootLayout({ children }) {
     <html lang="vi">
       <head>
         {/* Favicon và icon */}
-        <link rel="apple-touch-icon" href="/assets/img/apple-icon.png" />
-        <link rel="shortcut icon" href="/assets/img/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/apple_logo.ico" />
+        {/* <link rel="apple-touch-icon" href="/assets/img/apple_logo.png" /> */}
+        {/* <link rel="shortcut icon" href="/assets/img/apple_logo.png" type="image/x-icon" /> */}
+
 
         {/* Google Font bổ sung nếu không dùng next/font */}
         <link

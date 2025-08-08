@@ -13,6 +13,11 @@ const HeaderClient = () => {
   
   const [cartItems, setCartItems] = useState([]);
 
+  // Thêm state cho tìm kiếm
+  const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Load danh mục cha
   useEffect(() => {
     axios.get("http://localhost:5000/api/categories/parent")
@@ -93,6 +98,19 @@ const HeaderClient = () => {
   // Tính tổng số lượng sản phẩm trong giỏ hàng
   const totalQuantity = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    const delayDebounce = setTimeout(() => {
+      axios.get(`http://localhost:5000/api/products/search?q=${searchTerm}`)
+        .then(res => setSuggestions(res.data))
+        .catch(() => setSuggestions([]));
+    }, 400);
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm]);
+
   return (
     <>
       {/* Navbar trên cùng */}
@@ -153,7 +171,7 @@ const HeaderClient = () => {
             <div className="navbar align-self-center d-flex">
               <div className="d-lg-none flex-sm-fill mt-3 mb-4 col-7 col-sm-auto pr-3">
                 <div className="input-group">
-                  <input type="text" className="form-control" id="inputMobileSearch" placeholder="Search ..." />
+                  <input type="text" className="form-control" id="inputMobileSearch" placeholder="Tìm kiếm sản phẩm...." />
                   <div className="input-group-text">
                     <i className="fa fa-fw fa-search"></i>
                   </div>
@@ -217,17 +235,122 @@ const HeaderClient = () => {
       
 
       {/* Modal search */}
-      <div className="modal fade bg-white" id="templatemo_search" tabIndex="-1" role="dialog" aria-hidden="true">
+      <div
+        className="modal fade bg-white"
+        id="templatemo_search"
+        tabIndex={-1}
+        role="dialog"
+        aria-hidden="true"
+      >
         <div className="modal-dialog modal-lg" role="document">
           <div className="w-100 pt-1 mb-5 text-right">
-            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button
+              type="button"
+              className="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
           </div>
-          <form className="modal-content modal-body border-0 p-0">
-            <div className="input-group mb-2">
-              <input type="text" className="form-control" id="inputModalSearch" name="q" placeholder="Search ..." />
-              <button type="submit" className="input-group-text bg-success text-light">
+          <form
+            className="modal-content modal-body border-0 p-0"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchTerm.trim()) {
+                window.location.href = `/search?q=${encodeURIComponent(
+                  searchTerm.trim()
+                )}`;
+              }
+            }}
+          >
+            <div className="input-group mb-2 position-relative">
+              <input
+                type="text"
+                className="form-control"
+                id="inputModalSearch"
+                name="q"
+                placeholder="Tìm kiếm sản phẩm..."
+                autoComplete="off"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onFocus={() => setShowSuggestions(true)}
+              />
+              <button
+                type="submit"
+                className="input-group-text bg-success text-light"
+              >
                 <i className="fa fa-fw fa-search text-white"></i>
               </button>
+
+              {/* Dropdown gợi ý */}
+              {showSuggestions && searchTerm && (
+                <div
+                  className="list-group position-absolute w-100"
+                  style={{ top: '100%', zIndex: 1050, overflowY: 'auto' }}
+                >
+                  {suggestions.length > 0 ? (
+                    suggestions.map((item) => (
+                      // Thay vì Link, dùng <a> + xử lý onClick thủ công
+                      <a
+                        key={item.products_id || item.id_products}
+                        href="#"
+                        className="list-group-item list-group-item-action d-flex align-items-center"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowSuggestions(false);
+
+                          // Đóng modal thủ công
+                          const modalEl = document.getElementById('templatemo_search');
+                          if (modalEl) {
+                            const modalInstance = window.bootstrap?.Modal.getInstance(modalEl);
+                            if (modalInstance) {
+                              modalInstance.hide();
+                            }
+                          }
+
+                          // Điều hướng Next.js
+                          router.push(
+                            `/productDetail/${item.products_id || item.id_products}`
+                          );
+                        }}
+                      >
+                        <img
+                          src={
+                            item.main_image_url
+                              ? `http://localhost:5000${item.main_image_url}`
+                              : '/default-product.png'
+                          }
+                          alt={item.products_name}
+                          style={{ width: 'auto', height: 70, objectFit: 'cover' }}
+                          className="me-2"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src =
+                              'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
+                          }}
+                        />
+                        <div>
+                          {item.products_name}
+                          <br />
+                          <small className="text-muted">
+                            Giá:{' '}
+                            {item.market_price
+                              ? item.market_price.toLocaleString('vi-VN') + '₫'
+                              : 'Liên hệ'}
+                          </small>
+                        </div>
+                      </a>
+                    ))
+                  ) : (
+                    <div className="list-group-item text-muted">
+                      Không tìm thấy sản phẩm
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </form>
         </div>

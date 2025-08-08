@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
-import '../../../../public/assets/css/productDetail.css';
+import '@/styles/productDetail.css';
 import ProductActions from "./productAction";
 import ProductDescription from "./productDescription";
 import ProductGallery from "./productGallery";
@@ -207,7 +207,16 @@ export default function ProductDeatail({ product, productId }) {
     }
   }, [imagesForColor, productData]);
 
-  if (!productData) return <div>Đang tải dữ liệu sản phẩm...</div>;
+  if (!productData) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
+        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+          <span className="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <>

@@ -1,78 +1,116 @@
 "use client";
 import Script from "next/script";
+import axios from "axios";
+import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function FooterClient() {
+  const [parentCategories, setParentCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/categories/parent");
+        setParentCategories(res.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh mục:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   return (
     <>
       <footer className="bg-dark" id="tempaltemo_footer">
         <div className="container">
           <div className="row">
+            {/* Thông tin shop */}
             <div className="col-md-4 pt-5">
-              <h2 className="h2 text-success border-bottom pb-3 border-light logo">Zay Shop</h2>
+              <img
+                className="text-success border-bottom pb-3 border-light logo"
+                style={{ width: "auto", height: "100px" }}
+                src="/assets/image/IMG_2254.jpg"
+                alt="Logo"
+              />
               <ul className="list-unstyled text-light footer-link-list">
-                <li><i className="fas fa-map-marker-alt fa-fw"></i> 123 Consectetur at ligula 10660</li>
+                <li>
+                  <i className="fas fa-map-marker-alt fa-fw"></i> Đẹp trai nhất Đà Nẵng
+                </li>
                 <li>
                   <i className="fa fa-phone fa-fw"></i>
-                  <a className="text-decoration-none" href="tel:010-020-0340">010-020-0340</a>
+                  <a className="text-decoration-none" href="tel:0777527125">
+                    0777527125
+                  </a>
                 </li>
                 <li>
                   <i className="fa fa-envelope fa-fw"></i>
-                  <a className="text-decoration-none" href="mailto:info@company.com">info@company.com</a>
+                  <a className="text-decoration-none" href="mailto:tunlhpd09942@gmail.com">
+                    tunlhpd09942@gmail.com
+                  </a>
                 </li>
               </ul>
             </div>
 
+            {/* Danh mục lấy động */}
             <div className="col-md-4 pt-5">
-              <h2 className="h2 text-light border-bottom pb-3 border-light">Products</h2>
+              <h2 className="h2 text-light border-bottom pb-3 border-light">Danh mục</h2>
               <ul className="list-unstyled text-light footer-link-list">
-                <li><a className="text-decoration-none" href="#">Luxury</a></li>
-                <li><a className="text-decoration-none" href="#">Sport Wear</a></li>
-                <li><a className="text-decoration-none" href="#">Men's Shoes</a></li>
-                <li><a className="text-decoration-none" href="#">Women's Shoes</a></li>
-                <li><a className="text-decoration-none" href="#">Popular Dress</a></li>
-                <li><a className="text-decoration-none" href="#">Gym Accessories</a></li>
-                <li><a className="text-decoration-none" href="#">Sport Shoes</a></li>
+                {parentCategories.length > 0 ? (
+                  parentCategories.map((cat) => (
+                    <li key={cat.category_id}>
+                      <Link href={`/products/${cat.name}`} className="text-decoration-none">
+                        {cat.name}
+                      </Link>
+                    </li>
+                  ))
+                ) : (
+                  <li>Không có danh mục</li>
+                )}
               </ul>
             </div>
 
+            {/* Các trang */}
             <div className="col-md-4 pt-5">
-              <h2 className="h2 text-light border-bottom pb-3 border-light">Further Info</h2>
+              <h2 className="h2 text-light border-bottom pb-3 border-light">Các trang</h2>
               <ul className="list-unstyled text-light footer-link-list">
-                <li><a className="text-decoration-none" href="#">Home</a></li>
-                <li><a className="text-decoration-none" href="#">About Us</a></li>
-                <li><a className="text-decoration-none" href="#">Shop Locations</a></li>
-                <li><a className="text-decoration-none" href="#">FAQs</a></li>
-                <li><a className="text-decoration-none" href="#">Contact</a></li>
+                <li>
+                  <Link href="/" className="text-decoration-none">
+                    Trang Chủ
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="text-decoration-none">
+                    Liên hệ
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/register" className="text-decoration-none">
+                    Đăng ký
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login" className="text-decoration-none">
+                    Đăng nhập
+                  </Link>
+                </li>
+                <li>
+                  <a className="text-decoration-none" href="#">
+                    Giới thiệu
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
 
+          {/* Social + bản quyền */}
           <div className="row text-light mb-4">
             <div className="col-12 mb-3">
               <div className="w-100 my-3 border-top border-light"></div>
             </div>
             <div className="col-auto me-auto">
               <ul className="list-inline text-left footer-icons">
-                <li className="list-inline-item border border-light rounded-circle text-center">
-                  <a className="text-light text-decoration-none" href="http://facebook.com/" target="_blank">
-                    <i className="fab fa-facebook-f fa-lg fa-fw"></i>
-                  </a>
-                </li>
-                <li className="list-inline-item border border-light rounded-circle text-center">
-                  <a className="text-light text-decoration-none" href="https://www.instagram.com/" target="_blank">
-                    <i className="fab fa-instagram fa-lg fa-fw"></i>
-                  </a>
-                </li>
-                <li className="list-inline-item border border-light rounded-circle text-center">
-                  <a className="text-light text-decoration-none" href="https://twitter.com/" target="_blank">
-                    <i className="fab fa-twitter fa-lg fa-fw"></i>
-                  </a>
-                </li>
-                <li className="list-inline-item border border-light rounded-circle text-center">
-                  <a className="text-light text-decoration-none" href="https://www.linkedin.com/" target="_blank">
-                    <i className="fab fa-linkedin fa-lg fa-fw"></i>
-                  </a>
-                </li>
+                {/* Social icons... */}
+                {/* ...giữ nguyên*/}
               </ul>
             </div>
           </div>
@@ -84,7 +122,9 @@ export default function FooterClient() {
               <div className="col-12">
                 <p className="text-left text-light">
                   Copyright &copy; 2025 TonyThuyTu | Designed by{" "}
-                  <a rel="sponsored" href="#" target="_blank">Tonynguyen</a>
+                  <a rel="sponsored" href="https://github.com/TonyThuyTu" target="_blank">
+                    Tonynguyen
+                  </a>
                 </p>
               </div>
             </div>

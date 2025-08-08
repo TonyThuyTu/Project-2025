@@ -4,6 +4,9 @@ const upload = require('../helper/upload'); // dùng multer
 const productController = require('../controllers/product.controller');
 const validateJsonMiddleware = require('../middlewares/validateJson');
 
+//search product
+router.get('/search', productController.searchProducts);
+
 //add product
 router.post(
   '/',

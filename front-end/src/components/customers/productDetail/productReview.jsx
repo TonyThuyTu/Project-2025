@@ -46,12 +46,14 @@ export default function ProductReview({ id_products }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const idCustomer = localStorage.getItem('id_customer', 'token');
+    const idCustomer = localStorage.getItem('id_customer');
+    const token = localStorage.getItem('token'); // 👈 lấy token
 
-    if (!idCustomer) {
+    if (!idCustomer || !token) {
       toast.error('Vui lòng đăng nhập để gửi đánh giá');
       return;
     }
+
     if (!title.trim() || !comment.trim() || rating === 0) {
       toast.error('Vui lòng điền đầy đủ tiêu đề, nội dung và chọn số sao.');
       return;
@@ -60,14 +62,22 @@ export default function ProductReview({ id_products }) {
     setLoadingSubmit(true);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/reviews/', {
-        id_customer: idCustomer,
-        id_products,
-        rating,
-        title,
-        comment,
-        approved: 'Pending',
-      });
+      const res = await axios.post(
+        'http://localhost:5000/api/reviews/',
+        {
+          id_customer: idCustomer,
+          id_products,
+          rating,
+          title,
+          comment,
+          approved: 'Pending',
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // 👈 Gửi token ở đây
+          },
+        }
+      );
 
       if (res.status === 201) {
         toast.success('Gửi đánh giá thành công!');
@@ -86,6 +96,7 @@ export default function ProductReview({ id_products }) {
       setLoadingSubmit(false);
     }
   };
+
 
   return (
     <section className="container my-5" id="reviews">

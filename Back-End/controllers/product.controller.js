@@ -20,6 +20,96 @@ const {
   Category, 
 } = db;
 
+//search
+exports.searchProducts = async (req, res) => {
+  try {
+    const keyword = req.query.q?.trim();
+
+    if (!keyword) {
+      return res.status(400).json({ message: "Vui lòng nhập từ khóa tìm kiếm" });
+    }
+
+    const rows = await Product.findAll({
+      where: {
+        products_name: {
+          [Op.like]: `%${keyword}%`
+        },
+        products_status: 2
+      },
+      include: [
+        {
+          model: ProductImg,
+          as: "images",
+          where: { is_main: true, id_value: null, id_variant: null },
+          required: false,
+          attributes: ["Img_url"]
+        },
+        {
+          model: ProductVariant,
+          as: "variants",
+          required: false,
+          attributes: ["price", "price_sale"]
+        },
+        {
+          model: ProductAttributeValue,
+          as: "productAttributeValues",
+          required: false,
+          include: [
+            {
+              model: AttributeValue,
+              as: "attributeValue",
+              attributes: ["extra_price"]
+            }
+          ]
+        }
+      ],
+      order: [["products_name", "ASC"]],
+      limit: 8
+    });
+
+    if (rows.length === 0) {
+      return res.json({
+        message: "Không tìm thấy sản phẩm nào",
+        products: []
+      });
+    }
+
+    const products = rows.map(p => {
+      let productType = 1;
+      let marketPrice = parseFloat(p.products_market_price) || 0;
+      let salePrice = parseFloat(p.products_sale_price) || 0;
+
+      if (p.variants?.length > 0) {
+        productType = 3;
+        const variantPrices = p.variants.map(v => parseFloat(v.price)).filter(v => !isNaN(v));
+        const variantSalePrices = p.variants.map(v => parseFloat(v.price_sale)).filter(v => !isNaN(v));
+        if (variantPrices.length > 0) marketPrice = Math.min(...variantPrices);
+        if (variantSalePrices.length > 0) salePrice = Math.min(...variantSalePrices);
+      } 
+      else if (p.productAttributeValues?.length > 0) {
+        productType = 2;
+        const extraPrices = p.productAttributeValues
+          .map(item => parseFloat(item?.attributeValue?.extra_price))
+          .filter(val => !isNaN(val));
+        if (extraPrices.length > 0) salePrice = Math.min(...extraPrices);
+      }
+
+      return {
+        products_id: p.id_products,
+        products_name: p.products_name,
+        main_image_url: p.images?.[0]?.Img_url || null,
+        market_price: marketPrice,
+        sale_price: salePrice,
+      };
+    });
+
+    res.json(products);
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm gợi ý:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+
 //lấy danh sách danh mục và sản phẩm được ghim
 
 //lấy sản phẩm tưng tự

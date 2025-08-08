@@ -3,66 +3,94 @@ const sendOrderConfirmationEmail = require('../utils/mailCheckOut');
 
 exports.checkout = async (req, res) => {
   const t = await db.sequelize.transaction();
-  try {
-    const { id_customer, id_address, payment_method, cart_items, note } = req.body;
 
-    if (!id_customer || !id_address || !payment_method || !Array.isArray(cart_items) || cart_items.length === 0) {
+  try {
+    const {
+      id_customer,
+      name,
+      phone,
+      email,
+      address,
+      payment_method,
+      cart_items,
+      note
+    } = req.body;
+
+    // Kiểm tra dữ liệu đầu vào
+    if (
+      !id_customer || !name || !phone || !email || !address ||
+      !payment_method || !Array.isArray(cart_items) || cart_items.length === 0
+    ) {
       return res.status(400).json({ message: "Thiếu thông tin đơn hàng." });
     }
 
-    if (![1, 2].includes(payment_method)) {
+    // Kiểm tra phương thức thanh toán
+    const paymentMethodMap = { 1: 'cod', 2: 'vnpay' };
+    const paymentMethodText = paymentMethodMap[payment_method];
+    if (!paymentMethodText) {
       return res.status(400).json({ message: "Phương thức thanh toán không hợp lệ." });
     }
 
-    const paymentMethodMap = {
-      1: 'Thanh toán khi nhận hàng (COD)',
-      2: 'Thanh toán online',
-    };
-    const paymentMethodText = paymentMethodMap[payment_method] || 'Không xác định';
-
-    const shippingAddress = await db.Address.findOne({
-      where: { id_address, id_customer }
-    });
-    if (!shippingAddress) {
-      return res.status(404).json({ message: "Không tìm thấy địa chỉ giao hàng." });
+    // Xử lý địa chỉ
+    let fullAddress = '';
+    if (typeof address === 'string') {
+      fullAddress = address;
+    } else if (address?.fullAddress) {
+      fullAddress = address.fullAddress;
+    } else if (address?.address && address?.ward && address?.city) {
+      fullAddress = `${address.address}, ${address.ward}, ${address.city}`;
+    } else {
+      return res.status(400).json({ message: "Thiếu thông tin địa chỉ giao hàng." });
     }
 
     let total_amount = 0;
     const shipping_fee = 0;
+    const orderDetails = [];
 
+    // Tính tổng tiền và chuẩn bị chi tiết đơn hàng
     for (const item of cart_items) {
       const product = await db.Product.findByPk(item.id_product);
       if (!product) {
         throw new Error(`Sản phẩm với ID ${item.id_product} không tồn tại.`);
       }
-      total_amount += parseFloat(product.products_sale_price) * item.quantity;
-    }
 
-    const newOrder = await db.Order.create({
-      id_customer,
-      total_amount,
-      shipping_fee,
-      payment_method,
-      order_status: 1, // chờ xác nhận
-      note,
-      address_label: shippingAddress.address_label,
-      name_address: shippingAddress.name_address,
-      name_ward: shippingAddress.name_ward,
-      name_city: shippingAddress.name_city,
-    }, { transaction: t });
+      const itemTotal = parseFloat(product.products_sale_price) * item.quantity;
+      total_amount += itemTotal;
 
-    // Tạo chi tiết đơn hàng
-    for (const item of cart_items) {
-      const product = await db.Product.findByPk(item.id_product);
-      const orderDetail = await db.OrderDetail.create({
-        id_order: newOrder.id_order,
+      orderDetails.push({
         id_product: item.id_product,
         product_name: product.products_name,
         quantity: item.quantity,
+        price: parseFloat(product.products_sale_price),
+        options: item.attribute_value_ids || [],
+      });
+    }
+
+    // Tạo đơn hàng
+    const newOrder = await db.Order.create({
+      id_customer,
+      name,
+      phone,
+      email,
+      address: fullAddress,
+      total_amount,
+      shipping_fee,
+      payment_method,
+      order_status: 'pending',
+      note,
+    }, { transaction: t });
+
+    // Tạo chi tiết đơn hàng và thuộc tính
+    for (const detail of orderDetails) {
+      const orderDetail = await db.OrderDetail.create({
+        id_order: newOrder.id_order,
+        id_product: detail.id_product,
+        product_name: detail.product_name,
+        quantity: detail.quantity,
       }, { transaction: t });
 
-      if (item.attribute_value_ids && Array.isArray(item.attribute_value_ids)) {
-        for (const id_value of item.attribute_value_ids) {
+      if (Array.isArray(detail.options)) {
+        for (const id_value of detail.options) {
           await db.OrderItemAttributeValue.create({
             id_order_detail: orderDetail.id_order_detail,
             id_value,
@@ -71,40 +99,27 @@ exports.checkout = async (req, res) => {
       }
     }
 
-    // Tạo bản ghi thanh toán mới
+    // Tạo bản ghi thanh toán
     await db.Payment.create({
       id_order: newOrder.id_order,
-      payment_method,
-      payment_status: 1, // luôn pending ban đầu
+      payment_method: paymentMethodText,
+      payment_status: 'unpaid',
       amount: total_amount + shipping_fee,
-      payment_date: null,        // chỉ set khi thanh toán thành công
+      payment_date: null,
     }, { transaction: t });
 
-    // Gửi email xác nhận
-    const customer = await db.Customer.findByPk(id_customer);
-    const productsForEmail = [];
-
-    for (const item of cart_items) {
-      const product = await db.Product.findByPk(item.id_product);
-      productsForEmail.push({
-        name: product.products_name,
-        quantity: item.quantity,
-        price: Number(product.products_sale_price).toLocaleString('vi-VN') + ' vnđ',
-        options: item.attribute_value_ids || [],
-      });
-    }
-
-    const formattedTotalAmount = total_amount.toLocaleString('vi-VN') + ' vnđ';
-
-    await sendOrderConfirmationEmail(customer.email, {
-      orderId: newOrder.id_order,
-      products: productsForEmail,
-      totalAmount: formattedTotalAmount,
-      orderDate: newOrder.order_date,
-      customerName: customer.name,
-      note: newOrder.note,
-      address: `${shippingAddress.address_label} - ${shippingAddress.name_address}, ${shippingAddress.name_ward}, ${shippingAddress.name_city}`,
-      paymentMethod: paymentMethodText
+    // Gửi email xác nhận đơn hàng
+    await sendOrderConfirmationEmail(email, {
+      id_order: newOrder.id_order,
+      name,
+      phone,
+      email,
+      address: fullAddress,
+      total_amount,
+      payment_method: paymentMethodText,
+      order_date: newOrder.order_date,
+      products: orderDetails,
+      note,
     });
 
     await t.commit();
@@ -112,12 +127,12 @@ exports.checkout = async (req, res) => {
     return res.status(200).json({
       message: "Đặt hàng thành công",
       order_id: newOrder.id_order,
-      payment_method,
+      payment_method: paymentMethodText,
     });
 
   } catch (error) {
     await t.rollback();
-    console.error(error);
+    console.error("Checkout Error:", error);
     return res.status(500).json({ message: "Lỗi khi đặt hàng", error: error.message });
   }
 };
@@ -145,6 +160,10 @@ exports.getAllOrders = async (req, res) => {
       ],
       attributes: [
         'id_order',
+        'name',
+        'phone',
+        'email',
+        'address',
         'payment_method',
         'order_date',
         'order_status'
@@ -178,6 +197,10 @@ exports.getAllOrders = async (req, res) => {
 
       return {
         id: order.id_order,
+        name: order.name,
+        email: order.email,
+        phone: order.phone,
+        address: order.address,
         customer_name: order.customer?.name || '',
         payment_method: order.payment_method,
         order_status: order.order_status,

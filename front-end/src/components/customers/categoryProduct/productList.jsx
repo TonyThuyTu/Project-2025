@@ -37,8 +37,22 @@ export default function ProductList() {
     fetchCategoryDetail();
   }, [categoryName]);
 
-  if (loading) return <div>Đang tải dữ liệu...</div>;
-  if (!categoryData) return <div>Không tìm thấy danh mục</div>;
+  if (loading) 
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
+        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+          <span className="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+    );
+
+  if (!categoryData) return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
+        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+          <span className="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+    );
 
   return (
     <div className="mb-5">
