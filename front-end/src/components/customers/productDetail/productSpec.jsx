@@ -1,4 +1,12 @@
 export default function ProductSpec({specs}) {
+  if (!specs || specs.length === 0) {
+    return (
+      <section className="container specs" id="specs">
+        <h2>Thông số kỹ thuật</h2>
+        <p className="text-center">Chưa có thông số kỹ thuật</p>
+      </section>
+    );
+  }
   return (
     <section className="container specs" id="specs">
       <h2>Thông số kỹ thuật</h2>

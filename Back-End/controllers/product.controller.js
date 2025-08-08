@@ -6,6 +6,7 @@ const { sequelize } = db;
 const { parseJSONSafe } = require('../helper/parseJson');
 const generateSKU = require('../helper/generateSKU');
 const getAllChildCategoryIds = require('../utils/getCategories');
+const { generateUniqueSlug } = require('../helper/generateSlug');
 
 const {
   Product, 
@@ -162,6 +163,7 @@ exports.createProducts = async (req, res) => {
     const {
       products_name,
       category_id,
+      products_slug,
       products_market_price,
       products_sale_price,
       products_description,
@@ -187,8 +189,11 @@ exports.createProducts = async (req, res) => {
     const attributesParsed = parseJSONSafe(attributes, []);
     const variantsParsed = parseJSONSafe(variants, []);
 
+    const slug = await generateUniqueSlug(Product, products_name);
+
     const newProduct = await Product.create({
       products_name: products_name.trim(),
+      products_slug: slug,
       category_id: +category_id,
       products_market_price: marketPrice,
       products_sale_price: salePrice,
@@ -452,6 +457,7 @@ exports.updateProduct = async (req, res) => {
 
     const {
       products_name,
+      products_slug,
       products_market_price,
       products_sale_price,
       products_status,
@@ -468,10 +474,34 @@ exports.updateProduct = async (req, res) => {
 
     // === 1. Cập nhật thông tin cơ bản ===
     if (products_name !== undefined) product.products_name = products_name;
+    // if (products_slug !== undefined) product.products_slug = products_slug;
     if (products_shorts !== undefined) product.products_shorts = products_shorts;
     if (products_quantity !== undefined) product.products_quantity = products_quantity;
     if (products_market_price !== undefined) product.products_market_price = products_market_price;
     if (products_sale_price !== undefined) product.products_sale_price = products_sale_price;
+
+    // Nếu có gửi slug, kiểm tra slug đó có trùng không
+    if (products_slug !== undefined && products_slug.trim() !== '') {
+      // Kiểm tra slug trùng với sản phẩm khác (không phải chính nó)
+      const existingSlug = await Product.findOne({
+        where: {
+          products_slug: products_slug.trim(),
+          id_products: { [Op.ne]: id },
+        },
+        transaction: t,
+      });
+
+      if (existingSlug) {
+        await t.rollback();
+        return res.status(400).json({ message: "Slug đã tồn tại, vui lòng chọn slug khác" });
+      }
+
+      product.products_slug = products_slug.trim();
+    } else if (products_name !== undefined) {
+      // Nếu không có slug gửi lên, hoặc rỗng, và có tên mới, tự động tạo slug từ tên
+      const newSlug = await generateUniqueSlug(Product, products_name, id);
+      product.products_slug = newSlug;
+    }
 
     if (products_status !== undefined) {
       product.products_status = products_status;
@@ -1025,7 +1055,8 @@ exports.updateProduct = async (req, res) => {
 };
 
 //getProductByid
-exports.getProductsById = async (req, res) => {
+exports.getProductsByIdforAdmin = async (req, res) => {
+
   const id = req.params.id;
 
   try {
@@ -1053,6 +1084,8 @@ exports.getProductsById = async (req, res) => {
     }
 
     // console.log('Product with category:', JSON.stringify(product.toJSON(), null, 2)); // Debug
+
+    // const id= product.id_products;
 
     // 2. Ảnh sản phẩm
     const images = await ProductImg.findAll({
@@ -1212,6 +1245,228 @@ exports.getProductsById = async (req, res) => {
       product: {
         id_products: product.id_products,
         products_name: product.products_name,
+        products_slug: product.products_slug,
+        products_shorts: product.products_shorts,
+        products_market_price: product.products_market_price,
+        products_sale_price: product.products_sale_price,
+        products_description: product.products_description,
+        products_quantity: product.products_quantity,
+        products_status: product.products_status,
+        products_primary: product.products_primary,
+        //price for customers
+        salePrice: salePrice,
+        marketPrice: originalPrice,
+
+      },
+      category: product.category || null,
+      images,
+      specs,
+      attributes,
+      skus,
+    };
+
+    // console.log('Final response:', JSON.stringify(response, null, 2)); // Debug
+    return res.json(response);
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm theo ID:", error);
+    return res.status(500).json({
+      message: "Lỗi khi lấy sản phẩm",
+      error: error.message || error,
+    });
+  }
+};
+
+//getProductByid
+exports.getProductsById = async (req, res) => {
+  const slug = req.params.slug;
+
+  try {
+    // 1. Thông tin sản phẩm chính
+    const product = await Product.findOne({
+      where: { products_slug: slug },
+      include: [
+        {
+          model: Category,
+          as: 'category',
+          attributes: ['category_id', 'name', 'parent_id'],
+          include: [
+            {
+              model: Category,
+              as: 'parent',
+              attributes: ['category_id', 'name'],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    // console.log('Product with category:', JSON.stringify(product.toJSON(), null, 2)); // Debug
+
+    const id= product.id_products;
+
+    // 2. Ảnh sản phẩm
+    const images = await ProductImg.findAll({
+      where: { 
+        id_products: id,
+        id_value: null,
+        id_variant: null,
+        is_main: true 
+      },
+    });
+
+    // 3. Thông số kỹ thuật
+    const specs = await ProductSpec.findAll({
+      where: { id_products: id },
+    });
+
+    // 4. Lấy attribute kèm giá trị thuộc sản phẩm chính xác
+    const productAttributes = await ProductAttribute.findAll({
+      where: { id_product: id },
+      include: [
+        {
+          model: Attribute,
+          as: 'attribute',
+          attributes: ['id_attribute', 'name', 'type'],
+          include: [
+            {
+              model: AttributeValue,
+              as: 'values',
+              required: false,
+              include: [
+                {
+                  model: ProductAttributeValue,
+                  as: 'productAttributeValues',
+                  where: { id_product: id },
+                  required: true,
+                },
+                {
+                  model: ProductImg,
+                  as: 'images',
+                  where: { id_products: id },
+                  required: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    // console.log('ProductAttribute sample:', JSON.stringify(productAttributes, null, 2));
+    const attributes = productAttributes
+    .filter(pa => pa.attribute && Array.isArray(pa.attribute.values))
+    .map(pa => {
+      const filteredValues = pa.attribute.values.filter(
+        v => v.productAttributeValues && v.productAttributeValues.length > 0
+      );
+
+      return {
+        id_attribute: pa.attribute.id_attribute,
+        name: pa.attribute.name,
+        type: pa.attribute.type,
+        values: filteredValues.map(v => ({
+          id_value: v.id_value,
+          value: v.value,
+          value_note: v.value_note,
+          extra_price: v.extra_price,
+          quantity: v.quantity,
+          status: v.status,
+          images: v.images || [],
+        }))
+      };
+    });
+
+    // 5. Lấy SKU + option combo + ảnh SKU nếu có
+    const variantsRaw = await ProductVariant.findAll({
+      where: { id_products: id },
+      include: [
+        {
+          model: VariantValue,
+          as: 'variantValues',
+          include: [
+            {
+              model: AttributeValue,
+              as: 'attributeValue',
+              include: [
+                {
+                  model: Attribute,
+                  as: 'attribute',
+                },
+              ],
+            },
+          ],
+        },
+        // {
+        //   model: ProductImg,
+        //   as: 'images',
+        // },
+      ],
+    });
+
+    const skus = variantsRaw
+      .filter(variant => variant.variantValues.length === attributes.length)
+      .map(variant => ({
+        variant_id: variant.id_variant,
+        quantity: variant.quantity,
+        price: variant.price,
+        price_sale: variant.price_sale,
+        status: variant.status,
+        // images: variant.images || [],
+        option_combo: variant.variantValues.map(v => ({
+          // id_value: v.attributeValue?.attribute?.id_value,
+          attribute: v.attributeValue?.attribute?.name,
+          value: v.attributeValue?.value,
+          type: v.attributeValue.attribute?.type,
+          id_value: v.attributeValue?.id_value,
+      })),
+    }));
+
+    // Xác định loại sản phẩm (giống như getAllProducts)
+    let productType = 1;
+
+    if (skus && skus.length > 0) {
+      productType = 3;
+    } else if (attributes && attributes.length > 0) {
+      productType = 2;
+    }
+
+    // Tính giá hiển thị đúng theo loại
+    let originalPrice = parseFloat(product.products_market_price) || 0;
+    let salePrice = parseFloat(product.products_sale_price) || 0;
+
+    if (productType === 2) {
+      // Lấy giá nhỏ nhất từ extra_price
+      const extraPrices = attributes.flatMap(attr =>
+        attr.values.map(v => parseFloat(v.extra_price || 0))
+      ).filter(n => !isNaN(n));
+
+      if (extraPrices.length > 0) {
+        salePrice += Math.min(...extraPrices);
+      }
+
+    } else if (productType === 3) {
+      const variantPrices = skus.map(sku => parseFloat(sku.price)).filter(n => !isNaN(n));
+      const variantSalePrices = skus.map(sku => parseFloat(sku.price_sale)).filter(n => !isNaN(n));
+
+      if (variantPrices.length > 0) {
+        originalPrice = Math.min(...variantPrices);
+      }
+
+      if (variantSalePrices.length > 0) {
+        salePrice = Math.min(...variantSalePrices);
+      }
+    }
+
+
+    // Format response để khớp với frontend
+    const response = {
+      product: {
+        id_products: product.id_products,
+        products_name: product.products_name,
+        products_slug: product.products_slug,
         products_shorts: product.products_shorts,
         products_market_price: product.products_market_price,
         products_sale_price: product.products_sale_price,

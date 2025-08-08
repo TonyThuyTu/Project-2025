@@ -67,7 +67,7 @@ export default function ProductList() {
     }
     const fetchProduct = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/products/${id}`);
+        const res = await axios.get(`http://localhost:5000/api/products/admin/${id}`);
         setSelectedProduct(res.data);
         setShowEditModal(true);
       } catch {

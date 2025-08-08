@@ -226,6 +226,7 @@ exports.getCategoryDetail = async (req, res) => {
       attributes: [
         'id_products',
         'products_name',
+        'products_slug',
         'products_market_price',
         'products_sale_price',
         'category_id',

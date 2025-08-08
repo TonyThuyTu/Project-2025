@@ -11,6 +11,7 @@ function toSlug(str) {
 }
 
 export default function ProductGrid({ products = [] }) {
+  
   const formatVND = (number) => {
     const value = Number(number);
     if (isNaN(value)) return "0₫";
@@ -35,7 +36,7 @@ export default function ProductGrid({ products = [] }) {
   }
 
   return (
-    <section className={products}>
+    <section className="product-grid-section">
       <div className='grid'>
         {products.map((product, i) => {
           const mainImg =
@@ -44,17 +45,17 @@ export default function ProductGrid({ products = [] }) {
             null;
 
           const imgUrl = getImageUrl(mainImg);
-
+          // const slug = product.slug || toSlug(product.products_name);
 
           return (
             <div key={product.id_products || i} className='product-card'>
-              <a href={`/productDetail/${product.slug || product.id_products}`}>
+              <a href={`/productDetail/${product.products_slug || toSlug(product.products_name)}`}>
                 <img src={imgUrl} alt={product.products_name} />
               </a>
               <h3>{product.products_name}</h3>
               <p> Giá chỉ từ {formatVND(product.market_price)}</p>
               <div className="buttons-buy">
-                <a href={`/productDetail/${product.slug || product.id_products}`}>
+                <a href={`/productDetail/${product.products_slug || toSlug(product.products_name)}`}>
                   Xem chi tiết
                 </a>
               </div>

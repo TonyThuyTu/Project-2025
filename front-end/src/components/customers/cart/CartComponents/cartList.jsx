@@ -1,6 +1,6 @@
 import React from "react";
 import { Row, Col, Image, Form } from "react-bootstrap";
-
+import Link from "next/link";
 // Hàm định dạng tiền VND
 const formatVND = (value) =>
   Number(value).toLocaleString("vi-VN", {
@@ -37,14 +37,21 @@ export default function CartList({ items, onUpdateQuantity, onDeleteItem }) {
           >
             {/* Sản phẩm */}
             <Col md={6} className="d-flex">
-              <Image
-                src={image}
-                width={80}
-                height={80}
-                rounded
-                className="me-3"
-                alt="product-img"
-              />
+              {/* <div key={item.product.id_products}> */}
+                 {/* <Link href={`/productDetail/${item.product.products_slug}`}> */}
+                 
+                <Image
+                  src={image}
+                  width={80}
+                  height={80}
+                  rounded
+                  className="me-3"
+                  alt="product-img"
+                />
+
+                 {/* </Link> */}
+              {/* </div> */}
+              
               <div>
                 <div className="fw-semibold">{productName}</div>
                 <div className="text-muted small">

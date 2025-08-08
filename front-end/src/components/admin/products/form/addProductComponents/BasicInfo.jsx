@@ -2,6 +2,8 @@ import { Form, Button, Modal } from "react-bootstrap";
 
 export default function BasicInfo({
   productName,
+  productSlug,
+  setProductSlug,
   setProductName,
   marketPrice,
   setMarketPrice,
@@ -49,6 +51,24 @@ export default function BasicInfo({
             {errors.productName}
           </Form.Control.Feedback>
         )}
+      </Form.Group>
+
+      <Form.Group controlId="productName">
+        <Form.Label>Đường dẫn</Form.Label>
+        <Form.Control
+          disabled
+          type="text"
+          placeholder="Đường dẫn tự nhập"
+          value={productSlug}
+          onChange={(e) => setProductSlug(e.target.value)}
+          // onBlur={() => setTouched((prev) => ({ ...prev, productName: true }))}
+          // isInvalid={touched.productName && !!errors.productName}
+        />
+        {/* {touched.productName && errors.productName && (
+          <Form.Control.Feedback type="invalid">
+            {errors.productName}
+          </Form.Control.Feedback>
+        )} */}
       </Form.Group>
 
       <Form.Group controlId="productShorts" className="mb-3">

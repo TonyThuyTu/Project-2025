@@ -16,6 +16,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
   const [options, setOptions] = useState([]);
   const [skuList, setSkuList] = useState([]);
   const [productName, setProductName] = useState('');
+  const [productSlug, setProductSlug] = useState('');
   const [productShorts, setProductShorts] = useState('');
   const [marketPrice, setMarketPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
@@ -62,6 +63,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
 
   [
     productName, 
+    productSlug,
     productShorts,
     selectedParent, 
     selectedChild, 
@@ -79,6 +81,7 @@ export default function AddProductModal({ show, onClose, onAdd }) {
 
       // 🟢 Thêm thông tin cơ bản
       formData.append('products_name', productName);
+      formData.append('products_slug', productSlug);
       formData.append('category_id', categoryId);
       formData.append('products_description', description);
       formData.append('products_shorts', productShorts);
@@ -139,6 +142,8 @@ export default function AddProductModal({ show, onClose, onAdd }) {
           <Card className="mb-3 p-3">
             <BasicInfo
               productName={productName}
+              productSlug={productSlug}
+              setProductSlug={setProductSlug}
               setProductName={setProductName}
               marketPrice={marketPrice}
               setMarketPrice={setMarketPrice}

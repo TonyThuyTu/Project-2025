@@ -18,6 +18,8 @@ export default function BasicInfo({
   setProductQuantity,
   productShorts,
   setProductShorts,
+  productSlug, 
+  setProductSlug
 }) {
   return (
     <>
@@ -30,6 +32,18 @@ export default function BasicInfo({
           placeholder="Nhập tên sản phẩm"
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
+        />
+      </div>
+
+      <div className="mb-3">
+        <label htmlFor="productSlug" className="form-label">Đường dẫn</label>
+        <input
+          type="text"
+          className="form-control"
+          id="productSlug"
+          placeholder="Nhập đường dẫn"
+          value={productSlug}
+          onChange={(e) => setProductSlug(e.target.value)}
         />
       </div>
 

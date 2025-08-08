@@ -2,8 +2,9 @@ import ClientLayout from "@/components/layouts/Clientlayout";
 import ProductDeatail from "@/components/customers/productDetail/product-Deail";
 
 // ✅ Hàm fetch dữ liệu sản phẩm từ API
-async function getProductDetail(id) {
-  const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+async function getProductDetail(slug) {
+  console.log("Fetch product with slug:", slug);
+  const res = await fetch(`http://localhost:5000/api/products/${slug}`, {
     cache: "no-store",
   });
 
@@ -18,6 +19,7 @@ async function getProductDetail(id) {
     attributes: data.attributes,
     skus: data.skus,
     product_imgs: data.images,
+    specs: data.specs,
   };
 }
 
@@ -25,7 +27,7 @@ async function getProductDetail(id) {
 export async function generateMetadata(propsPromise) {
   const { params } = await propsPromise; // 👈 await props
 
-  const product = await getProductDetail(params.id);
+  const product = await getProductDetail(params.slug);
 
   return {
     title: `${product.products_name} - Táo Bro`,
@@ -35,11 +37,11 @@ export async function generateMetadata(propsPromise) {
 
 // ✅ Component chính
 export default async function Page({ params }) {
-  const product = await getProductDetail(params.id);
+  const product = await getProductDetail(params.slug);
 
   return (
     <ClientLayout>
-      <ProductDeatail />
+      <ProductDeatail product={product}/>
     </ClientLayout>
   );
 }

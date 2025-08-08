@@ -4,6 +4,9 @@ const upload = require('../helper/upload'); // dùng multer
 const productController = require('../controllers/product.controller');
 const validateJsonMiddleware = require('../middlewares/validateJson');
 
+//get id products for admin
+router.get('/admin/:id', productController.getProductsByIdforAdmin);
+
 //search product
 router.get('/search', productController.searchProducts);
 
@@ -30,7 +33,7 @@ router.put(
 );
 
 //get product by id
-router.get('/:id', productController.getProductsById);
+router.get('/:slug', productController.getProductsById);
 
 //get all products
 router.get('/', productController.getAllProducts);

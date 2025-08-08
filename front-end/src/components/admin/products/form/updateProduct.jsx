@@ -17,6 +17,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
   const [options, setOptions] = useState([]);
   const [skuList, setSkuList] = useState([]);
   const [productName, setProductName] = useState('');
+  const [productSlug, setProductSlug] = useState('');
   const [productShorts, setProductShorts] = useState('');
   const [productQuantity, setProductQuantity] = useState(0);
   const [marketPrice, setMarketPrice] = useState('');
@@ -60,6 +61,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
 
     setProductQuantity(product.products_quantity)
     setProductName(product.products_name || "");
+    setProductSlug(product.products_slug || "");
     setProductShorts(product.products_shorts || "");
     setMarketPrice(product.products_market_price?.toString() || "");
     setSalePrice(product.products_sale_price?.toString() || "");
@@ -270,6 +272,7 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
       formData.append('attributes', JSON.stringify(fixedOptions));
       formData.append('products_id', productId);
       formData.append('products_name', productName);
+      formData.append('products_slug', productSlug);
       formData.append('products_shorts', productShorts);
       formData.append('products_quantity', productQuantity);
       formData.append('products_market_price', Number(marketPrice).toFixed(2));
@@ -335,7 +338,8 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
               marketPrice, setMarketPrice, 
               salePrice, setSalePrice,
               productQuantity, setProductQuantity,
-              productShorts, setProductShorts
+              productShorts, setProductShorts,
+              productSlug, setProductSlug
               }} />
           </Card>
 

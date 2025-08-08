@@ -59,7 +59,7 @@ export default function ProductDeatail({ product, productId }) {
 
     const payload = {
       id_customer: idCustomer,
-      id_product: params.id,
+      id_product: productData.id_products,
       quantity: quantity,
       attribute_value_ids: selectedSku.option_combo.map(o => o.id_value),
     };
@@ -83,9 +83,9 @@ export default function ProductDeatail({ product, productId }) {
   // Fetch sản phẩm nếu chưa có
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!product && params?.id) {
+      if (!product && params?.slug) {
         try {
-          const res = await fetch(`${baseURL}/api/products/${params.id}`);
+          const res = await fetch(`${baseURL}/api/products/${params.slug}`);
           const data = await res.json();
 
           setProductData({
@@ -101,7 +101,7 @@ export default function ProductDeatail({ product, productId }) {
       }
     };
     fetchProduct();
-  }, [params?.id, product]);
+  }, [params?.slug, product]);
 
   // Khởi tạo selectedValues, giá, SKU mặc định theo SKU đầu tiên
   useEffect(() => {
@@ -249,16 +249,24 @@ export default function ProductDeatail({ product, productId }) {
           <ProductActions
             selectedSku={selectedSku}
             idCustomer={idCustomer}
-            productId={params.id}
+            productId={productData.id_products}
             setQuantity={setQuantity}
             quantity={quantity}
             onAddToCart={handleAddToCart}
           />
         </aside>
       </section>
-      <ProductDescription description={productData.products_description} />
-      <ProductSpec specs={productData.specs} />
-      <ProductReview id_products={params.id} id_customer={idCustomer} />
+
+      <ProductDescription 
+      description={productData.products_description || ''} 
+      />
+      <ProductSpec 
+      specs={productData.specs || []}
+       />
+      <ProductReview 
+      id_products={productData.id_products} 
+      id_customer={idCustomer} 
+      />
     </>
   );
 }
