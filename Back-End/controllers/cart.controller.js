@@ -147,7 +147,7 @@ exports.getCartByCustomer = async (req, res) => {
             {
               model: db.Product,
               as: 'product',
-              attributes: ['id_products', 'products_name'],
+              attributes: ['id_products', 'products_name', 'products_slug'],
               // include: [
               //   {
               //     model: db.ProductImg,
@@ -221,6 +221,12 @@ exports.getCartByCustomer = async (req, res) => {
 
       return {
         ...item,
+
+        product:{
+          ...item.product,
+          products_slug: item.product?.products_slug || ""
+        },
+
         attribute_values: filteredAttributes,
         price
       };

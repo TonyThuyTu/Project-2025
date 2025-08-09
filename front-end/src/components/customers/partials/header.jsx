@@ -313,7 +313,7 @@ const HeaderClient = () => {
 
                           // Điều hướng Next.js
                           router.push(
-                            `/productDetail/${item.products_id || item.id_products}`
+                            `/productDetail/${item.products_slug}`
                           );
                         }}
                       >

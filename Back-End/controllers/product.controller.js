@@ -97,6 +97,7 @@ exports.searchProducts = async (req, res) => {
 
       return {
         products_id: p.id_products,
+        products_slug: p.products_slug,
         products_name: p.products_name,
         main_image_url: p.images?.[0]?.Img_url || null,
         market_price: marketPrice,
