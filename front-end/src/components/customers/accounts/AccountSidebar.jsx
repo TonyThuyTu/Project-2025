@@ -41,6 +41,14 @@ export default function AccountSidebar() {
       >
         Sản phẩm đã được đánh giá
       </Link>
+      <Link
+        href="/profile/Order"
+        className={`list-group-item list-group-item-action ${
+          pathname === "/profile/Order" ? "active" : ""
+        }`}
+      >
+        Đơn hàng đã đặt
+      </Link>
     </div>
   );
 }

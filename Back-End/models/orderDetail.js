@@ -16,6 +16,11 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER, 
             allowNull: false 
         },
+    id_variant:
+        {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
     product_name: 
         { 
             type: DataTypes.STRING,
@@ -25,7 +30,12 @@ module.exports = (sequelize, DataTypes) => {
         { 
             type: DataTypes.INTEGER, 
             allowNull: false 
-        }
+        },
+    final_price: 
+        { 
+            type: DataTypes.DECIMAL, 
+            allowNull: false 
+        },
   }, {
     tableName: 'order_details',
     timestamps: false

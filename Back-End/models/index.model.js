@@ -1,7 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
-const orderItemAttributeValue = require('./orderItemAttributeValue');
-const shippingInfo = require('./shippingInfo');
 
 // Import các model
 const Contact = require('./contact')(sequelize, DataTypes);
@@ -39,6 +37,8 @@ const ProductReview = require('./comments') (sequelize, DataTypes);
 const Voucher = require('./voucher') (sequelize, DataTypes);
 
 const VoucherProduct = require('./voucherProduct') (sequelize, DataTypes);
+
+const VoucherUsage = require('./voucherUsage') (sequelize, DataTypes);
 
 const Cart = require('./cart') (sequelize, DataTypes);
 
@@ -80,6 +80,7 @@ const db = {
   ProductReview,
   Voucher,
   VoucherProduct,
+  VoucherUsage,
   Cart,
   CartItem,
   CartItemAttributeValue,
@@ -271,6 +272,20 @@ db.Product.belongsToMany(db.Voucher, {
   as: 'vouchers'
 });
 
+db.Voucher.belongsToMany(db.Customer, {
+  through: db.VoucherUsage,
+  foreignKey: 'id_voucher',
+  otherKey: 'id_customer',
+  as: 'users'
+});
+
+db.Customer.belongsToMany(db.Voucher, {
+  through: db.VoucherUsage,
+  foreignKey: 'id_customer',
+  otherKey: 'id_voucher',
+  as: 'vouchers'
+});
+
 //cart
 // Cart 1-n CartItem
 db.Cart.hasMany(db.CartItem, {
@@ -362,6 +377,16 @@ db.OrderDetail.belongsTo(db.Product, {
   foreignKey: 'id_product',
   as: 'product',
 });
+
+db.OrderDetail.belongsTo(ProductVariant, {
+  foreignKey: 'id_variant',
+  as: 'variant',
+});
+
+db.ProductVariant.hasMany(OrderDetail, {
+  foreignKey: 'id_variant',
+  as: 'order_details',
+})
 
 // ========== ASSOCIATION ATTRIBUTE TRONG ORDER ==========
 db.OrderDetail.hasMany(db.OrderItemAttributeValue, {

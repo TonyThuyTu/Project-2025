@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const voucherController = require('../controllers/voucher.controller');
+const verifyToken = require('../middlewares/verifyToken');
 
 //apply voucher
-router.post('/apply', voucherController.applyVoucher);
+router.post('/apply', verifyToken, voucherController.applyVoucher);
 
 //create voucher
 router.post('/', voucherController.createVoucher);

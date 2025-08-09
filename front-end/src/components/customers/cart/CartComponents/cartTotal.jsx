@@ -22,11 +22,21 @@ export default function CartTotal({ items, onShowContactModal }) {
 
   const applyVoucher = async () => {
     try {
-      const res = await axios.post("http://localhost:5000/api/voucher/apply", {
-        code: discountCode,
-        total: totalBeforeDiscount,
-        productIds: items.map((item) => item.id_product),
-      });
+      const token = localStorage.getItem("token"); // Lấy token khách hàng
+
+      const res = await axios.post(
+        "http://localhost:5000/api/voucher/apply",
+        {
+          code: discountCode,
+          total: totalBeforeDiscount,
+          productIds: items.map((item) => item.id_product),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,  // Gửi token trong header
+          },
+        }
+      );
 
       setVoucherInfo(res.data.voucher);
       toast.success("Áp dụng mã giảm giá thành công!");

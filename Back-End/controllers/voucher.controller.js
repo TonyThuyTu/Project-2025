@@ -1,9 +1,10 @@
 const db = require('../models/index.model');
 const Voucher = db.Voucher;
+const VoucherUsage = db.VoucherUsage
 const Product = db.Product;
 const VoucherProduct = db.VoucherProduct;
 const { sequelize } = db;
-
+ 
 //create voucher
 exports.createVoucher = async (req, res) => {
   const t = await db.sequelize.transaction();
@@ -218,34 +219,81 @@ exports.updateVoucher = async (req, res) => {
 //apply voucher
 exports.applyVoucher = async (req, res) => {
   const { code, total, productIds } = req.body;
+  const userId = req.user?.id_customer;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Bạn cần đăng nhập để sử dụng voucher' });
+  }
 
   try {
-    const voucher = await Voucher.findOne({ where: { code } });
+    const voucher = await Voucher.findOne({
+      where: { code, status: 2 }
+    });
 
-    if (!voucher) return res.status(404).json({ message: 'Mã không tồn tại' });
-
-    // Kiểm tra trạng thái
-    if (voucher.status !== 2) {
-      return res.status(400).json({ message: "Voucher không còn hiệu lực" });
+    if (!voucher) {
+      return res.status(404).json({ message: 'Mã giảm giá không tồn tại hoặc không còn hiệu lực' });
     }
 
-    // Kiểm tra thời gian
     const now = new Date();
-    if (voucher.start_date > now || voucher.end_date < now)
-      return res.status(400).json({ message: 'Voucher hết hạn' });
-
-    // Kiểm tra đơn hàng tối thiểu
-    if (voucher.min_order_value && total < voucher.min_order_value)
-      return res.status(400).json({ message: `Đơn hàng cần tối thiểu ${voucher.min_order_value.toLocaleString()}₫` });
-
-    // Kiểm tra sản phẩm áp dụng (nếu có)
-    if (voucher.products?.length > 0) {
-      const validProduct = voucher.products.some(id => productIds.includes(id));
-      if (!validProduct) return res.status(400).json({ message: 'Mã không áp dụng cho sản phẩm này' });
+    if (voucher.start_date && new Date(voucher.start_date) > now) {
+      return res.status(400).json({ message: 'Voucher chưa bắt đầu sử dụng' });
+    }
+    if (voucher.end_date && new Date(voucher.end_date) < now) {
+      return res.status(400).json({ message: 'Voucher đã hết hạn' });
     }
 
-    return res.json({ voucher });
-  } catch (err) {
-    return res.status(500).json({ message: 'Lỗi server khi áp dụng mã' });
+    if (voucher.min_order_value && Number(total) < Number(voucher.min_order_value)) {
+      return res.status(400).json({ message: `Đơn hàng tối thiểu phải từ ${Number(voucher.min_order_value).toLocaleString()}₫` });
+    }
+
+    if (voucher.usage_limit && voucher.usage_count >= voucher.usage_limit) {
+      return res.status(400).json({ message: 'Voucher đã hết lượt sử dụng' });
+    }
+
+    if (voucher.user_limit) {
+      const usedCount = await VoucherUsage.count({
+        where: {
+          id_voucher: voucher.id_voucher,
+          id_customer: userId,
+        }
+      });
+
+      if (usedCount >= voucher.user_limit) {
+        return res.status(400).json({ message: 'Bạn đã dùng mã này vượt giới hạn cho phép' });
+      }
+    }
+
+    const voucherProducts = await VoucherProduct.findAll({
+      where: { id_voucher: voucher.id_voucher }
+    });
+    if (voucherProducts.length > 0) {
+      const validProductIds = voucherProducts.map(vp => vp.id_product);
+      const hasValidProduct = productIds.some(pid => validProductIds.includes(pid));
+      if (!hasValidProduct) {
+        return res.status(400).json({ message: 'Voucher không áp dụng cho sản phẩm trong đơn hàng' });
+      }
+    }
+
+    let discountAmount = 0;
+    if (voucher.discount_type === 'percent') {
+      discountAmount = Number(total) * (Number(voucher.discount_value) / 100);
+    } else if (voucher.discount_type === 'fixed') {
+      discountAmount = Number(voucher.discount_value);
+    }
+    if (discountAmount > Number(total)) discountAmount = Number(total);
+
+    return res.json({
+      message: 'Áp dụng voucher thành công',
+      discountAmount,
+      voucher: {
+        code: voucher.code,
+        discount_type: voucher.discount_type,
+        discount_value: voucher.discount_value,
+        min_order_value: voucher.min_order_value
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi khi áp dụng voucher:', error);
+    return res.status(500).json({ message: 'Lỗi server khi áp dụng voucher' });
   }
 };
