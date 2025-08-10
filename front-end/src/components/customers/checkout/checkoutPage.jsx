@@ -197,7 +197,7 @@ export default function CheckoutPage({ idCustomer }) {
       
       if (paymentMethod === 2 && res.data.payUrl) {
       // Thanh toán online → chuyển hướng sang MoMo
-        window.location.href = res.data.payUrl;
+        window.open(res.data.payUrl, '_blank');
       } else {
       toast.success("Đặt hàng thành công!");
       // Có thể chuyển trang hoặc reset giỏ hàng ở đây

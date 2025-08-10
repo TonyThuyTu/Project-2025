@@ -1,31 +1,26 @@
-const crypto = require('crypto');
+// utils/momo.js
 const https = require('https');
+const crypto = require('crypto');
 
-const partnerCode = "MOMO";
-const accessKey = "F8BBA842ECF85";
-const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
-const redirectUrl = "https://your-site.com/payment-return";
-const ipnUrl = "https://your-site.com/payment-notify";
-
-function createMoMoPaymentUrl({ amount, orderId, orderInfo = "Thanh toán MoMo", extraData = "" }) {
+async function createMoMoPaymentUrl({ amount, orderId, orderInfo }) {
   return new Promise((resolve, reject) => {
+    const partnerCode = 'MOMO';
+    const accessKey = 'F8BBA842ECF85';
+    const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
     const requestId = partnerCode + Date.now();
-    const requestType = "captureWallet";
+    const redirectUrl = 'http://localhost:3000/thankyou';
+    const ipnUrl = 'http://localhost:5000/api/payment/momo/ipn';
+    const requestType = 'captureWallet';
+    const extraData = '';
 
-    // Giữ nguyên orderInfo khi ký và khi gửi
     const rawSignature =
-      `accessKey=${accessKey}` +
-      `&amount=${amount}` +
-      `&extraData=${extraData}` +
-      `&ipnUrl=${ipnUrl}` +
-      `&orderId=${orderId}` +
-      `&orderInfo=${orderInfo}` +
-      `&partnerCode=${partnerCode}` +
-      `&redirectUrl=${redirectUrl}` +
-      `&requestId=${requestId}` +
-      `&requestType=${requestType}`;
+      `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}` +
+      `&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}` +
+      `&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}` +
+      `&requestId=${requestId}&requestType=${requestType}`;
 
-    const signature = crypto.createHmac('sha256', secretKey)
+    const signature = crypto
+      .createHmac('sha256', secretKey)
       .update(rawSignature)
       .digest('hex');
 
@@ -35,7 +30,7 @@ function createMoMoPaymentUrl({ amount, orderId, orderInfo = "Thanh toán MoMo",
       requestId,
       amount,
       orderId,
-      orderInfo, // dùng đúng như khi ký
+      orderInfo,
       redirectUrl,
       ipnUrl,
       extraData,
@@ -51,28 +46,28 @@ function createMoMoPaymentUrl({ amount, orderId, orderInfo = "Thanh toán MoMo",
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestBody),
-      },
+        'Content-Length': Buffer.byteLength(requestBody)
+      }
     };
 
-    const req = https.request(options, (res) => {
+    const req = https.request(options, res => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', chunk => (data += chunk));
       res.on('end', () => {
         try {
           const result = JSON.parse(data);
-          if (result.resultCode === 0 && result.payUrl) {
+          if (result.payUrl) {
             resolve(result.payUrl);
           } else {
-            reject(new Error(`MoMo trả về lỗi: ${result.message} (code: ${result.resultCode})`));
+            reject(new Error(result.message || 'Không tạo được link MoMo'));
           }
-        } catch (error) {
-          reject(error);
+        } catch (err) {
+          reject(err);
         }
       });
     });
 
-    req.on('error', (err) => reject(err));
+    req.on('error', reject);
     req.write(requestBody);
     req.end();
   });
