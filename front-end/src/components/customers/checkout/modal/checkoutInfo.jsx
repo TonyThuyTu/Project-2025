@@ -5,160 +5,165 @@ import { useState, useEffect } from "react";
 export default function CheckoutInfo({
   userInfo,
   setUserInfo,
-  addresses = [],
+  addresses = [],         // danh sách địa chỉ user
   selectedAddress,
+  newAddress,
+  setNewAddress,
   setSelectedAddress,
   paymentMethod,
   setPaymentMethod,
+  note,
+  setNote
 }) {
-  
-  const [newAddress, setNewAddress] = useState({
-    address: "",
-    ward: "",
-    city: "",
-  });
+  // State địa chỉ để sửa, đồng nhất tên trường với dữ liệu addresses
+  // const [newAddress, setNewAddress] = useState({
+  //   name_address: "",
+  //   name_ward: "",
+  //   name_city: "",
+  // });
 
-  // ✅ Hàm cập nhật userInfo
+  // Khi addresses hoặc selectedAddress thay đổi, set selected và newAddress mặc định
+  useEffect(() => {
+    if (addresses.length > 0) {
+      const defaultAddress = selectedAddress || addresses.find(a => a.is_primary === 1) || addresses[0];
+      setSelectedAddress(defaultAddress);
+
+      if (defaultAddress) {
+        setNewAddress({
+          name_address: defaultAddress.name_address || "",
+          name_ward: defaultAddress.name_ward || "",
+          name_city: defaultAddress.name_city || "",
+        });
+      }
+    }
+  }, [addresses, selectedAddress, setSelectedAddress]);
+
+  // Cập nhật thông tin khách hàng
   const handleChangeUser = (field, value) => {
-    setUserInfo((prev) => ({
+    setUserInfo(prev => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  // ✅ Hàm cập nhật địa chỉ mới
+  // Cập nhật form địa chỉ (các input)
   const handleChangeNewAddress = (e) => {
     const { name, value } = e.target;
-    setNewAddress((prev) => ({
+    setNewAddress(prev => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // ✅ Tự động chọn địa chỉ mặc định nếu chưa chọn
-  useEffect(() => {
-    if (!selectedAddress && addresses.length > 0) {
-      const primary = addresses.find((a) => a.is_primary === 1);
-      setSelectedAddress(primary || addresses[0]);
-    }
-  }, [addresses, selectedAddress, setSelectedAddress]);
-
+  // Khi chọn 1 địa chỉ từ danh sách, cập nhật selected và đổ dữ liệu lên form địa chỉ
   const handleSelectAddress = (addr) => {
     setSelectedAddress(addr);
+    setNewAddress({
+      name_address: addr.name_address || "",
+      name_ward: addr.name_ward || "",
+      name_city: addr.name_city || "",
+    });
   };
 
   return (
     <div>
-      {/* === Thông tin khách hàng === */}
+      {/* Thông tin khách hàng */}
       {userInfo && (
-        <div>
+        <>
           <h5>Thông tin khách hàng</h5>
 
-          <div className="mb-2">
-            <label className="form-label">Họ và tên</label>
-            <input
+          <Form.Group className="mb-2">
+            <Form.Label>Họ và tên</Form.Label>
+            <Form.Control
               type="text"
-              className="form-control"
               value={userInfo.name || ""}
               onChange={(e) => handleChangeUser("name", e.target.value)}
             />
-          </div>
+          </Form.Group>
 
-          <div className="mb-2">
-            <label className="form-label">Email</label>
-            <input
+          <Form.Group className="mb-2">
+            <Form.Label>Email</Form.Label>
+            <Form.Control
               type="email"
-              className="form-control"
               value={userInfo.email || ""}
               onChange={(e) => handleChangeUser("email", e.target.value)}
             />
-          </div>
+          </Form.Group>
 
-          <div className="mb-2">
-            <label className="form-label">Số điện thoại</label>
-            <input
+          <Form.Group className="mb-2">
+            <Form.Label>Số điện thoại</Form.Label>
+            <Form.Control
               type="tel"
-              className="form-control"
               value={userInfo.phone || ""}
               onChange={(e) => handleChangeUser("phone", e.target.value)}
             />
-          </div>
-        </div>
+          </Form.Group>
+        </>
       )}
 
-      {/* === Địa chỉ giao hàng === */}
-      <h5>Thông tin giao hàng</h5>
-
-      {addresses.length > 0 ? (
-        <div className="d-flex flex-column gap-2">
-          {addresses.map((addr) => (
+      {/* Danh sách địa chỉ để chọn */}
+      <h5 className="mt-4">Chọn địa chỉ giao hàng</h5>
+      <div className="d-flex flex-column gap-2 mb-3">
+        {addresses.length > 0 ? (
+          addresses.map(addr => (
             <Card
               key={addr.id_address}
               onClick={() => handleSelectAddress(addr)}
               style={{
                 cursor: "pointer",
-                border:
-                  selectedAddress?.id_address === addr.id_address
-                    ? "2px solid #007bff"
-                    : "1px solid #ccc",
-                background:
-                  selectedAddress?.id_address === addr.id_address
-                    ? "#e9f5ff"
-                    : "#fff",
+                border: selectedAddress?.id_address === addr.id_address ? "2px solid #007bff" : "1px solid #ccc",
+                background: selectedAddress?.id_address === addr.id_address ? "#e9f5ff" : "#fff"
               }}
               className="p-3"
             >
-              <div>
-                <strong>
-                  {addr.address_label}
-                  {addr.is_primary === true && (
-                    <span
-                      className="text-primary bg-light ms-2 px-2 py-1 rounded"
-                      style={{ fontSize: "15px", fontWeight: 500 }}
-                    >
-                      Mặc định
-                    </span>
-                  )}
-                </strong>
-              </div>
-              <div>
-                {addr.name_city} - {addr.name_ward} - {addr.name_address}
-              </div>
+              <strong>
+                {addr.address_label}
+                {addr.is_primary === true && (
+                  <span
+                    className="text-primary bg-light ms-2 px-2 py-1 rounded"
+                    style={{ fontSize: "15px", fontWeight: 500 }}
+                  >
+                    Mặc định
+                  </span>
+                )}
+              </strong>
+              <div>{addr.name_city} - {addr.name_ward} - {addr.name_address}</div>
             </Card>
-          ))}
-        </div>
-      ) : (
-        <div>
-          <Form.Group className="mb-2">
-            <Form.Label>Địa chỉ</Form.Label>
-            <Form.Control
-              name="address"
-              value={newAddress.address}
-              onChange={handleChangeNewAddress}
-            />
-          </Form.Group>
-          <Form.Group className="mb-2">
-            <Form.Label>Phường</Form.Label>
-            <Form.Control
-              name="ward"
-              value={newAddress.ward}
-              onChange={handleChangeNewAddress}
-            />
-          </Form.Group>
-          <Form.Group className="mb-2">
-            <Form.Label>Thành phố</Form.Label>
-            <Form.Control
-              name="city"
-              value={newAddress.city}
-              onChange={handleChangeNewAddress}
-            />
-          </Form.Group>
-        </div>
-      )}
+          ))
+        ) : (
+          <div>Chưa có địa chỉ nào</div>
+        )}
+      </div>
 
-      {/* === Phương thức thanh toán === */}
+      {/* Form sửa/chỉnh sửa địa chỉ */}
+      <h5 className="mt-4">Địa chỉ giao hàng</h5>
+      <Form.Group className="mb-2">
+        <Form.Label>Địa chỉ nhà</Form.Label>
+        <Form.Control
+          name="name_address"
+          value={newAddress.name_address}
+          onChange={handleChangeNewAddress}
+        />
+      </Form.Group>
+      <Form.Group className="mb-2">
+        <Form.Label>Phường</Form.Label>
+        <Form.Control
+          name="name_ward"
+          value={newAddress.name_ward}
+          onChange={handleChangeNewAddress}
+        />
+      </Form.Group>
+      <Form.Group className="mb-2">
+        <Form.Label>Thành phố</Form.Label>
+        <Form.Control
+          name="name_city"
+          value={newAddress.name_city}
+          onChange={handleChangeNewAddress}
+        />
+      </Form.Group>
+
+      {/* Phương thức thanh toán */}
       <h5 className="mt-4">Phương thức thanh toán</h5>
-
       <Form.Check
         type="radio"
         label="Thanh toán khi nhận hàng (COD)"
@@ -175,6 +180,16 @@ export default function CheckoutInfo({
         checked={paymentMethod === 2}
         onChange={() => setPaymentMethod(2)}
       />
+      <h5 className="mt-4">Ghi chú</h5>
+      <Form.Group className="mb-2">
+        <Form.Control
+          as="textarea"
+          rows={3}
+          placeholder="Nhập ghi chú nếu có"
+          value={note || ""}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </Form.Group>
     </div>
   );
 }

@@ -1,37 +1,81 @@
-// utils/momoPayment.js
-const MOMO_URL = 'https://test-payment.momo.vn/v2/gateway/api/create';
-const axios = require('axios');
 const crypto = require('crypto');
+const https = require('https');
 
-exports.createMomoPayment = async ({ amount, orderId }) => {
-  // Dữ liệu test MoMo (đăng ký với tài khoản test của bạn)
-  const partnerCode = 'MOMO...';
-  const accessKey = '...';
-  const secretKey = '...';
-  const returnUrl = `http://localhost:5000/api/order/momo/return`;
-  const notifyUrl = returnUrl;
+const partnerCode = "MOMO";
+const accessKey = "F8BBA842ECF85";
+const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+const redirectUrl = "https://your-site.com/payment-return";
+const ipnUrl = "https://your-site.com/payment-notify";
 
-  const requestId = `${orderId}-${Date.now()}`;
-  const orderInfo = 'Thanh toán đơn hàng #' + orderId;
+function createMoMoPaymentUrl({ amount, orderId, orderInfo = "Thanh toán MoMo", extraData = "" }) {
+  return new Promise((resolve, reject) => {
+    const requestId = partnerCode + Date.now();
+    const requestType = "captureWallet";
 
-  const rawSignature = `accessKey=${accessKey}&amount=${amount}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&requestId=${requestId}&returnUrl=${returnUrl}&notifyUrl=${notifyUrl}`;
-  const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
+    // Giữ nguyên orderInfo khi ký và khi gửi
+    const rawSignature =
+      `accessKey=${accessKey}` +
+      `&amount=${amount}` +
+      `&extraData=${extraData}` +
+      `&ipnUrl=${ipnUrl}` +
+      `&orderId=${orderId}` +
+      `&orderInfo=${orderInfo}` +
+      `&partnerCode=${partnerCode}` +
+      `&redirectUrl=${redirectUrl}` +
+      `&requestId=${requestId}` +
+      `&requestType=${requestType}`;
 
-  const body = {
-    partnerCode,
-    accessKey,
-    requestId,
-    orderId: orderId.toString(),
-    orderInfo,
-    amount: amount.toString(),
-    returnUrl,
-    notifyUrl,
-    requestType: 'captureWallet',
-    signature,
-    extraData: '',
-    lang: 'vi',
-  };
+    const signature = crypto.createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex');
 
-  const response = await axios.post(MOMO_URL, body);
-  return response.data.payUrl;
-};
+    const requestBody = JSON.stringify({
+      partnerCode,
+      accessKey,
+      requestId,
+      amount,
+      orderId,
+      orderInfo, // dùng đúng như khi ký
+      redirectUrl,
+      ipnUrl,
+      extraData,
+      requestType,
+      signature,
+      lang: 'vi'
+    });
+
+    const options = {
+      hostname: 'test-payment.momo.vn',
+      port: 443,
+      path: '/v2/gateway/api/create',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(requestBody),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          if (result.resultCode === 0 && result.payUrl) {
+            resolve(result.payUrl);
+          } else {
+            reject(new Error(`MoMo trả về lỗi: ${result.message} (code: ${result.resultCode})`));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(err));
+    req.write(requestBody);
+    req.end();
+  });
+}
+
+module.exports = { createMoMoPaymentUrl };

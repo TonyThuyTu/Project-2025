@@ -158,6 +158,7 @@ export default function OrderPage() {
             <table className="table table-hover table-bordered align-middle">
               <thead className="table-secondary">
                 <tr>
+                  <th>Mã</th>
                   <th>Tên người đặt</th>
                   <th>Ngày đặt</th>
                   <th>Thanh toán</th>
@@ -177,6 +178,7 @@ export default function OrderPage() {
                 ) : (
                   orders.map((order, index) => (
                     <tr key={order.id ?? index}>
+                      <td>#{order.id}</td>
                       <td>{order.given_name ? order.given_name : order.customer_name}</td>
                       <td>{new Date(order.order_date).toLocaleDateString("vi-VN")}</td>
                       <td>{paymentMethodMap[order.payment_method]}</td>

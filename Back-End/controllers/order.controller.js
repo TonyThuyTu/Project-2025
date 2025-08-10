@@ -1,10 +1,11 @@
 const db = require('../models/index.model');
 const sendOrderConfirmationEmail = require('../utils/mailCheckOut');
 const { Op } = require('sequelize');
+const crypto = require('crypto');
+const { createMoMoPaymentUrl } = require('../utils/momoPayment');
 
 exports.checkout = async (req, res) => {
   const t = await db.sequelize.transaction();
-
   try {
     const {
       id_customer,
@@ -17,124 +18,216 @@ exports.checkout = async (req, res) => {
       note
     } = req.body;
 
-    // Kiểm tra dữ liệu đầu vào
-    if (
-      !id_customer || !name || !phone || !email || !address ||
-      !payment_method || !Array.isArray(cart_items) || cart_items.length === 0
-    ) {
+    if (!id_customer || !name || !phone || !email || !address ||
+        !payment_method || !Array.isArray(cart_items) || cart_items.length === 0) {
       return res.status(400).json({ message: "Thiếu thông tin đơn hàng." });
     }
 
-    // Kiểm tra phương thức thanh toán
-    const paymentMethodMap = { 1: 'cod', 2: 'vnpay' };
+    const paymentMethodMap = { 1: 'cod', 2: 'online' };
     const paymentMethodText = paymentMethodMap[payment_method];
     if (!paymentMethodText) {
       return res.status(400).json({ message: "Phương thức thanh toán không hợp lệ." });
-    }
-
-    // Xử lý địa chỉ
-    let fullAddress = '';
-    if (typeof address === 'string') {
-      fullAddress = address;
-    } else if (address?.fullAddress) {
-      fullAddress = address.fullAddress;
-    } else if (address?.address && address?.ward && address?.city) {
-      fullAddress = `${address.address}, ${address.ward}, ${address.city}`;
-    } else {
-      return res.status(400).json({ message: "Thiếu thông tin địa chỉ giao hàng." });
     }
 
     let total_amount = 0;
     const shipping_fee = 0;
     const orderDetails = [];
 
-    // Tính tổng tiền và chuẩn bị chi tiết đơn hàng
+    // Tính tổng và chuẩn bị orderDetails
     for (const item of cart_items) {
       const product = await db.Product.findByPk(item.id_product);
-      if (!product) {
-        throw new Error(`Sản phẩm với ID ${item.id_product} không tồn tại.`);
+      if (!product) throw new Error(`Sản phẩm với ID ${item.id_product} không tồn tại.`);
+
+      let price = parseFloat(product.products_price);
+      let id_variant = null;
+      const options = item.attribute_value_ids || [];
+
+      if (item.id_variant) {
+        const variant = await db.ProductVariant.findByPk(item.id_variant);
+        if (variant) {
+          price = parseFloat(variant.price || variant.price_sale || price);
+          id_variant = variant.id_variant;
+        }
+      } else if (options.length > 0) {
+        const attrs = await db.AttributeValue.findAll({ where: { id_value: options } });
+        for (const attr of attrs) price += parseFloat(attr.extra_price || 0);
       }
 
-      const itemTotal = parseFloat(product.products_sale_price) * item.quantity;
+      const itemTotal = price * item.quantity;
       total_amount += itemTotal;
 
       orderDetails.push({
         id_product: item.id_product,
+        id_variant,
         product_name: product.products_name,
         quantity: item.quantity,
-        price: parseFloat(product.products_sale_price),
-        options: item.attribute_value_ids || [],
+        final_price: price,
+        options
       });
     }
 
-    // Tạo đơn hàng
+    const totalAmountFromClient = parseFloat(req.body.total_amount);
+    const totalAmountToSave = (!isNaN(totalAmountFromClient) && totalAmountFromClient > 0)
+      ? totalAmountFromClient
+      : total_amount;
+
+    // Nếu là thanh toán online, tạo link MoMo trước
+    let payUrl = null;
+    if (payment_method === 2) {
+      try {
+        const tempOrderId = `ORDER_TMP_${Date.now()}`;
+        payUrl = await createMoMoPaymentUrl({
+          amount: totalAmountToSave.toString(),
+          orderId: tempOrderId,
+          orderInfo: `Thanh toán đơn hàng`
+        });
+      } catch (err) {
+        console.error("Lỗi tạo link thanh toán MoMo:", err);
+        await t.rollback();
+        return res.status(500).json({ message: "Lỗi thanh toán MoMo", error: err.message });
+      }
+    }
+
+    // Tạo đơn hàng (chỉ khi MoMo đã tạo link thành công hoặc COD)
     const newOrder = await db.Order.create({
       id_customer,
       name,
       phone,
       email,
-      address: fullAddress,
-      total_amount,
+      address,
+      total_amount: totalAmountToSave,
       shipping_fee,
       payment_method,
-      order_status: 'pending',
-      note,
+      order_status: 1,
+      note
     }, { transaction: t });
 
-    // Tạo chi tiết đơn hàng và thuộc tính
     for (const detail of orderDetails) {
       const orderDetail = await db.OrderDetail.create({
         id_order: newOrder.id_order,
+        id_variant: detail.id_variant,
         id_product: detail.id_product,
         product_name: detail.product_name,
         quantity: detail.quantity,
+        final_price: detail.final_price
       }, { transaction: t });
 
-      if (Array.isArray(detail.options)) {
-        for (const id_value of detail.options) {
-          await db.OrderItemAttributeValue.create({
-            id_order_detail: orderDetail.id_order_detail,
-            id_value,
-          }, { transaction: t });
-        }
+      if (detail.options.length > 0) {
+        const optionRecords = detail.options.map(id_value => ({
+          id_order_detail: orderDetail.id_order_detail,
+          id_value
+        }));
+        await db.OrderItemAttributeValue.bulkCreate(optionRecords, { transaction: t });
       }
     }
 
-    // Tạo bản ghi thanh toán
     await db.Payment.create({
       id_order: newOrder.id_order,
-      payment_method: paymentMethodText,
-      payment_status: 'unpaid',
-      amount: total_amount + shipping_fee,
-      payment_date: null,
+      payment_method,
+      payment_status: payment_method === 2 ? 0 : 1, // online chưa thanh toán thì status = 0
+      amount: totalAmountToSave + shipping_fee,
+      payment_date: null
     }, { transaction: t });
 
-    // Gửi email xác nhận đơn hàng
-    await sendOrderConfirmationEmail(email, {
-      id_order: newOrder.id_order,
-      name,
-      phone,
-      email,
-      address: fullAddress,
-      total_amount,
-      payment_method: paymentMethodText,
-      order_date: newOrder.order_date,
-      products: orderDetails,
-      note,
-    });
+    // Chỉ gửi email khi COD hoặc khi online đã thanh toán (nếu xử lý callback MoMo thì gửi ở đó)
+    if (payment_method === 1) {
+      await sendOrderConfirmationEmail(email, {
+        id_order: newOrder.id_order,
+        name,
+        phone,
+        email,
+        address,
+        total_amount: totalAmountToSave,
+        payment_method: paymentMethodText,
+        order_date: newOrder.order_date,
+        products: orderDetails,
+        note
+      });
+    }
 
     await t.commit();
+
+    if (payment_method === 2) {
+      return res.status(200).json({
+        message: "Tạo đơn thành công, vui lòng thanh toán online",
+        order_id: newOrder.id_order,
+        payment_method: 'online',
+        payUrl
+      });
+    }
 
     return res.status(200).json({
       message: "Đặt hàng thành công",
       order_id: newOrder.id_order,
-      payment_method: paymentMethodText,
+      payment_method: 'cod'
     });
 
   } catch (error) {
     await t.rollback();
     console.error("Checkout Error:", error);
     return res.status(500).json({ message: "Lỗi khi đặt hàng", error: error.message });
+  }
+};
+
+//IPN Momo
+exports.momoIPN = async (req, res) => {
+  try {
+    const {
+      partnerCode,
+      orderId,
+      requestId,
+      amount,
+      orderInfo,
+      orderType,
+      transId,
+      resultCode,
+      message,
+      payType,
+      responseTime,
+      extraData,
+      signature
+    } = req.body;
+
+    const rawSignature =
+      `accessKey=F8BBA842ECF85` +
+      `&amount=${amount}` +
+      `&extraData=${extraData}` +
+      `&message=${message}` +
+      `&orderId=${orderId}` +
+      `&orderInfo=${orderInfo}` +
+      `&orderType=${orderType}` +
+      `&partnerCode=${partnerCode}` +
+      `&payType=${payType}` +
+      `&requestId=${requestId}` +
+      `&responseTime=${responseTime}` +
+      `&resultCode=${resultCode}` +
+      `&transId=${transId}`;
+
+    const expectedSignature = crypto
+      .createHmac('sha256', 'K951B6PE1waDMi640xX08PD3vg6EkVlz')
+      .update(rawSignature)
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      return res.status(400).json({ message: 'Chữ ký không hợp lệ' });
+    }
+
+    // Nếu thanh toán thành công
+    if (resultCode === 0) {
+      // Cập nhật đơn hàng
+      await db.Payment.update(
+        { payment_status: 1, payment_date: new Date() },
+        { where: { id_order: myOrderId} }
+      );
+
+      // Gửi email xác nhận ở đây
+      // await sendOrderConfirmationEmail(...);
+    }
+
+    return res.status(200).json({ message: 'OK' });
+  } catch (error) {
+    console.error('MoMo IPN error:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -295,7 +388,6 @@ exports.getOrderDetail = async (req, res) => {
         {
           model: db.OrderDetail,
           as: 'order_details',
-          
           include: [
             {
               model: db.Product,
@@ -303,11 +395,10 @@ exports.getOrderDetail = async (req, res) => {
               attributes: [
                 'id_products', 'products_name', 'products_slug',
                 'products_market_price', 'products_sale_price',
-                // Nếu bạn có include attributes, skus ở đây thì tốt, hoặc load ở step khác
               ],
               include: [
                 {
-                  model: db.ProductAttributeValue, // hoặc tên model đúng của attribute_values
+                  model: db.ProductAttributeValue,
                   as: 'productAttributeValues',
                   include: [
                     {
@@ -339,6 +430,26 @@ exports.getOrderDetail = async (req, res) => {
               model: db.ProductVariant,
               as: 'variant',
               attributes: ['price', 'price_sale'],
+              include: [
+                {
+                  model: db.VariantValue,
+                  as: 'variantValues',
+                  include: [
+                    {
+                      model: db.AttributeValue,
+                      as: 'attributeValue',
+                      attributes: ['value', 'value_note', 'extra_price'],
+                      include: [
+                        {
+                          model: db.Attribute,
+                          as: 'attribute',
+                          attributes: ['name', 'type']
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             },
           ],
         },
@@ -349,13 +460,13 @@ exports.getOrderDetail = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     }
 
-
     res.status(200).json(order);
   } catch (error) {
     console.error('Lỗi lấy chi tiết đơn hàng:', error);
     res.status(500).json({ message: 'Lỗi server khi lấy chi tiết đơn hàng' });
   }
 };
+
 
 exports.getOrdersByCustomerId = async (req, res) => {
   const customerId = req.params.id;

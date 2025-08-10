@@ -11,12 +11,16 @@ const formatVND = (value) =>
     minimumFractionDigits: 0,
   });
 
-export default function CheckoutCart({ cartItems }) {
+export default function CheckoutCart({ cartItems, onCheckout, submitting, onTotalChange }) {
 
   const totalPrice = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  React.useEffect(() => {
+    onTotalChange(totalPrice);
+  }, [totalPrice, onTotalChange]);
 
   const router = useRouter();
 
@@ -143,8 +147,13 @@ export default function CheckoutCart({ cartItems }) {
           Hủy
         </Button>
 
-        <Button className="flex-grow-0" style={{ width: "50%" }} variant="primary">
-          Xác nhận đơn hàng
+        <Button 
+        className="flex-grow-0" 
+        style={{ width: "50%" }} 
+        variant="primary"
+        onClick={onCheckout}
+        >
+          {submitting ? "Đang xử lý..." : "Đặt hàng"}
         </Button>
       </div>
 

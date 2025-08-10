@@ -120,11 +120,51 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
                   return (
                     <tr key={i}>
                       <td>{item.product_name}</td>
+
                       <td>
-                        {item.attribute_values?.length
-                          ? item.attribute_values.map(attr => attr.value_name).join(", ")
-                          : "Không có"}
+                        {item.variant?.variantValues?.length ? (
+                          item.variant.variantValues.map((v, idx) => {
+                            const attr = v.attributeValue;
+                            const attrName = attr?.attribute?.name || "Thuộc tính";
+                            const type = attr?.attribute?.type; // lấy type đúng chỗ
+                            const colorName = attr?.value_note || "Không rõ"; // tên màu
+                            const val = type === 2 ? colorName : attr?.value || "Không rõ";
+
+                            if (type === 2) {
+                              return (
+                                <span
+                                  key={idx}
+                                  className="badge border me-2"
+                                  style={{
+                                    color: "#000",
+                                    textAlign: "center",
+                                    display: "inline-block",
+                                    fontWeight: "500",
+                                    fontSize: "0.85rem",
+                                  }}
+                                  title={`${attrName}: ${colorName}`}
+                                >
+                                  {colorName}
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span
+                                  key={idx}
+                                  className="me-2"
+                                  style={{ fontSize: "0.9rem" }}
+                                >
+                                  {`${attrName}: ${val}`}
+                                </span>
+                              );
+                            }
+                          })
+                        ) : (
+                          "Không có"
+                        )}
                       </td>
+
+
                       <td>{item.quantity}</td>
                       <td>
                         {Number(item.final_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}

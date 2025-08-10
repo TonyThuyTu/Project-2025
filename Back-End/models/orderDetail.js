@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
     id_variant:
         {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
         },
     product_name: 
         { 
