@@ -3,9 +3,9 @@ const router = express.Router();
 const categoryController = require('../controllers/categories.controller');
 const upload = require('../helper/upload');
 
-router.get('/', categoryController.getCategories); // Lấy tất cả
-
 router.get('/home', categoryController.getHomepageData); // lấy danh sach danh mục và snr phẩm được ghim
+
+router.get('/', categoryController.getCategories); // Lấy tất cả
 
 router.get('/parent', categoryController.getParentCategories); //lấy danh mục cha cho trang khách
 

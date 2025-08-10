@@ -10,6 +10,8 @@ const {
           VariantValue,
         } = require('../models/index.model');
 
+const { Op, where } = require("sequelize");
+
 // Lấy tất cả danh mục
 exports.getCategories = async (req, res) => {
   try {
@@ -390,30 +392,39 @@ exports.getCategoryDetail = async (req, res) => {
 
 exports.getHomepageData = async (req, res) => {
   try {
+
     const categories = await Category.findAll({
-      where: { is_primary: 1 }, // lấy danh mục được ghim
+      where: { is_primary: true },
       include: [
         {
           model: Product,
           as: 'products',
-          required: false,  // cho phép danh mục không có sản phẩm vẫn lấy
-          where: { products_primary: true }, // chỉ lấy sản phẩm được ghim
+          required: false,
+          attributes: ['id_products', 'category_id', 'products_name', 'products_primary', 'products_status'],
+          where: {
+            // products_primary: 1, // bạn có thể bật lên nếu muốn lọc theo
+            // products_status: { [Op.in]: [2, 4] }
+          },
           include: [
             {
               model: ProductImg,
               as: 'images',
-              required: false,  // cho phép sản phẩm không có ảnh vẫn lấy
-              where: { is_main: true , id_variant: null, id_value: null}, // chỉ lấy ảnh đại diện
-            },
+              required: false,
+              where: {
+                is_main: true,
+                id_variant: null,
+                id_value: null,
+              },
+              attributes: ['id_product_img', 'Img_url']
+            }
           ],
-        },
+        }
       ],
+      
     });
 
-    // console.log('Homepage categories:', JSON.stringify(categories, null, 2));
-
     if (!categories || categories.length === 0) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      return res.status(404).json({ message: "Không tìm thấy danh mục hoặc sản phẩm" });
     }
 
     res.json(categories);

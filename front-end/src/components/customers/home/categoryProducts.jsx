@@ -33,7 +33,7 @@ export default function CategoryProduct() {
                 // Lấy ảnh đại diện: ảnh đầu tiên is_main=true hoặc ảnh đầu tiên
                 const mainImage =
                   product.images?.find((img) => img.is_main) || product.images?.[0];
-                const imageUrl = mainImage ? baseUrl + mainImage.Img_url : "/default.jpg";
+                const imageUrl = mainImage ? baseUrl + mainImage.Img_url : "/https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg";
 
                 return (
                   <div
@@ -41,7 +41,7 @@ export default function CategoryProduct() {
                     className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4"
                   >
                     <div className="card h-100 shadow-sm border-0 rounded-4">
-                      <a href={`//productDetail/${product.slug || product.id_products}`}>
+                      <a href={`//productDetail/${product.products_slug || product.id_products}`}>
                         <Image
                           src={imageUrl}
                           className="card-img-top p-3 rounded-4"

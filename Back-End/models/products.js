@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 1,
         },
       products_primary: { 
-        type: DataTypes.BOOLEAN,
+        type: DataTypes.TINYINT,
 
       defaultValue: false }
   }, {
