@@ -11,6 +11,7 @@ import OptionsManager from "./updateProductComponents/OptionManager";
 import SkuManager from "./updateProductComponents/SkuManager";
 import axios from "axios";
 import { toast } from "react-toastify";
+import React, { useMemo } from 'react';
  
 export default function EditProductModal({ show, onClose, onUpdate, productData }) {
   const [description, setDescription] = useState('');
@@ -324,6 +325,16 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
     }
   };
 
+  const skuManagedOptions = React.useMemo(() => {
+    const optionNamesSet = new Set();
+    skuList.forEach(sku => {
+      sku.combo.forEach(c => {
+        if (c.optionName) optionNamesSet.add(c.optionName);
+      });
+    });
+    return Array.from(optionNamesSet);
+  }, [skuList]);
+
   return (
     <Modal show={show} onHide={handleClose} size="xl" centered scrollable>
       <Modal.Header closeButton>
@@ -364,7 +375,13 @@ export default function EditProductModal({ show, onClose, onUpdate, productData 
           </Card>
 
           <Card className="mb-3 p-3">
-            <OptionsManager {...{ options, setOptions }} />
+
+            <OptionsManager 
+              options={options} 
+              setOptions={setOptions} 
+              skuManagedOptions={skuManagedOptions} 
+            />
+
           </Card>
 
           {options.length >= 2 && (

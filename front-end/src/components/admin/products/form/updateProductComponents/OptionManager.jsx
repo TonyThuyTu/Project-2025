@@ -3,9 +3,16 @@ import { Form, Row, Col, Button, Table } from 'react-bootstrap';
 import CurrencyInput from 'react-currency-input-field';
 import { Trash } from 'react-bootstrap-icons';
 
-export default function OptionsManager({ options, setOptions }) {
+export default function OptionsManager({ options, setOptions, skuManagedOptions }) {
   const [newOptionName, setNewOptionName] = useState('');
   const [newOptionType, setNewOptionType] = useState('');
+
+  const isOptionLocked = (option) => {
+    // Kiểm tra bằng id_attribute hoặc name tùy bạn
+    return skuManagedOptions.some(
+      (locked) => locked === option.id_attribute || locked === option.name
+    );
+  };
  
   // Cleanup URL object khi component unmount
   useEffect(() => {
@@ -180,13 +187,21 @@ export default function OptionsManager({ options, setOptions }) {
             <Col>
               <Form.Control
                 value={option.name}
-                onChange={(e) => updateOption(i, 'name', e.target.value)}
+                onChange={(e) => !isOptionLocked(option) && updateOption(i, 'name', e.target.value)}
                 placeholder="Tên option"
+                disabled={isOptionLocked(option)}
               />
             </Col>
             <Col sm="auto">
               {options.length > 0 && (
-                <Button variant="danger" size="sm" onClick={() => removeOption(i)}>Xoá</Button>
+                <Button 
+                variant="danger" 
+                size="sm" 
+                onClick={() => !isOptionLocked(option) && removeOption(i)}
+                disabled={isOptionLocked(option)}
+                >
+                Xoá
+                </Button>
               )}
             </Col>
           </Row>
@@ -212,9 +227,10 @@ export default function OptionsManager({ options, setOptions }) {
                           <Form.Control
                             type="color"
                             value={val.value || '#000000'}
-                            onChange={(e) => updateValue(i, j, 'value', e.target.value)}
+                            onChange={(e) => !isOptionLocked(option) && updateValue(i, j, 'value', e.target.value)}
                             title={val.label}
                             style={{ width: 50, height: 50 }}
+                            disabled={isOptionLocked(option)}
                           />
                           <span>{val.value}</span>
                         </div>
@@ -222,13 +238,15 @@ export default function OptionsManager({ options, setOptions }) {
                           type="text"
                           placeholder="Nhập tên màu"
                           value={val.value_note || ''}
-                          onChange={(e) => updateValue(i, j, 'value_note', e.target.value)}
+                          onChange={(e) => !isOptionLocked(option) && updateValue(i, j, 'value_note', e.target.value)}
+                          disabled={isOptionLocked(option)}
                         />
                       </div>
                     ) : (
                       <Form.Control
                         value={val.value}
-                        onChange={(e) => updateValue(i, j, 'value', e.target.value)}
+                        onChange={(e) => !isOptionLocked(option) && updateValue(i, j, 'value', e.target.value)}
+                        disabled={isOptionLocked(option)}
                       />
                     )}
                   </td>
@@ -304,7 +322,7 @@ export default function OptionsManager({ options, setOptions }) {
                     </div>
                   </td>
                   <td>
-                    <Button size="sm" variant="danger" onClick={() => removeValue(i, j)}>
+                    <Button size="sm" variant="danger" onClick={() => removeValue(i, j)} disabled={isOptionLocked(option)}>
                       <Trash />
                     </Button>
                   </td>
