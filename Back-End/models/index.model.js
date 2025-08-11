@@ -378,15 +378,15 @@ db.OrderDetail.belongsTo(db.Product, {
   as: 'product',
 });
 
-db.OrderDetail.belongsTo(ProductVariant, {
-  foreignKey: 'id_variant',
-  as: 'variant',
-});
+// db.OrderDetail.belongsTo(ProductVariant, {
+//   foreignKey: 'id_variant',
+//   as: 'variant',
+// });
 
-db.ProductVariant.hasMany(OrderDetail, {
-  foreignKey: 'id_variant',
-  as: 'order_details',
-})
+// db.ProductVariant.hasMany(OrderDetail, {
+//   foreignKey: 'id_variant',
+//   as: 'order_details',
+// })
 
 // ========== ASSOCIATION ATTRIBUTE TRONG ORDER ==========
 db.OrderDetail.hasMany(db.OrderItemAttributeValue, {

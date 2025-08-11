@@ -3,16 +3,21 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Button, Modal, Spinner, Pagination, Card } from "react-bootstrap";
+import { useRouter } from "next/navigation";
 
 export default function OrderList({ idCustomer }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-
+ 
   // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 3;
+
+  const router = useRouter();
+
+  const goToOrderDetail = (orderId) => {
+    router.push(`/profile/Order/detail?id=${orderId}`);
+  };
 
   useEffect(() => {
     if (!idCustomer) return;
@@ -27,16 +32,6 @@ export default function OrderList({ idCustomer }) {
       })
       .finally(() => setLoading(false));
   }, [idCustomer]);
-
-  const openModal = (order) => {
-    setSelectedOrder(order);
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedOrder(null);
-  };
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -79,8 +74,27 @@ export default function OrderList({ idCustomer }) {
 
   // Tạo phân trang
   const totalPages = Math.ceil(orders.length / ordersPerPage);
+  // Tạo phân trang rút gọn
   const paginationItems = [];
-  for (let number = 1; number <= totalPages; number++) {
+
+  const pageNumbersToShow = 3; // số trang hiển thị ở giữa
+  let startPage = Math.max(1, currentPage - 1);
+  let endPage = Math.min(totalPages, currentPage + 1);
+
+// Luôn có trang 1
+  if (startPage > 1) {
+    paginationItems.push(
+      <Pagination.Item key={1} active={currentPage === 1} onClick={() => setCurrentPage(1)}>
+        1
+      </Pagination.Item>
+    );
+    if (startPage > 2) {
+      paginationItems.push(<Pagination.Ellipsis key="start-ellipsis" disabled />);
+    }
+  }
+
+  // Các trang ở giữa
+  for (let number = startPage; number <= endPage; number++) {
     paginationItems.push(
       <Pagination.Item
         key={number}
@@ -91,6 +105,23 @@ export default function OrderList({ idCustomer }) {
       </Pagination.Item>
     );
   }
+
+  // Luôn có trang cuối
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      paginationItems.push(<Pagination.Ellipsis key="end-ellipsis" disabled />);
+    }
+    paginationItems.push(
+      <Pagination.Item
+        key={totalPages}
+        active={currentPage === totalPages}
+        onClick={() => setCurrentPage(totalPages)}
+      >
+        {totalPages}
+      </Pagination.Item>
+    );
+  }
+
 
   return (
     <>
@@ -110,7 +141,11 @@ export default function OrderList({ idCustomer }) {
                   <b>Trạng thái đơn hàng:</b> {formatOrderStatus(order.order_status)} <br />
                   <b>Tổng tiền:</b> {Number(order.total_amount).toLocaleString("vi-VN")} ₫
                 </Card.Text>
-                <Button variant="primary" size="sm" onClick={() => openModal(order)}>
+                <Button 
+                variant="primary" 
+                size="sm"
+                onClick={() =>goToOrderDetail(order.id_order)}
+                >
                   Xem chi tiết
                 </Button>
               </Card.Body>
@@ -122,37 +157,7 @@ export default function OrderList({ idCustomer }) {
       )}
 
       {/* Modal chi tiết đơn hàng */}
-      <Modal show={showModal} onHide={closeModal} size="lg" scrollable>
-        <Modal.Header closeButton>
-          <Modal.Title>Chi tiết đơn hàng #{selectedOrder?.id_order}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {selectedOrder ? (
-            <>
-              <p>
-                <b>Ngày đặt:</b> {formatDate(selectedOrder.Order_date)}
-              </p>
-              <p>
-                <b>Phương thức thanh toán:</b> {formatPaymentMethod(selectedOrder.payment_method)}
-              </p>
-              <p>
-                <b>Trạng thái đơn hàng:</b> {formatOrderStatus(selectedOrder.order_status)}
-              </p>
-              <p>
-                <b>Tổng tiền:</b> {Number(selectedOrder.total_amount).toLocaleString("vi-VN")} ₫
-              </p>
-              {/* Nếu có thêm dữ liệu chi tiết sản phẩm bạn có thể hiển thị thêm ở đây */}
-            </>
-          ) : (
-            <p>Đang tải chi tiết...</p>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={closeModal}>
-            Đóng
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      
     </>
   );
 }

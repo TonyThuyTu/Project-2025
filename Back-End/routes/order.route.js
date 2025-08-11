@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/order.controller');
 
+//update order
+router.patch('/order/:id', orderController.updateOrderStatus);
+
 //create order
 router.post('/checkout', orderController.checkout);
 

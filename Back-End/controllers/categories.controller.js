@@ -402,8 +402,8 @@ exports.getHomepageData = async (req, res) => {
           required: false,
           attributes: ['id_products', 'category_id', 'products_name', 'products_primary', 'products_status'],
           where: {
-            // products_primary: 1, // bạn có thể bật lên nếu muốn lọc theo
-            // products_status: { [Op.in]: [2, 4] }
+            products_primary: 1, // bạn có thể bật lên nếu muốn lọc theo
+            products_status: { [Op.in]: [2, 4] }
           },
           include: [
             {

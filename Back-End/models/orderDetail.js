@@ -1,3 +1,5 @@
+const productAttribute = require("./productAttribute");
+
 module.exports = (sequelize, DataTypes) => {
   const OrderDetail = sequelize.define('OrderDetail', {
     id_order_detail: 
@@ -16,10 +18,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER, 
             allowNull: false 
         },
-    id_variant:
-        {
-            type: DataTypes.INTEGER,
-            allowNull: true,
+    products_item: 
+        { 
+            type: DataTypes.STRING,
+            allowNull: true 
         },
     product_name: 
         { 

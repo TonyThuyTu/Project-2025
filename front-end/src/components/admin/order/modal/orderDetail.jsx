@@ -10,7 +10,7 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
   const [orderStatus, setOrderStatus] = useState("");
 
   const orderStatusMap = {
-    
+    0: "Chọn",
     2: "Xác nhận",
     3: "Hủy",
   };
@@ -24,7 +24,7 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
       try {
         const res = await axios.get(`http://localhost:5000/api/order/${orderId}`);
         setOrder(res.data);
-        setOrderStatus(res.data.order_status);
+        setOrderStatus(String(res.data.order_status)); // Ép kiểu string
       } catch (err) {
         console.error("Lỗi khi lấy chi tiết đơn hàng:", err);
       } finally {
@@ -35,12 +35,12 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
     fetchOrderDetail();
   }, [orderId, show]);
 
-  // Hàm cập nhật trạng thái đơn
+  // Cập nhật trạng thái đơn
   const handleUpdateStatus = async () => {
     if (!orderId) return;
     setUpdating(true);
     try {
-      await axios.patch(`http://localhost:5000/api/order/${orderId}`, {
+      await axios.patch(`http://localhost:5000/api/order/order/${orderId}`, {
         order_status: Number(orderStatus),
       });
       await refreshOrders();
@@ -52,11 +52,14 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
     }
   };
 
+  const isDisabledSelect = order?.order_status === 2 || order?.order_status === 3;
+
   return (
     <Modal show={show} onHide={onClose} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>Chi tiết đơn hàng</Modal.Title>
       </Modal.Header>
+
       <Modal.Body>
         {loading ? (
           <div className="d-flex justify-content-center align-items-center" style={{ height: "150px" }}>
@@ -64,8 +67,8 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
           </div>
         ) : order ? (
           <>
-          
-           <Row className="mb-3">
+            {/* Thông tin khách hàng */}
+            <Row className="mb-3">
               <Col md={6}>
                 <strong>Tên tài khoản:</strong> {order.customer.last_name} {order.customer.given_name}
               </Col>
@@ -88,22 +91,46 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
             </Row>
             <Row className="mb-3">
               <Col md={6}>
-                <strong>Ngày đặt:</strong> {new Date(order.order_date).toLocaleDateString("vi-VN")}
+                <strong>Ngày đặt:</strong>{" "}
+                {new Date(order.order_date).toLocaleDateString("vi-VN")}
               </Col>
               <Col md={6}>
-                <strong>Tổng tiền:</strong> {Number(order.total_amount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                <strong>Tổng tiền:</strong>{" "}
+                {Number(order.total_amount).toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
               </Col>
             </Row>
+            <Row className="mb-3">
+                <Col md={12}>
+                
+                <strong>Ghi chú:</strong> {order.note || "Chưa có"}
 
+                </Col>
+            </Row>
+
+            {/* Trạng thái đơn */}
             <Form.Group className="mb-3">
               <Form.Label>Trạng thái đơn hàng</Form.Label>
-              <Form.Select value={orderStatus} onChange={(e) => setOrderStatus(e.target.value)}>
-                {Object.entries(orderStatusMap).map(([key, text]) => (
-                  <option key={key} value={key}>{text}</option>
-                ))}
+              <Form.Select
+                value={orderStatus}
+                onChange={(e) => setOrderStatus(e.target.value)}
+                disabled={isDisabledSelect}
+              >
+                {Object.entries(orderStatusMap).map(([key, text]) => {
+                  if (order?.order_status === 2 && Number(key) === 3) return null; // Đã xác nhận -> ẩn hủy
+                  if (order?.order_status === 3 && Number(key) !== 3) return null; // Đã hủy -> chỉ hiện hủy
+                  return (
+                    <option key={key} value={key}>
+                      {text}
+                    </option>
+                  );
+                })}
               </Form.Select>
             </Form.Group>
 
+            {/* Sản phẩm */}
             <h5>Sản phẩm</h5>
             <table className="table table-bordered">
               <thead>
@@ -115,63 +142,19 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
                 </tr>
               </thead>
               <tbody>
-                {order.order_details?.map((item, i) => {
-                  // console.log('price:', item.price, typeof item.price);
-                  return (
-                    <tr key={i}>
-                      <td>{item.product_name}</td>
-
-                      <td>
-                        {item.variant?.variantValues?.length ? (
-                          item.variant.variantValues.map((v, idx) => {
-                            const attr = v.attributeValue;
-                            const attrName = attr?.attribute?.name || "Thuộc tính";
-                            const type = attr?.attribute?.type; // lấy type đúng chỗ
-                            const colorName = attr?.value_note || "Không rõ"; // tên màu
-                            const val = type === 2 ? colorName : attr?.value || "Không rõ";
-
-                            if (type === 2) {
-                              return (
-                                <span
-                                  key={idx}
-                                  className="badge border me-2"
-                                  style={{
-                                    color: "#000",
-                                    textAlign: "center",
-                                    display: "inline-block",
-                                    fontWeight: "500",
-                                    fontSize: "0.85rem",
-                                  }}
-                                  title={`${attrName}: ${colorName}`}
-                                >
-                                  {colorName}
-                                </span>
-                              );
-                            } else {
-                              return (
-                                <span
-                                  key={idx}
-                                  className="me-2"
-                                  style={{ fontSize: "0.9rem" }}
-                                >
-                                  {`${attrName}: ${val}`}
-                                </span>
-                              );
-                            }
-                          })
-                        ) : (
-                          "Không có"
-                        )}
-                      </td>
-
-
-                      <td>{item.quantity}</td>
-                      <td>
-                        {Number(item.final_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {order.order_details?.map((item, i) => (
+                  <tr key={i}>
+                    <td>{item.product_name}</td>
+                    <td>{item.products_item || "Không có"}</td>
+                    <td>{item.quantity}</td>
+                    <td>
+                      {Number(item.final_price).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </>
@@ -179,9 +162,16 @@ export default function OrderDetailModal({ show, onClose, orderId, refreshOrders
           <p>Không tìm thấy đơn hàng</p>
         )}
       </Modal.Body>
+
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>Đóng</Button>
-        <Button variant="primary" onClick={handleUpdateStatus} disabled={updating}>
+        <Button variant="secondary" onClick={onClose}>
+          Đóng
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleUpdateStatus}
+          disabled={updating || orderStatus === String(order?.order_status)}
+        >
           {updating ? <Spinner size="sm" animation="border" /> : "Cập nhật"}
         </Button>
       </Modal.Footer>

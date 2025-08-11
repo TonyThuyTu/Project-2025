@@ -181,27 +181,37 @@ export default function CheckoutPage({ idCustomer }) {
         email: userInfo.email,
         address: address,
         payment_method: paymentMethod, // 1 hoặc 2
-        cart_items: cartItems.map(item => ({
-          id_product: item.id_product,
-          quantity: item.quantity,
-          id_variant: item.id_variant || null,
-          attribute_value_ids: item.attribute_value_ids || [],
-          price: item.price,
-        })),
+        cart_items: cartItems.map(item => {
+          const optionDesc = item.attribute_values?.map(attr => {
+            const attrValue = attr.attribute_value;
+            const attribute = attrValue?.attribute;
+            if (!attrValue || !attribute) return null;
+
+            const type = Number(attribute.type);
+            return type === 2 ? attrValue.value_note || attrValue.value : attrValue.value || "";
+          }).filter(Boolean).join(", ") || "";
+
+          return {
+            id_product: item.id_product,
+            quantity: item.quantity,
+            price: item.price,
+            attribute_values: item.attribute_values,
+            attribute_value_ids: item.attribute_value_ids || [],
+            products_item: optionDesc,
+          };
+        }),
         note,
-        total_amount: totalAmount, 
+        total_amount: totalAmount,
       };
 
       const headers = { Authorization: `Bearer ${token}` };
       const res = await axios.post("http://localhost:5000/api/order/checkout", dataToSend, { headers });
-      
+
       if (paymentMethod === 2 && res.data.payUrl) {
-      // Thanh toán online → chuyển hướng sang MoMo
         window.open(res.data.payUrl, '_blank');
       } else {
-      toast.success("Đặt hàng thành công!");
-      // Có thể chuyển trang hoặc reset giỏ hàng ở đây
-      router.push(`/thankyou?order_id=${res.data.order_id}`);
+        toast.success("Đặt hàng thành công!");
+        router.push(`/thankyou?order_id=${res.data.order_id}`);
       }
     } catch (error) {
       console.error("Lỗi khi đặt hàng:", error);

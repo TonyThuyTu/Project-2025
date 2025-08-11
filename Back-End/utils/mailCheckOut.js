@@ -37,9 +37,12 @@ const sendOrderConfirmationEmail = async (customerEmail, orderInfo) => {
   };
 
   const productRows = products.map(product => {
-    const optionsHtml = product.options && product.options.length > 0
-      ? `<div style="font-size: 12px; color: #555; margin-top: 4px;"><strong>Phân loại:</strong> ${product.options.join(', ')}</div>`
-      : '';
+  // Dùng trực tiếp product.products_item để hiển thị phân loại
+  const optionsHtml = product.products_item
+    ? `<div style="font-size: 12px; color: #555; margin-top: 4px;">
+         <strong>Phân loại:</strong> ${product.products_item}
+       </div>`
+    : '';
 
     return `
       <tr>
