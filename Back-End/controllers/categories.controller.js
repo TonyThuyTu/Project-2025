@@ -77,14 +77,22 @@ exports.getChildrenByParentId = async (req, res) => {
 // Thêm danh mục
 exports.createCategory = async (req, res) => {
   try {
-    const { name, parent_id, is_active, is_primary } = req.body;
-    const banner = req.file ? req.file.filename : null;
+    const { name, note, parent_id, is_active, is_primary } = req.body;
+
+    // Validate file ảnh
+    if (!req.file) return res.status(400).json({ message: 'Vui lòng chọn ảnh' });
+    if (req.file.size < 2 * 1024 * 1024) { // < 2MB
+      return res.status(400).json({ message: 'Dung lượng ảnh tối thiểu 2MB' });
+    }
+
+    const banner = req.file.filename;
 
     const exists = await Category.findOne({ where: { name, parent_id: parent_id ?? null } });
     if (exists) return res.status(400).json({ message: 'Danh mục đã tồn tại' });
 
     const newCat = await Category.create({
       name,
+      note,
       parent_id: parent_id || null,
       is_active: is_active === 'true' || is_active === true,
       is_primary: is_primary === 'true' || is_primary === true,
@@ -97,6 +105,7 @@ exports.createCategory = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 //ẩn hiện danh mục
 exports.toggleActive = async (req, res) => {
@@ -150,16 +159,27 @@ exports.updateCategory = async (req, res) => {
     const category = await Category.findByPk(id);
     if (!category) return res.status(404).json({ message: 'Danh mục không tồn tại' });
 
-    // Nếu có file ảnh mới, xử lý upload (nếu dùng multer)
+    // Validate ảnh mới nếu có
     if (req.file) {
+      if (req.file.size < 2 * 1024 * 1024) {
+        return res.status(400).json({ message: 'Dung lượng ảnh tối thiểu 2MB' });
+      }
       category.img = req.file.filename;
     }
 
     category.name = name || category.name;
-    category.note = note || category.note;
     category.parent_id = parent_id || null;
     category.is_active = is_active !== undefined ? is_active : category.is_active;
-    category.is_primary = is_primary !== undefined ? is_primary : category.is_primary;
+
+    // Nếu là danh mục con → xóa banner + note + không ghim
+    if (category.parent_id) {
+      category.is_primary = 0;
+      category.note = '';
+      category.img = req.file ? category.img : null; // chỉ giữ nếu upload mới
+    } else {
+      category.is_primary = is_primary !== undefined ? is_primary : category.is_primary;
+      category.note = note || category.note;
+    }
 
     await category.save();
     res.json({ message: 'Cập nhật thành công', category });

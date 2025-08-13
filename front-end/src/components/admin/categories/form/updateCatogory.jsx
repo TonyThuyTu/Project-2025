@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 export default function EditCategoryModal({ show, onClose, onSave, category }) {
   const [name, setName] = useState('');
@@ -9,7 +10,10 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
   const [isPrimary, setIsPrimary] = useState(false);
   const [banner, setBanner] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [previewImg, setPreviewImg] = useState(''); // thêm state preview ảnh
+  const [previewImg, setPreviewImg] = useState('');
+  const [imageError, setImageError] = useState('');
+
+  const isChild = !!category?.parent_id; // danh mục con
 
   useEffect(() => {
     if (show) {
@@ -25,39 +29,61 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
         setIsPrimary(category.is_primary || false);
         setBanner(null);
         setPreviewImg(category.img ? `http://localhost:5000/uploads/${category.img}` : '');
+        setImageError('');
       }
     }
   }, [show, category]);
 
   const onFileChange = (e) => {
     const file = e.target.files[0];
-    setBanner(file);
     if (file) {
-      setPreviewImg(URL.createObjectURL(file)); // hiển thị ảnh mới chọn
+      if (file.size > 2 * 1024 * 1024) { // > 2MB
+        setImageError('Ảnh phải nhỏ hơn 2MB');
+        setBanner(null);
+        setPreviewImg('');
+      } else {
+        setImageError('');
+        setBanner(file);
+        setPreviewImg(URL.createObjectURL(file));
+      }
     } else {
+      setImageError('');
+      setBanner(null);
       setPreviewImg(category.img ? `http://localhost:5000/uploads/${category.img}` : '');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (imageError) {
+      toast.error('Vui lòng chọn ảnh hợp lệ');
+      return;
+    }
+
     const form = new FormData();
     form.append('name', name);
-    form.append('note', note);
-    form.append('parent_id', parentId || '');
-    form.append('is_active', isActive);
-    form.append('is_primary', isPrimary);
-    if (banner) form.append('image', banner);
+
+    if (isChild) {
+      form.append('parent_id', parentId || '');
+    } else {
+      form.append('note', note);
+      form.append('parent_id', parentId || '');
+      form.append('is_active', isActive);
+      form.append('is_primary', isPrimary);
+      if (banner) form.append('image', banner);
+    }
 
     try {
       await axios.put(`http://localhost:5000/api/categories/${category.category_id}`, form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      toast.success('Cập nhật danh mục thành công!');
       onSave();
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Lỗi khi cập nhật danh mục');
+      const msg = err.response?.data?.message || 'Có lỗi xảy ra!';
+      toast.error(msg);
     }
   };
 
@@ -77,24 +103,39 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
               <label className="form-label">Tên danh mục</label>
               <input type="text" className="form-control" value={name} onChange={e => setName(e.target.value)} required />
             </div>
-            {/* Note */}
-            <div className="mb-3">
-              <label className="form-label">Tiêu đề danh mục</label>
-              <input type="text" className="form-control" value={note} onChange={e => setNote(e.target.value)} required />
-            </div>
-            {/* Preview ảnh */}
-            {previewImg && (
-              <div className="mb-3">
-                <label className="form-label">Ảnh hiện tại</label>
-                <br />
-                <img src={previewImg} alt="Preview" style={{ width: '150px', borderRadius: '5px' }} />
-              </div>
+
+            {!isChild && (
+              <>
+                <div className="mb-3">
+                  <label className="form-label">Tiêu đề danh mục</label>
+                  <input type="text" className="form-control" value={note} onChange={e => setNote(e.target.value)} />
+                </div>
+
+                {previewImg && (
+                  <div className="mb-3">
+                    <label className="form-label">Ảnh hiện tại</label>
+                    <br />
+                    <img src={previewImg} alt="Preview" style={{ width: '150px', borderRadius: '5px' }} />
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <label className="form-label">Banner ảnh (chọn ảnh mới để thay thế)</label>
+                  <input type="file" className="form-control" accept="image/*" onChange={onFileChange} />
+                  {imageError && <small className="text-danger">{imageError}</small>}
+                </div>
+
+                <div className="form-check mb-2">
+                  <input className="form-check-input" type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
+                  <label className="form-check-label">Ẩn danh mục</label>
+                </div>
+                <div className="form-check mb-2">
+                  <input className="form-check-input" type="checkbox" checked={isPrimary} onChange={e => setIsPrimary(e.target.checked)} />
+                  <label className="form-check-label">Ghim trang chủ</label>
+                </div>
+              </>
             )}
-            {/* Banner */}
-            <div className="mb-3">
-              <label className="form-label">Banner ảnh (chọn ảnh mới để thay thế)</label>
-              <input type="file" className="form-control" accept="image/*" onChange={onFileChange} />
-            </div>
+
             {/* Danh mục cha */}
             <div className="mb-3">
               <label className="form-label">Danh mục cha</label>
@@ -106,15 +147,6 @@ export default function EditCategoryModal({ show, onClose, onSave, category }) {
                   )
                 ))}
               </select>
-            </div>
-            {/* Checkbox */}
-            <div className="form-check mb-2">
-              <input className="form-check-input" type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} id="isActiveCheck" />
-              <label className="form-check-label" htmlFor="isActiveCheck">Ẩn danh mục</label>
-            </div>
-            <div className="form-check mb-2">
-              <input className="form-check-input" type="checkbox" checked={isPrimary} onChange={e => setIsPrimary(e.target.checked)} id="isPrimaryCheck" />
-              <label className="form-check-label" htmlFor="isPrimaryCheck">Ghim trang chủ</label>
             </div>
           </div>
           <div className="modal-footer">

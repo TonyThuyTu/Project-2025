@@ -81,25 +81,25 @@ export default function CategoriesList() {
           
           <td>{category.is_active ? 'Ẩn' : 'Hiển thị'}</td>
           <td>{category.is_primary ? 'Đang ghim' : 'Không'}</td>
-          <td>
-            {/* <button
-              className="btn btn-sm btn-success me-1"
-              onClick={() => handleCreateSubCategory(category.category_id)}
-            >
-              + Thêm danh mục con
-            </button> */}
+          <td>    
             <button
               className="btn btn-sm btn-warning me-1"
               onClick={() => handleEdit(category)}
             >
               Sửa
             </button>
-            <button
-              className="btn btn-sm btn-info me-1"
-              onClick={() => togglePrimary(category.category_id)}
-            >
-              {category.is_primary ? 'Bỏ ghim' : 'Ghim'}
-            </button>
+
+            {!category.parent_id && (
+              <button
+                className={`btn btn-sm me-1 ${
+                  category.is_primary ? 'btn-info' : 'btn-success'
+                }`}
+                onClick={() => togglePrimary(category.category_id)}
+              >
+                {category.is_primary ? 'Bỏ ghim' : 'Ghim'}
+              </button>
+            )}
+            
             <button
               className="btn btn-sm btn-secondary"
               onClick={() => toggleActive(category.category_id)}
@@ -127,7 +127,7 @@ export default function CategoriesList() {
         <thead className="table-light">
           <tr>
             <th>Tên danh mục</th>
-            <th>Tiêu đề danh mụch</th>
+            <th>Tiêu đề danh mục</th>
             <th>Ảnh Banner</th>
             <th>Trạng thái</th>
             <th>Trang chủ</th>
