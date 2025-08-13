@@ -11,6 +11,8 @@ export default function BannerManager() {
   const [editId, setEditId] = useState(null);
   const [editImageUrl, setEditImageUrl] = useState(null);
 
+  
+
   const fetchBanners = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/banner");

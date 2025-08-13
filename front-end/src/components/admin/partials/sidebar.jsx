@@ -36,7 +36,7 @@ export default function AdminSidebar() {
 
   const links = [
     { href: "/admin/dashboard", label: "Tổng quan", roles: [1, 2] },
-    { href: "/admin/banner", label: "Quảng cáo", roles: [1] },
+    { href: "/admin/banner", label: "Ảnh bìa", roles: [1] },
     { href: "/admin/categories", label: "Danh mục", roles: [1, 2] },
     { href: "/admin/order", label: "Đơn hàng", roles: [1, 2] },
     { href: "/admin/products", label: "Sản phẩm", roles: [1, 2] },

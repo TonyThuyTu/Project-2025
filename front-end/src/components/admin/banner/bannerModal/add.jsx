@@ -41,19 +41,35 @@ export default function BannerModal({
     const isImage = file.type.startsWith("image");
     const isVideo = file.type.startsWith("video");
 
+    // ✅ Kiểm tra loại file
     const isValid = (type === 1 && isImage) || (type === 2 && isVideo);
-
     if (!isValid) {
       toast.error(`Chỉ được chọn ${type === 1 ? "ảnh" : "video"} hợp lệ`);
       setSelectedFile(null);
-      setPreview(initialImageUrl || null); // fallback lại ảnh ban đầu
+      setPreview(initialImageUrl || null);
       if (fileInputRef.current) fileInputRef.current.value = null;
       return;
     }
 
+    // ✅ Kiểm tra dung lượng tối đa theo loại
+    const maxSize = type === 1 ? 2 * 1024 * 1024 : 10 * 1024 * 1024; // Ảnh: 2MB, Video: 10MB
+    if (file.size > maxSize) {
+      toast.error(
+        type === 1
+          ? "Dung lượng ảnh tối đa là 2MB"
+          : "Dung lượng video tối đa là 10MB"
+      );
+      setSelectedFile(null);
+      setPreview(initialImageUrl || null);
+      if (fileInputRef.current) fileInputRef.current.value = null;
+      return;
+    }
+
+    // ✅ Hợp lệ
     setSelectedFile(file);
     setPreview(URL.createObjectURL(file));
   };
+
 
   const handleSubmit = () => {
     if (!selectedFile && !isEdit) {
@@ -93,6 +109,11 @@ export default function BannerModal({
             accept={type === 1 ? "image/*" : "video/*"}
             onChange={handleFileChange}
           />
+          <Form.Text className="text-danger">
+            {type === 1
+              ? "Dung lượng ảnh tối đa 2MB"
+              : "Dung lượng video tối đa 10MB"}
+          </Form.Text>
         </Form.Group>
 
         {preview && (
