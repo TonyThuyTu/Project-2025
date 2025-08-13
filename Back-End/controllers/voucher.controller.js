@@ -77,15 +77,7 @@ exports.createVoucher = async (req, res) => {
 exports.getAllVouchers = async (req, res) => {
   try {
     const vouchers = await Voucher.findAll({
-      include: [
-        {
-          model: Product,
-          as: 'products',
-          attributes: ['id_products', 'products_name', 'products_sale_price'],
-          through: { attributes: [] } // không lấy dữ liệu từ bảng trung gian
-        }
-      ],
-      order: [['create_date', 'DESC']] // sắp xếp mới nhất trước
+      order: [['create_date', 'DESC']], // sắp xếp mới nhất trước
     });
 
     res.status(200).json({ vouchers });
@@ -100,28 +92,14 @@ exports.getVoucherById = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const voucher = await Voucher.findByPk(id, {
-      include: [
-        {
-          model: Product,
-          as: 'products',
-          attributes: ['id_products', 'products_name', 'products_sale_price'],
-          through: { attributes: [] },
-        },
-      ],
-    });
+    const voucher = await Voucher.findByPk(id);
 
     if (!voucher) {
       return res.status(404).json({ message: 'Voucher không tồn tại' });
     }
 
-    // Đếm số lượng sản phẩm áp dụng
-    const appliedProductCount = voucher.products.length;
-
-    res.json({
-      ...voucher.toJSON(),  // trả toàn bộ voucher kèm products
-      appliedProductCount,  // thêm trường đếm số lượng sản phẩm
-    });
+    // Trả dữ liệu voucher
+    res.json(voucher);
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết voucher:', error);
     res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy chi tiết voucher' });
@@ -145,13 +123,12 @@ exports.updateVoucher = async (req, res) => {
       start_date,
       end_date,
       status,
-      productIds,
     } = req.body;
 
     const voucher = await Voucher.findByPk(id);
     if (!voucher) return res.status(404).json({ message: 'Voucher không tồn tại' });
 
-    // ✅ Kiểm tra mã code đã tồn tại ở voucher khác chưa
+    // Kiểm tra mã code đã tồn tại ở voucher khác chưa
     const existing = await Voucher.findOne({
       where: {
         code,
@@ -163,14 +140,14 @@ exports.updateVoucher = async (req, res) => {
       return res.status(400).json({ message: 'Mã voucher đã tồn tại' });
     }
 
-    // ✅ Cập nhật dữ liệu
+    // Cập nhật dữ liệu voucher
     await voucher.update({
       name,
       code,
       description,
       discount_type,
-      discount_value,
-      min_order_value,
+      discount_value: Number(discount_value) || 0,
+      min_order_value: Number(min_order_value) || 0,
       user_limit,
       usage_limit,
       start_date,
@@ -178,16 +155,13 @@ exports.updateVoucher = async (req, res) => {
       status,
     });
 
-    if (Array.isArray(productIds)) {
-      await voucher.setProducts(productIds);
-    }
-
     return res.json({ message: 'Cập nhật thành công', voucher });
   } catch (err) {
     console.error('❌ Lỗi update voucher:', err);
     return res.status(500).json({ message: 'Đã xảy ra lỗi khi cập nhật voucher' });
   }
 };
+
 
 //apply voucher
 exports.applyVoucher = async (req, res) => {

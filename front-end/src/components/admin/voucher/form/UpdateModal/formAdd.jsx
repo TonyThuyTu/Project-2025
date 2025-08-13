@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Form, Row, Col } from 'react-bootstrap';
 
-// Format phần trăm: 2 => "2%", 2.5 => "2.50%"
+// Format phần trăm
 function formatPercent(value) {
   const num = Number(value);
   if (isNaN(num)) return '';
@@ -12,17 +12,121 @@ function formatPercent(value) {
 function formatVND(value) {
   const num = Number(value);
   if (isNaN(num)) return '';
-  
-  const options = num % 1 === 0
-    ? { style: 'currency', currency: 'VND', minimumFractionDigits: 0 }
-    : { style: 'currency', currency: 'VND', minimumFractionDigits: 2 };
-
-  return num.toLocaleString('vi-VN', options);
+  return num.toLocaleString('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 });
 }
 
-export default function FormAdd({ form, handleChange }) {
+function formatDatetimeLocal(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+
+export default function FormAdd({ form, setForm }) {
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // Chuyển đổi discount_type
+    if (name === 'discount_type') {
+      setForm(prev => ({
+        ...prev,
+        discount_type: value,
+        discount_value: '',
+      }));
+      setErrorMsg('');
+      return;
+    }
+
+    // Xử lý giá trị giảm
+    if (name === 'discount_value') {
+      let numericValue = form.discount_type === 'percent'
+        ? value.replace(/\D/g, '')
+        : value.replace(/\./g, '');
+
+      numericValue = numericValue === '' ? '' : Number(numericValue);
+
+      if (form.discount_type === 'percent') {
+        if (numericValue > 100) {
+          setErrorMsg('Phần trăm giảm tối đa 100%');
+          return;
+        }
+      } else {
+        if (numericValue > 10000000) {
+          setErrorMsg('Số tiền giảm tối đa 10.000.000 VNĐ');
+          return;
+        }
+        const minOrder = Number(form.min_order_value.replace(/\./g, '') || 0);
+        if (minOrder && numericValue >= minOrder) {
+          setErrorMsg('Đơn hàng tối thiểu phải lớn hơn số tiền giảm');
+          return;
+        }
+      }
+
+      setErrorMsg('');
+      setForm(prev => ({ ...prev, discount_value: numericValue.toString() }));
+      return;
+    }
+
+    // Xử lý min_order_value
+    if (name === 'min_order_value') {
+      const numericValue = value.replace(/\./g, '');
+      if (numericValue !== '' && Number(numericValue) > 50000000) {
+        setErrorMsg('Đơn hàng tối đa 50.000.000 VNĐ');
+        return;
+      }
+      if (form.discount_type === 'fixed' && Number(form.discount_value) >= Number(numericValue)) {
+        setErrorMsg('Đơn hàng tối thiểu phải lớn hơn số tiền giảm');
+        return;
+      }
+
+      setErrorMsg('');
+      setForm(prev => ({ ...prev, min_order_value: numericValue }));
+      return;
+    }
+
+    // Validate ngày bắt đầu và ngày kết thúc
+    if (name === 'start_date') {
+      const startDate = new Date(value);
+      const now = new Date();
+      if (startDate < now) {
+        setErrorMsg('Ngày bắt đầu không được nhỏ hơn hiện tại');
+        return;
+      }
+      if (form.end_date && new Date(form.end_date) < startDate) {
+        setErrorMsg('Ngày kết thúc phải sau ngày bắt đầu');
+        return;
+      }
+      setErrorMsg('');
+      setForm(prev => ({ ...prev, start_date: value }));
+      return;
+    }
+
+    if (name === 'end_date') {
+      if (form.start_date && new Date(value) < new Date(form.start_date)) {
+        setErrorMsg('Ngày kết thúc phải sau ngày bắt đầu');
+        return;
+      }
+      setErrorMsg('');
+      setForm(prev => ({ ...prev, end_date: value }));
+      return;
+    }
+
+    // Các input khác
+    setForm(prev => ({ ...prev, [name]: value }));
+    setErrorMsg('');
+  };
+
   return (
     <>
+      {errorMsg && <div className="text-danger mb-2">{errorMsg}</div>}
+
       <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
@@ -69,15 +173,14 @@ export default function FormAdd({ form, handleChange }) {
             <Form.Control
               type="text"
               name="discount_value"
-              value={form.discount_value || ''}
+              value={
+                form.discount_type === 'fixed'
+                  ? formatVND(form.discount_value)
+                  : formatPercent(form.discount_value)
+              }
               onChange={handleChange}
               placeholder={form.discount_type === 'fixed' ? 'VNĐ' : '%'}
             />
-            <Form.Text className="text-muted">
-              {form.discount_type === 'fixed'
-                ? formatVND(form.discount_value)
-                : formatPercent(form.discount_value)}
-            </Form.Text>
           </Form.Group>
         </Col>
 
@@ -87,39 +190,11 @@ export default function FormAdd({ form, handleChange }) {
             <Form.Control
               type="text"
               name="min_order_value"
-              value={form.min_order_value || ''}
-              onChange={handleChange}
-              placeholder="VNĐ"
-            />
-            <Form.Text className="text-muted">{formatVND(form.min_order_value)}</Form.Text>
-          </Form.Group>
-        </Col>
-      </Row>
-
-      {/* Các phần còn lại giữ nguyên như bạn đã làm */}
-      <Row>
-        <Col md={6}>
-          <Form.Group className="mb-3">
-            <Form.Label>Số lượt dùng mỗi người</Form.Label>
-            <Form.Control
-              type="number"
-              name="user_limit"
-              value={form.user_limit}
-              onChange={handleChange}
-              min={0}
-            />
-          </Form.Group>
-        </Col>
-
-        <Col md={6}>
-          <Form.Group className="mb-3">
-            <Form.Label>Tổng số Voucher</Form.Label>
-            <Form.Control
-              type="number"
-              name="usage_limit"
-              value={form.usage_limit}
-              onChange={handleChange}
-              min={0}
+              value={form.min_order_value ? formatVND(form.min_order_value) : ''}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\./g, ''); // bỏ dấu chấm
+                if (!isNaN(raw)) setForm(prev => ({ ...prev, min_order_value: Number(raw) }));
+              }}
             />
           </Form.Group>
         </Col>
@@ -134,7 +209,7 @@ export default function FormAdd({ form, handleChange }) {
               name="start_date"
               value={form.start_date}
               onChange={handleChange}
-              min={new Date().toISOString().slice(0, 16)}
+              min={formatDatetimeLocal(new Date())}
             />
           </Form.Group>
         </Col>
@@ -147,7 +222,7 @@ export default function FormAdd({ form, handleChange }) {
               name="end_date"
               value={form.end_date}
               onChange={handleChange}
-              min={new Date().toISOString().slice(0, 16)}
+              min={formatDatetimeLocal(form.start_date || new Date())}
             />
           </Form.Group>
         </Col>

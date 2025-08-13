@@ -1,9 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Row, Col } from 'react-bootstrap';
 
 export default function FormAdd({ form, handleChange, formatVND }) {
+  const [minEndDate, setMinEndDate] = useState(new Date().toISOString().slice(0, 16));
+  const [dateError, setDateError] = useState('');
+  const [minOrderError, setMinOrderError] = useState('');
+
+  // Validate ngày kết thúc dựa trên ngày bắt đầu
+  useEffect(() => {
+    if (form.start_date) {
+      const start = new Date(form.start_date);
+      start.setDate(start.getDate() + 1); // kết thúc phải sau ít nhất 1 ngày
+      const minEnd = start.toISOString().slice(0, 16);
+      setMinEndDate(minEnd);
+
+      if (form.end_date && new Date(form.end_date) < start) {
+        setDateError('Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày.');
+      } else {
+        setDateError('');
+      }
+    }
+  }, [form.start_date, form.end_date]);
+
+  // Validate giá trị giảm cố định so với đơn hàng tối thiểu
+  useEffect(() => {
+    if (form.discount_type === 'fixed') {
+      const discount = parseFloat(form.discount_value.toString().replace(/\./g, '')) || 0;
+      const minOrder = parseFloat(form.min_order_value.toString().replace(/\./g, '')) || 0;
+
+      if (discount > minOrder) {
+        setMinOrderError('Đơn hàng tối thiểu phải lớn hơn giá trị giảm.');
+      } else {
+        setMinOrderError('');
+      }
+    } else {
+      setMinOrderError('');
+    }
+  }, [form.discount_type, form.discount_value, form.min_order_value]);
+
   return (
     <>
+      {/* Tên voucher và mã */}
       <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
@@ -29,6 +66,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
         </Col>
       </Row>
 
+      {/* Loại giảm, giá trị giảm, đơn hàng tối thiểu */}
       <Row>
         <Col md={4}>
           <Form.Group className="mb-3">
@@ -58,9 +96,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
               placeholder={form.discount_type === 'fixed' ? 'VNĐ' : '%'}
               max={form.discount_type === 'percent' ? 100 : undefined}
             />
-            <Form.Text>
-              {form.discount_type === 'fixed' ? 'VNĐ' : '%'}
-            </Form.Text>
+            <Form.Text>{form.discount_type === 'fixed' ? 'VNĐ' : '%'}</Form.Text>
           </Form.Group>
         </Col>
         <Col md={4}>
@@ -73,10 +109,12 @@ export default function FormAdd({ form, handleChange, formatVND }) {
               onChange={handleChange}
             />
             <Form.Text>VNĐ</Form.Text>
+            {minOrderError && <Form.Text style={{ color: 'red' }}>{minOrderError}</Form.Text>}
           </Form.Group>
         </Col>
       </Row>
 
+      {/* Số lượt dùng, tổng số voucher */}
       <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
@@ -92,7 +130,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
         </Col>
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Tổng số Vocuher</Form.Label>
+            <Form.Label>Tổng số voucher</Form.Label>
             <Form.Control
               type="number"
               name="usage_limit"
@@ -104,6 +142,7 @@ export default function FormAdd({ form, handleChange, formatVND }) {
         </Col>
       </Row>
 
+      {/* Ngày bắt đầu & kết thúc */}
       <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
@@ -125,12 +164,14 @@ export default function FormAdd({ form, handleChange, formatVND }) {
               name="end_date"
               value={form.end_date}
               onChange={handleChange}
-              min={new Date().toISOString().slice(0, 16)}
+              min={minEndDate}
             />
+            {dateError && <Form.Text style={{ color: 'red' }}>{dateError}</Form.Text>}
           </Form.Group>
         </Col>
       </Row>
 
+      {/* Mô tả */}
       <Form.Group className="mb-3">
         <Form.Label>Mô tả</Form.Label>
         <Form.Control

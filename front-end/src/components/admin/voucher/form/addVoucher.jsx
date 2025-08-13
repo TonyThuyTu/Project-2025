@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import FormAdd from './AddModal/formAdd';
-import FormList from './AddModal/formList';
+
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -38,6 +38,7 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
+    // Chọn loại giảm
     if (name === 'discount_type') {
       return setForm((prev) => ({
         ...prev,
@@ -52,21 +53,24 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
 
       if (isPercent) {
         const percentValue = value.replace(/\D/g, '');
-        if (/^\d{0,3}$/.test(percentValue) && (+percentValue <= 100 || percentValue === '')) {
-          toast.error("Giảm tối thiểu 100%")
+        if (/^\d{0,3}$/.test(percentValue)) {
+          if (percentValue !== '' && +percentValue > 100) {
+            toast.error("Giảm tối đa 100%", { toastId: 'discount-percent' });
+          }
           return setForm((prev) => ({
             ...prev,
             discount_value: percentValue,
-          
           }));
         }
       } else {
         const onlyNums = parseVND(value);
         const numericValue = parseInt(onlyNums || '0');
 
-        if (numericValue > 10000000){
-          toast.error("Giảm tối thiểu 10 triệu")
-        } // ❌ vượt quá 10 triệu → không cho nhập
+        if (numericValue > 10000000) {
+          toast.error("Giảm tối đa 10 triệu", { toastId: 'discount-fixed' });
+          // Không set giá trị vượt quá 10 triệu
+          return;
+        }
 
         if (/^\d*$/.test(onlyNums)) {
           return setForm((prev) => ({
@@ -79,14 +83,15 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
       return;
     }
 
-    // Validate các giá trị khác
+    // Validate các giá trị khác: min_order_value, user_limit, usage_limit
     if (['min_order_value', 'user_limit', 'usage_limit'].includes(name)) {
       const val = parseVND(value);
       const numericValue = parseInt(val || '0');
 
       if (name === 'min_order_value' && numericValue > 50000000) {
-        toast.error("Đơn hàng tối thiểu 50 triệu");
-      } // ❌ vượt quá 50 triệu
+        toast.error("Đơn hàng tối đa 50 triệu", { toastId: 'min-order-value' });
+        return;
+      }
 
       if (/^\d*$/.test(val)) {
         return setForm((prev) => ({
@@ -98,8 +103,10 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
       return;
     }
 
+    // Các input khác
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
 
 
   const getAllChildCategoryIds = (parentId) => {
@@ -113,11 +120,11 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
     return result;
   };
 
-  const handleSelectProduct = (id) => {
-    setSelectedProducts((prev) =>
-      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-    );
-  };
+  // const handleSelectProduct = (id) => {
+  //   setSelectedProducts((prev) =>
+  //     prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+  //   );
+  // };
 
   const handleSubmit = async () => {
     if (!form.name || !form.code || !form.discount_value) {
@@ -140,7 +147,7 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
       // alert('🎉 Tạo voucher thành công!');
       toast.success("Tạo voucher thành công!");
       setForm({ ...defaultForm });
-      setSelectedProducts([]);
+      // setSelectedProducts([]);
       setSearchTerm('');
       setSelectedParent('');
       setSelectedChild('');
