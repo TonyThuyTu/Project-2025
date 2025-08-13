@@ -85,20 +85,20 @@ function sendOTPByEmail(toEmail, otp, customerName) {
               <body>
                 <div class="email-container">
                   <div class="header">
-                    <h2>Xác thực đăng nhập / quên mật khẩu</h2>
+                    <h2>Xác thực quên mật khẩu</h2>
                   </div>
                   <div class="greeting">
                     Xin chào, <strong>${customerName}</strong>
                   </div>
                   <div class="content">
-                    <p>Bạn vừa yêu cầu mã xác thực (OTP) để đăng nhập hoặc thực hiện một hành động bảo mật.</p>
+                    <p>Bạn vừa yêu cầu mã xác thực (OTP) để đăng nhập hoặc thực hiện một hành động đổi mật khẩu.</p>
                     <p>Vui lòng sử dụng mã OTP bên dưới để tiếp tục:</p>
                   </div>
                   <div class="otp-box">
                     ${otp}
                   </div>
                   <div class="content">
-                    <p>Mã này sẽ hết hạn sau <strong>5 phút</strong>. Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
+                    <p>Mã này sẽ hết hạn sau <strong>3 phút</strong>. Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
                   </div>
                   <div class="footer">
                     &copy; 2025 Táo Bro. Mua Apple đến ngay Táo Bro.<br/>

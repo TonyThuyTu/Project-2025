@@ -248,7 +248,7 @@ exports.sendOTP = async (req, res) => {
   }
 
   const otp = Math.floor(100000 + Math.random() * 900000); // mã 6 số
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
+  const expiresAt = Date.now() + 3 * 60 * 1000; // 5 phút
 
   try {
     let user = await Customer.findOne({ where: { email: phoneOrEmail } });
@@ -272,13 +272,13 @@ exports.sendOTP = async (req, res) => {
         return res.status(500).json({ message: 'Gửi OTP qua SMS thất bại' });
       }
 
-      await redisClient.set(toPhone, JSON.stringify({ otp, expiresAt }), { EX: 300 });
+      await redisClient.set(toPhone, JSON.stringify({ otp, expiresAt }), { EX: 180 });
 
       return res.json({ message: 'OTP đã được gửi đến số điện thoại' });
     } else {
       // ✅ Gửi OTP qua Email
       await sendOTPByEmail(phoneOrEmail, otp, user.name);
-      await redisClient.setEx(phoneOrEmail, 300, JSON.stringify({ otp, expiresAt }));
+      await redisClient.setEx(phoneOrEmail, 180, JSON.stringify({ otp, expiresAt }));
 
       return res.json({ message: 'OTP đã được gửi đến email' });
     }

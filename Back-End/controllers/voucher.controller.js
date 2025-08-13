@@ -21,20 +21,16 @@ exports.createVoucher = async (req, res) => {
       start_date,
       end_date,
       status,
-      productIds,
     } = req.body;
 
-    // Kiểm tra bắt buộc
     if (!name || !code || !discount_type || !discount_value) {
       return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin bắt buộc." });
     }
 
-    // Kiểm tra discount_type hợp lệ
     if (!["percent", "fixed"].includes(discount_type)) {
-      return res.status(400).json({ message: "Loại giảm giá không hợp lệ. Chỉ nhận 'percent' hoặc 'fixed'." });
+      return res.status(400).json({ message: "Loại giảm giá không hợp lệ." });
     }
 
-    // Kiểm tra discount_value hợp lệ
     const discountVal = parseFloat(discount_value);
     if (isNaN(discountVal) || discountVal <= 0) {
       return res.status(400).json({ message: "Giá trị giảm giá không hợp lệ." });
@@ -43,31 +39,16 @@ exports.createVoucher = async (req, res) => {
       return res.status(400).json({ message: "Giá trị giảm giá phần trăm không được vượt quá 100." });
     }
 
-    // Kiểm tra code trùng
     const existing = await Voucher.findOne({ where: { code } });
     if (existing) {
-      return res.status(400).json({ message: "Mã voucher đã tồn tại, vui lòng nhập mã khác." });
+      return res.status(400).json({ message: "Mã voucher đã tồn tại." });
     }
 
-    // Kiểm tra ngày bắt đầu và kết thúc
-    if (start_date && end_date) {
-      const sd = new Date(start_date);
-      const ed = new Date(end_date);
-      if (sd.toString() === 'Invalid Date' || ed.toString() === 'Invalid Date') {
-        return res.status(400).json({ message: "Ngày bắt đầu hoặc kết thúc không hợp lệ." });
-      }
-      if (sd >= ed) {
-        return res.status(400).json({ message: "Ngày kết thúc phải sau ngày bắt đầu." });
-      }
-    }
-
-    // Ép kiểu số
     min_order_value = min_order_value ? parseFloat(min_order_value) : null;
     user_limit = user_limit ? parseInt(user_limit) : null;
     usage_limit = usage_limit ? parseInt(usage_limit) : null;
     status = status !== undefined ? parseInt(status) : 1;
 
-    // Tạo voucher
     const newVoucher = await Voucher.create({
       name,
       code,
@@ -82,15 +63,6 @@ exports.createVoucher = async (req, res) => {
       status,
     }, { transaction: t });
 
-    // Liên kết sản phẩm
-    if (Array.isArray(productIds) && productIds.length > 0) {
-      const links = productIds.map(productId => ({
-        id_voucher: newVoucher.id_voucher,
-        id_product: productId,
-      }));
-      await VoucherProduct.bulkCreate(links, { transaction: t });
-    }
-
     await t.commit();
     res.status(201).json({ message: "Tạo voucher thành công", voucher: newVoucher });
   } catch (error) {
@@ -99,6 +71,7 @@ exports.createVoucher = async (req, res) => {
     res.status(500).json({ message: "Đã xảy ra lỗi khi tạo voucher." });
   }
 };
+
 
 //get list all 
 exports.getAllVouchers = async (req, res) => {

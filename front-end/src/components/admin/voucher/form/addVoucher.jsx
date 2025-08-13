@@ -21,9 +21,9 @@ const defaultForm = {
 
 export default function AddVoucherModal({ show, handleClose, onSuccess }) {
   const [form, setForm] = useState({ ...defaultForm });
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  // const [products, setProducts] = useState([]);
+  // const [filteredProducts, setFilteredProducts] = useState([]);
+  // const [selectedProducts, setSelectedProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedParent, setSelectedParent] = useState('');
   const [selectedChild, setSelectedChild] = useState('');
@@ -132,7 +132,7 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
       min_order_value: form.min_order_value ? parseFloat(form.min_order_value) : null,
       user_limit: form.user_limit ? parseInt(form.user_limit) : null,
       usage_limit: form.usage_limit ? parseInt(form.usage_limit) : null,
-      productIds: selectedProducts,
+      // productIds: selectedProducts,
     };
 
    try {
@@ -199,8 +199,8 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
           }
         });
 
-        setProducts(res.data.products || []);
-        setFilteredProducts(res.data.products || []);
+        // setProducts(res.data.products || []);
+        // setFilteredProducts(res.data.products || []);
         setTotalPages(res.data.pagination?.totalPages || 1);
       } catch (err) {
         console.error('Lỗi lấy sản phẩm:', err);
@@ -211,21 +211,21 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
   }, [searchTerm, selectedChild, selectedParent, categories, currentPage]);
 
   // Lọc sản phẩm
-  useEffect(() => {
-    let filtered = [...products];
+  // useEffect(() => {
+  //   let filtered = [...products];
 
-    if (searchTerm) {
-      filtered = filtered.filter((p) =>
-        p.products_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  //   if (searchTerm) {
+  //     filtered = filtered.filter((p) =>
+  //       p.products_name.toLowerCase().includes(searchTerm.toLowerCase())
+  //     );
+  //   }
 
-    if (selectedChild) {
-      filtered = filtered.filter((p) => p.category_id === parseInt(selectedChild));
-    }
+  //   if (selectedChild) {
+  //     filtered = filtered.filter((p) => p.category_id === parseInt(selectedChild));
+  //   }
 
-    setFilteredProducts(filtered);
-  }, [searchTerm, selectedChild, products]);
+  //   setFilteredProducts(filtered);
+  // }, [searchTerm, selectedChild, products]);
 
   const getImageUrl = (path) => {
     if (!path) return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCRRdvpS3KRcG9a43mI5-vbU2kysPylGtfHw&s';
@@ -240,7 +240,7 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
       <Modal.Body>
         <Form>
           <FormAdd form={form} handleChange={handleChange} formatVND={formatVND} />
-          <FormList
+          {/* <FormList
             categories={categories}
             selectedParent={selectedParent}
             setSelectedParent={setSelectedParent}
@@ -257,7 +257,7 @@ export default function AddVoucherModal({ show, handleClose, onSuccess }) {
             setCurrentPage={setCurrentPage}
             totalPages={totalPages}
             onPageChange={(page) => setCurrentPage(page)}
-          />
+          /> */}
         </Form>
       </Modal.Body>
       <Modal.Footer>
