@@ -30,10 +30,10 @@ export default function AddProductModal({ show, onClose, onAdd }) {
 
   const [touched, setTouched] = useState({
     productName: false,
-    marketPrice: false,
+    // marketPrice: false,
     productShorts: false,
-    salePrice: false,
-    productQuantity: false,
+    // salePrice: false,
+    // productQuantity: false,
   });
   
   const errors = {
@@ -67,9 +67,9 @@ export default function AddProductModal({ show, onClose, onAdd }) {
     productShorts,
     selectedParent, 
     selectedChild, 
-    marketPrice, 
+    // marketPrice, 
     productQuantity,
-    salePrice, 
+    // salePrice, 
     images
   ]);
 

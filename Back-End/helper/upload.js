@@ -43,7 +43,7 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // tối đa 10MB
-    files: 1,
+    files: 10,
   },
 });
 
