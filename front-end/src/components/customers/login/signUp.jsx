@@ -52,7 +52,7 @@ export default function SignUp() {
     switch (name) {
       case "phone":
         if (value === "") return "";
-        if (!/^\d{11}$/.test(value)) return "Số điện thoại phải đúng 10 chữ số.";
+        if (!/^\d{10}$/.test(value)) return "Số điện thoại phải đúng 10 chữ số.";
         return "";
 
       case "email":

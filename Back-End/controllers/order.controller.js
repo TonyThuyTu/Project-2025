@@ -312,11 +312,11 @@ exports.getAllOrders = async (req, res) => {
           where: payment_status ? { payment_status } : undefined, // lọc payment_status
           required: payment_status ? true : false, // join inner nếu filter, outer nếu không
         },
-        {
-          model: db.ShippingInfo,
-          as: 'shipping_info',
-          attributes: ['shipping_code', 'shipping_status'],
-        }
+        // {
+        //   model: db.ShippingInfo,
+        //   as: 'shipping_info',
+        //   attributes: ['shipping_code', 'shipping_status'],
+        // }
       ],
       attributes: [
         'id_order',
@@ -408,11 +408,11 @@ exports.getOrderDetail = async (req, res) => {
           as: 'payment',
           attributes: ['payment_status', 'payment_time'],
         },
-        {
-          model: db.ShippingInfo,
-          as: 'shipping_info',
-          attributes: ['shipping_code', 'shipping_status'],
-        },
+        // {
+        //   model: db.ShippingInfo,
+        //   as: 'shipping_info',
+        //   attributes: ['shipping_code', 'shipping_status'],
+        // },
         {
           model: db.OrderDetail,
           as: 'order_details',
